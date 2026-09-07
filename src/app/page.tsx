@@ -88,8 +88,16 @@ export default function HomePage() {
       </motion.header>
 
       {/* ============================= HERO (DECLUTTERED & ANIMATED) ============================= */}
-      <section className="border-b border-emerald-100/60 relative">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-20 lg:pb-24 text-center">
+      <section className="border-b border-emerald-100/60 relative overflow-hidden">
+        {/* Ayurvedic Botanical Motif Background */}
+        <div
+          className="absolute inset-0 pointer-events-none select-none bg-cover bg-bottom opacity-35 mix-blend-multiply"
+          style={{ backgroundImage: "url('/bg.png')" }}
+        />
+        {/* Soft atmospheric gradient to maintain optimal text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/85 via-[#F8FAF9]/45 to-[#F8FAF9]/95 pointer-events-none select-none" />
+
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-20 lg:pb-24 text-center relative z-10">
 
           {/* Institutional Badge */}
           <motion.div
