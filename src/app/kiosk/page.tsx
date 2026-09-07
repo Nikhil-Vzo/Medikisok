@@ -125,6 +125,26 @@ export default function KioskPage() {
     setContinuity(decision);
   };
 
+  // Hydrate custom patient profile if routed from patient login with query params
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlAbha = params.get("abha");
+      const urlName = params.get("name");
+      const urlAge = params.get("age");
+      const urlGender = params.get("gender");
+
+      if (urlAbha || urlName) {
+        if (urlAbha) setAbhaId(urlAbha);
+        if (urlName) setPatientName(urlName);
+        if (urlAge && !isNaN(Number(urlAge))) setPatientAge(Number(urlAge));
+        if (urlGender) setPatientGender(urlGender);
+        setIsReturningPatient(false);
+        setPresetNotice(`Loaded custom patient profile: "${urlName || urlAbha}"`);
+      }
+    }
+  }, []);
+
   const handleAbhaInput = async (val: string) => {
     setAbhaId(val);
     setPresetNotice(null);

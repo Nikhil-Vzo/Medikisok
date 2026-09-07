@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Loader2,
   User,
-  Zap
+  Zap,
+  Shuffle,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +73,7 @@ export default function PatientLoginPage() {
   // Form fields
   const [abhaNumber, setAbhaNumber] = React.useState("91-4523-8819-2041");
   const [mobileNumber, setMobileNumber] = React.useState("9876543210");
+  const [customName, setCustomName] = React.useState("");
 
   // Result state
   const [profile, setProfile] = React.useState<AbhaProfile | null>(null);
@@ -80,6 +83,56 @@ export default function PatientLoginPage() {
 
   const steps = lang === "hi" ? ABHA_STEPS_HI : ABHA_STEPS_EN;
   const stepIndex = flowStep === "identify" ? 0 : 1;
+
+  // Quick preset patient generator
+  function generateRandomPatient() {
+    const r4 = () => Math.floor(1000 + Math.random() * 9000).toString();
+    const newAbha = `91-${r4()}-${r4()}-${r4()}`;
+    const pool = [
+      { name: "Ramesh Kumar Sharma", gender: "Male", yob: 1976 },
+      { name: "Priya Anand Patel", gender: "Female", yob: 1990 },
+      { name: "Mohan Lal Verma", gender: "Male", yob: 1966 },
+      { name: "Sunita Devi", gender: "Female", yob: 1961 },
+      { name: "Deepak Joshi", gender: "Male", yob: 1995 },
+      { name: "Gurpreet Kaur", gender: "Female", yob: 1983 },
+      { name: "Aarav Mehra", gender: "Male", yob: 1998 },
+      { name: "Kavita Reddy", gender: "Female", yob: 1988 },
+      { name: "Rajeshwar Singh", gender: "Male", yob: 1970 },
+      { name: "Anil Gupta", gender: "Male", yob: 1986 }
+    ];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const username = pick.name.toLowerCase().replace(/\s+/g, ".");
+    const customProf: AbhaProfile = {
+      abhaId: newAbha,
+      abhaAddress: `${username}@abdm`,
+      fullName: pick.name,
+      gender: pick.gender,
+      yearOfBirth: pick.yob,
+      mobile: `98${r4()}${Math.floor(1000 + Math.random() * 9000)}`.slice(0, 10),
+      token: "TOKEN-MOCK-VERIFIED",
+    };
+    setAbhaNumber(newAbha);
+    setCustomName(pick.name);
+    setProfile(customProf);
+    setFlowStep("confirmed");
+  }
+
+  function selectPresetPatient(name: string, abha: string, gender: string, yob: number) {
+    const username = name.toLowerCase().replace(/\s+/g, ".");
+    const p: AbhaProfile = {
+      abhaId: abha,
+      abhaAddress: `${username}@abdm`,
+      fullName: name,
+      gender: gender,
+      yearOfBirth: yob,
+      mobile: "9876543210",
+      token: "TOKEN-MOCK-VERIFIED",
+    };
+    setAbhaNumber(abha);
+    setCustomName(name);
+    setProfile(p);
+    setFlowStep("confirmed");
+  }
 
   /* ─── Helpers ──────────────────────────────────────────────────────── */
 
@@ -142,9 +195,14 @@ export default function PatientLoginPage() {
 
       let resolved: AbhaProfile = { ...MOCK_PROFILE };
 
+      if (customName.trim()) {
+        resolved.fullName = customName.trim();
+        resolved.abhaAddress = `${customName.trim().toLowerCase().replace(/\s+/g, ".")}@abdm`;
+      }
+
       if (authMethod === "abha" && abhaNumber.trim()) {
         resolved.abhaId = abhaNumber.trim();
-        if (abhaNumber.includes("1234")) {
+        if (abhaNumber.includes("1234") && !customName.trim()) {
           resolved.fullName = "Ravi Kumar";
           resolved.gender = "Male";
           resolved.yearOfBirth = 1975;
@@ -164,7 +222,18 @@ export default function PatientLoginPage() {
   }
 
   function handleProceed() {
-    router.push("/kiosk");
+    if (profile) {
+      const age = new Date().getFullYear() - profile.yearOfBirth;
+      const params = new URLSearchParams({
+        abha: profile.abhaId,
+        name: profile.fullName,
+        gender: profile.gender,
+        age: String(age),
+      });
+      router.push(`/kiosk?${params.toString()}`);
+    } else {
+      router.push("/kiosk");
+    }
   }
 
   function handleReset() {
@@ -280,6 +349,68 @@ export default function PatientLoginPage() {
           {/* ── STEP: Identify ── */}
           {flowStep === "identify" && (
             <div className="space-y-5">
+              {/* Quick Identity Selector (New Unique Patient / Presets) */}
+              <div className="space-y-2.5 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-emerald-950 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                    {lang === "hi" ? "विशिष्ट मरीज़ पहचान चुनें" : "Select Patient Identity"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={generateRandomPatient}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-md border border-emerald-300 shadow-2xs hover:bg-emerald-50 transition-colors"
+                  >
+                    <Shuffle className="w-3 h-3 text-emerald-700" />
+                    <span>🎲 {lang === "hi" ? "रैंडम नया मरीज़" : "Random Unique Patient"}</span>
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => selectPresetPatient("Kamla Devi", "91-4523-8819-2041", "Female", 1964)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
+                  >
+                    Kamla Devi (62F)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectPresetPatient("Ravi Kumar", "91-1234-8899-7711", "Male", 1976)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
+                  >
+                    Ravi Kumar (48M)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectPresetPatient("Priya Patel", "91-8834-1192-5503", "Female", 1990)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
+                  >
+                    Priya Patel (34F)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectPresetPatient("Anil Gupta", "91-6621-9943-1209", "Male", 1986)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
+                  >
+                    Anil Gupta (38M)
+                  </button>
+                </div>
+              </div>
+
+              {/* Patient Name input (Optional or Custom) */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  {lang === "hi" ? "मरीज़ का पूरा नाम (अपना नाम लिखें या खाली छोड़ें)" : "Patient Full Name (Type your custom name or leave default)"}
+                </label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder={lang === "hi" ? "उदा. निखिल वर्मा / आपका नाम" : "e.g. Nikhil Verma / Your Name"}
+                  className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-medium focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
+                />
+              </div>
+
               {authMethod === "abha" && (
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-700">
