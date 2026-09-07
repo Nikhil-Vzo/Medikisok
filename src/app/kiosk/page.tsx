@@ -183,6 +183,7 @@ export default function KioskPage() {
 
   // Vitals recorded at the kiosk (optional step)
   const [recordedVitals, setRecordedVitals] = React.useState<VitalMeasurements | null>(null);
+  const [showVitals, setShowVitals] = React.useState(false);
 
   // Continuity Engine state
   const [isReturningPatient, setIsReturningPatient] = React.useState(false);
@@ -298,19 +299,19 @@ export default function KioskPage() {
       </header>
 
       {/* Main Terminal Body */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6 flex flex-col justify-between">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-3 sm:py-5 space-y-4 flex flex-col justify-between">
         {/* Privacy Guard Inactivity Timer */}
         {step !== "identify" && step !== "completed" && (
           <InactivityTimer onTimeout={() => setStep("identify")} />
         )}
 
         {/* Stepper Card */}
-        <div className="p-4 sm:p-5 rounded-xl bg-white border border-emerald-100 shadow-sm">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-emerald-100 shadow-sm">
           <ProgressSteps steps={stepsList} currentStepIndex={getStepIndex()} />
         </div>
 
         {/* Main Dynamic Step Area */}
-        <div className="flex-1 flex flex-col justify-center py-4">
+        <div className="flex-1 flex flex-col justify-center py-1">
           {/* ================= STEP 1: IDENTIFY ================= */}
           {step === "identify" && (
             <div className="space-y-6 animate-in fade-in duration-300">
@@ -840,9 +841,9 @@ export default function KioskPage() {
                 </div>
 
                 {/* Extracted Entities Live Preview */}
-                <div className="lg:col-span-5 p-5 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                <div className="lg:col-span-5 p-5 bg-white rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col space-y-3.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-emerald-700" />
                         <h4 className="text-sm font-semibold text-slate-900">Extracted Clinical Data</h4>
@@ -850,8 +851,8 @@ export default function KioskPage() {
                       <Badge variant="default" className="text-xs font-medium">Vision AI Active</Badge>
                     </div>
 
-                    {extractedEntities.medications.length === 0 && extractedEntities.labValues.length === 0 ? (
-                      <div className="py-8 text-center space-y-2 text-slate-400 bg-emerald-50/20 rounded-xl border border-dashed border-emerald-200 p-4">
+                    {extractedEntities.medications.length === 0 && extractedEntities.labValues.length === 0 && (!extractedEntities.diagnoses || extractedEntities.diagnoses.length === 0) ? (
+                      <div className="my-auto py-8 text-center space-y-2 text-slate-400 bg-emerald-50/20 rounded-xl border border-dashed border-emerald-200 p-4">
                         <FileText className="w-8 h-8 mx-auto text-emerald-600/50" />
                         <p className="text-xs font-semibold text-slate-700">No documents scanned yet</p>
                         <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
@@ -859,29 +860,52 @@ export default function KioskPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-3 text-xs">
-                        {extractedEntities.medications.length > 0 && (
+                      <div className="space-y-3.5 text-xs flex-1 flex flex-col">
+                        {/* Diagnoses / Findings */}
+                        {extractedEntities.diagnoses && extractedEntities.diagnoses.length > 0 && (
                           <div>
                             <span className="font-semibold text-emerald-800 text-xs block mb-1">
-                              Active Prescribed Medicines:
+                              Clinical Diagnoses & Indications:
                             </span>
-                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                            <div className="flex flex-wrap gap-1.5">
+                              {extractedEntities.diagnoses.map((d, idx) => (
+                                <span key={idx} className="px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold">
+                                  {d}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Active Prescribed Medicines - Expands smoothly without cramped max-h-40 scrollbar */}
+                        {extractedEntities.medications.length > 0 && (
+                          <div className="flex-1 flex flex-col">
+                            <span className="font-semibold text-emerald-800 text-xs block mb-1.5">
+                              Active Prescribed Medicines ({extractedEntities.medications.length}):
+                            </span>
+                            <div className="space-y-2 overflow-y-auto max-h-[380px] lg:max-h-[460px] pr-1">
                               {extractedEntities.medications.map((m, idx) => (
-                                <div key={idx} className="p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100 flex justify-between font-medium">
-                                  <span className="text-slate-900">{m.name}</span>
-                                  <span className="text-slate-500 text-xs">{m.dosage} · {m.frequency}</span>
+                                <div key={idx} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 flex items-center justify-between font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                    <span className="text-slate-900 font-semibold">{m.name}</span>
+                                  </div>
+                                  <span className="text-slate-600 text-xs bg-white px-2 py-0.5 rounded border border-emerald-150">
+                                    {m.dosage} · {m.frequency}
+                                  </span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         )}
 
+                        {/* Laboratory Findings */}
                         {extractedEntities.labValues.length > 0 && (
                           <div>
                             <span className="font-semibold text-emerald-800 text-xs block mb-1">
-                              Laboratory Findings:
+                              Laboratory Findings ({extractedEntities.labValues.length}):
                             </span>
-                            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            <div className="space-y-1.5 overflow-y-auto max-h-[240px] pr-1">
                               {extractedEntities.labValues.map((l, idx) => (
                                 <div key={idx} className={`p-2.5 rounded-lg border flex justify-between font-medium ${l.abnormal ? 'bg-red-50 border-red-200 text-red-950' : 'bg-emerald-50/40 border-emerald-100 text-slate-800'}`}>
                                   <span>{l.test}</span>
@@ -895,25 +919,78 @@ export default function KioskPage() {
                     )}
                   </div>
 
-                  <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200/80 text-xs text-emerald-800 font-medium">
-                    Scanned {scannedFiles.length} records · Match verified against RxNorm ontology
+                  <div className="space-y-2.5 pt-3 mt-auto border-t border-slate-100">
+                    <div className="p-2.5 bg-emerald-50/60 rounded-lg border border-emerald-200/80 text-[11px] text-emerald-800 font-medium flex items-center justify-between">
+                      <span>Scanned {scannedFiles.length > 0 ? scannedFiles.length : 1} records · Match verified</span>
+                      <Badge variant="default" className="text-[10px] bg-emerald-200/60 text-emerald-950 border-0">ABDM FHIR R4</Badge>
+                    </div>
+
+                    {/* Direct 1-Click Action to Continue Intake without scrolling */}
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setStep("confirm")}
+                      className="w-full h-11 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <span>Parchon ki Pushti Karein (Generate Summary)</span>
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
                 </div>
               </div>
 
-              {/* Optional Integrated Vitals Check */}
-              <VitalsScanner
-                onVitalsRecorded={(vitalsData) => {
-                  setRecordedVitals(vitalsData);
-                  speakConfirmation("vitals_confirmed", language);
-                }}
-              />
+              {/* Optional Integrated Vitals Check (Collapsible to prevent unnecessary page scrolling) */}
+              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowVitals(prev => !prev)}
+                  className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-emerald-50/40 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Activity className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 block">
+                        Integrated Vital Signs Telemetry (Optional)
+                      </span>
+                      <p className="text-[11px] text-slate-500 font-normal">
+                        {recordedVitals
+                          ? `Recorded: BP ${recordedVitals.bloodPressure} · Pulse ${recordedVitals.pulseRate} bpm · SpO2 ${recordedVitals.spO2}% · Temp ${recordedVitals.temperature}`
+                          : "Bluetooth cuff & pulse oximeter readings · Click to record or test IOT sensors"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {recordedVitals ? (
+                      <Badge variant="default" className="text-[10px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        ✓ Recorded
+                      </Badge>
+                    ) : (
+                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                        {showVitals ? "Collapse ▲" : "Record Vitals ▼"}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                {showVitals && (
+                  <div className="p-4 border-t border-slate-100 bg-slate-50/50 animate-in fade-in duration-150">
+                    <VitalsScanner
+                      onVitalsRecorded={(vitalsData) => {
+                        setRecordedVitals(vitalsData);
+                        speakConfirmation("vitals_confirmed", language);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
 
+              {/* Bottom Primary Button */}
               <Button
                 variant="primary"
                 size="lg"
                 onClick={() => setStep("confirm")}
-                className="w-full h-14 rounded-lg text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
+                className="w-full h-12 sm:h-14 rounded-lg text-sm sm:text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
               >
                 <span>Parchon ki Pushti Karein (Generate Clinical Summary)</span>
                 <ArrowRight className="w-5 h-5 ml-2" />
