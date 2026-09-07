@@ -40,6 +40,7 @@ export interface ScannedDocument {
   medications: ExtractedMedication[];
   labValues: ExtractedLabValue[];
   diagnoses: string[];
+  proceduresSurgeries?: string[];
 }
 
 export interface ClinicalSuggestion {
@@ -50,6 +51,36 @@ export interface ClinicalSuggestion {
   severity: 'low' | 'medium' | 'high' | 'critical';
   confidenceScore: number;
   citedSource?: string;
+}
+
+/**
+ * Standard 8-Part Clinical History format specified by SIH26047
+ * (Chief Complaint -> HPI -> Past Medical/Surgical -> Drug & Allergy -> Family -> Personal -> ROS -> Investigations)
+ */
+export interface ClassicalEightPartHistory {
+  chiefComplaint: string;
+  historyOfPresentIllness: string;
+  pastMedicalSurgical: string[];
+  drugAndAllergies: {
+    medications: ExtractedMedication[] | any[];
+    allergies: string[];
+  };
+  familyHistory: string;
+  personalHistory: {
+    diet: string;
+    sleep: string;
+    appetite: string;
+    bowelBladder: string;
+    lifestyleHabits: string;
+  };
+  reviewOfSystems: {
+    cardiovascular?: string;
+    respiratory?: string;
+    gastrointestinal?: string;
+    neurological?: string;
+    musculoskeletal?: string;
+  };
+  priorInvestigations: string;
 }
 
 export interface ClinicalSummaryDraft {
@@ -70,4 +101,5 @@ export interface ClinicalSummaryDraft {
   status: 'draft' | 'approved' | 'amended' | 'rejected';
   isEmergencyTriage: boolean;
   createdAt: string;
+  classicalHistory?: ClassicalEightPartHistory;
 }

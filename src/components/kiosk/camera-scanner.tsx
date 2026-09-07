@@ -25,6 +25,8 @@ export interface ExtractedDocResult {
   medications: Array<{ name: string; dosage: string; frequency: string; duration?: string; confidence: number }>;
   labValues: Array<{ test: string; value: string; range: string; abnormal: boolean }>;
   diagnoses: string[];
+  proceduresSurgeries?: string[];
+  allergies?: string[];
   summaryText?: string;
   previewUrl: string;
   fileName: string;
@@ -226,33 +228,86 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         </div>
       </div>
 
-      {/* OCR Mode Toggle */}
+      {/* OCR Mode Toggle & Demo Sample Presets */}
       {ocrStatus !== "checking" && (
-        <div className="flex items-center gap-1 p-1 bg-emerald-50/50 rounded-lg w-fit border border-emerald-200/60">
-          <button
-            onClick={() => { setOcrMode("camera"); resetState(); setCapturedImage(null); stopCamera(); }}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
-              ocrMode === "camera"
-                ? "bg-emerald-700 text-white shadow-xs"
-                : "text-slate-600 hover:text-emerald-950"
-            )}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            Camera Scanner
-          </button>
-          <button
-            onClick={() => { setOcrMode("upload"); resetState(); setCapturedImage(null); stopCamera(); }}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
-              ocrMode === "upload"
-                ? "bg-emerald-700 text-white shadow-xs"
-                : "text-slate-600 hover:text-emerald-950"
-            )}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Upload File
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1 p-1 bg-emerald-50/50 rounded-lg w-fit border border-emerald-200/60">
+            <button
+              onClick={() => { setOcrMode("camera"); resetState(); setCapturedImage(null); stopCamera(); }}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
+                ocrMode === "camera"
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-emerald-950"
+              )}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              Camera Scanner
+            </button>
+            <button
+              onClick={() => { setOcrMode("upload"); resetState(); setCapturedImage(null); stopCamera(); }}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
+                ocrMode === "upload"
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "text-slate-600 hover:text-emerald-950"
+              )}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Upload File
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                resetState();
+                onDocumentExtracted({
+                  docType: "prescription",
+                  documentDate: "2026-06-15",
+                  fileName: "Sample_Rx_DrVerma.jpg",
+                  previewUrl: "",
+                  medications: [
+                    { name: "Tab Metformin", dosage: "500mg", frequency: "BD (Twice Daily)", duration: "30 Days", confidence: 0.96 },
+                    { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD (Once Daily)", duration: "30 Days", confidence: 0.94 }
+                  ],
+                  labValues: [],
+                  diagnoses: ["Type 2 Diabetes Mellitus", "Essential Hypertension"],
+                  proceduresSurgeries: ["Appendectomy (2018)"],
+                  allergies: ["No Known Drug Allergies"],
+                  summaryText: "Sample Prescription Dr. Verma: Metformin 500mg BD + Telmisartan 40mg OD."
+                });
+              }}
+              className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1"
+            >
+              <FileText className="w-3 h-3 text-emerald-700" />
+              Demo: Load Sample Rx
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetState();
+                onDocumentExtracted({
+                  docType: "lab_report",
+                  documentDate: "2026-07-02",
+                  fileName: "Sample_BloodReport_Thyrocare.pdf",
+                  previewUrl: "",
+                  medications: [],
+                  labValues: [
+                    { test: "Fasting Blood Sugar", value: "168 mg/dL", range: "70-100 mg/dL", abnormal: true },
+                    { test: "HbA1c", value: "8.4%", range: "< 5.7%", abnormal: true }
+                  ],
+                  diagnoses: ["Uncontrolled Hyperglycemia"],
+                  summaryText: "Sample Blood Profile: Elevated FBS (168 mg/dL) and HbA1c (8.4%)."
+                });
+              }}
+              className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1"
+            >
+              <ScanLine className="w-3 h-3 text-emerald-700" />
+              Demo: Load Sample Lab
+            </button>
+          </div>
         </div>
       )}
 

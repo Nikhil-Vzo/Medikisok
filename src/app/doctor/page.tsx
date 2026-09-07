@@ -180,6 +180,7 @@ export default function DoctorPage() {
     allergies: dbDraft?.allergies || ["No known drug allergies (NKDA)"],
     scannedDocumentsSummary: dbDraft?.scannedDocumentsSummary ||
       "Processed 2 historical documents (June prescription from Dr. Verma + July Thyrocare report). FBS: 168 mg/dL, HbA1c: 8.4%.",
+    classicalHistory: dbDraft?.classicalHistory || null,
     status: "draft",
     isEmergencyTriage: selectedPatient.isEmergency,
     createdAt: new Date().toISOString()
@@ -392,7 +393,7 @@ export default function DoctorPage() {
                 />
               )}
 
-              {/* Structured SOAP Editor */}
+              {/* Structured SOAP & 8-Part Classical History Editor */}
               <SoapSummaryEditor
                 summary={{
                   chiefComplaint: currentSummaryDraft.chiefComplaint,
@@ -400,7 +401,8 @@ export default function DoctorPage() {
                   pastHistory: currentSummaryDraft.pastMedicalHistory,
                   medications: currentSummaryDraft.currentMedications,
                   allergies: currentSummaryDraft.allergies,
-                  scannedSummary: currentSummaryDraft.scannedDocumentsSummary
+                  scannedSummary: currentSummaryDraft.scannedDocumentsSummary,
+                  classicalHistory: currentSummaryDraft.classicalHistory
                 }}
                 onApprove={async (notes) => {
                   if (selectedPatient.summaryId) {

@@ -101,6 +101,8 @@ Extract all clinical entities accurately and output strictly a JSON object with 
     }
   ],
   "diagnoses": ["e.g. Type 2 Diabetes Mellitus", "Essential Hypertension"],
+  "proceduresSurgeries": ["e.g. Cholecystectomy 2021", "Appendectomy"],
+  "allergies": ["e.g. Penicillin allergy"],
   "summaryText": "Concise summary of findings from this document"
 }
 Output only valid JSON without markdown wrapping.`;

@@ -22,14 +22,12 @@ import { VitalsScanner, VitalMeasurements } from "@/components/kiosk/vitals-scan
 import { InactivityTimer } from "@/components/kiosk/inactivity-timer";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 import { getQuestionContent, getKioskStepStrings } from "@/lib/translations/kiosk-strings";
-import { SOCRATES_CHEST_PAIN } from "@/lib/ontologies/allopathy-socrates";
-import { DASHAVIDHA_PARIKSHA_STEPS } from "@/lib/ontologies/ayush-dashavidha";
 import { evaluateRedFlags } from "@/lib/ontologies/red-flags";
 import { buildFhirR4Bundle } from "@/lib/abdm/fhir-builder";
 import { savePatientIntake } from "@/lib/supabase/db";
 import { matchOptionFromTranscript } from "@/lib/voice-matching";
 import { computeContinuity, ContinuityDecision } from "@/lib/continuity-engine";
-import { CHIEF_COMPLAINTS } from "@/lib/ontologies/chief-complaints";
+import { CHIEF_COMPLAINTS, getQuestionsForComplaint } from "@/lib/ontologies/chief-complaints";
 import { KioskStep } from "@/types/kiosk";
 
 export default function KioskPage() {
@@ -64,22 +62,21 @@ export default function KioskPage() {
   const [continuity, setContinuity] = React.useState<ContinuityDecision | null>(null);
   const [selectedComplaint, setSelectedComplaint] = React.useState<string | null>(null);
 
-  // Scanned Document State
-  const [scannedFiles, setScannedFiles] = React.useState<Array<{ name: string; size: string; status: string }>>([
-    { name: "Old_Prescription_DrVerma_June.jpg", size: "1.2 MB", status: "Extracted" },
-    { name: "Blood_Report_Thyrocare_July.pdf", size: "850 KB", status: "Extracted" }
-  ]);
+  // Scanned Document State - starts clean and empty for live OCR demo
+  const [scannedFiles, setScannedFiles] = React.useState<Array<{ name: string; size: string; status: string }>>([]);
 
-  const [extractedEntities, setExtractedEntities] = React.useState({
-    medications: [
-      { name: "Tab Metformin", dosage: "500mg", frequency: "BD (Twice Daily)" },
-      { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD (Once Daily)" }
-    ],
-    labValues: [
-      { test: "Fasting Blood Sugar", value: "168 mg/dL", range: "70-100 mg/dL", abnormal: true },
-      { test: "HbA1c", value: "8.4%", range: "< 5.7%", abnormal: true }
-    ],
-    diagnoses: ["Type 2 Diabetes Mellitus", "Essential Hypertension"]
+  const [extractedEntities, setExtractedEntities] = React.useState<{
+    medications: Array<{ name: string; dosage: string; frequency: string; duration?: string; confidence?: number }>;
+    labValues: Array<{ test: string; value: string; range: string; abnormal: boolean }>;
+    diagnoses: string[];
+    proceduresSurgeries?: string[];
+    allergies?: string[];
+  }>({
+    medications: [],
+    labValues: [],
+    diagnoses: [],
+    proceduresSurgeries: [],
+    allergies: []
   });
 
   const stepsList = [
@@ -105,15 +102,18 @@ export default function KioskPage() {
     }
   };
 
-  // Conversational questions list based on mode, prepended with delta
-  // questions from the Continuity Engine for returning patients.
-  const baseQuestions = clinicalMode === "allopathy" ? SOCRATES_CHEST_PAIN : DASHAVIDHA_PARIKSHA_STEPS;
+  // Conversational questions list based on selected chief complaint and clinical mode,
+  // prepended with delta questions from the Continuity Engine for returning patients.
+  const baseQuestions = React.useMemo(() => {
+    return getQuestionsForComplaint(selectedComplaint, clinicalMode);
+  }, [selectedComplaint, clinicalMode]);
+
   const activeQuestions = React.useMemo(() => {
     if (continuity && continuity.deltaQuestions.length > 0) {
       return [...continuity.deltaQuestions, ...baseQuestions] as any[];
     }
     return baseQuestions as any[];
-  }, [continuity, clinicalMode]);
+  }, [continuity, baseQuestions]);
   const currentQ: any = activeQuestions[currentQuestionIndex] || activeQuestions[0];
 
   const handleOptionSelect = (optionId: string) => {
@@ -611,7 +611,9 @@ export default function KioskPage() {
                       setExtractedEntities(prev => ({
                         medications: [...prev.medications, ...result.medications],
                         labValues: [...prev.labValues, ...result.labValues],
-                        diagnoses: [...prev.diagnoses, ...result.diagnoses]
+                        diagnoses: Array.from(new Set([...prev.diagnoses, ...result.diagnoses])),
+                        proceduresSurgeries: [...(prev.proceduresSurgeries || []), ...(result.proceduresSurgeries || [])],
+                        allergies: [...(prev.allergies || []), ...(result.allergies || [])]
                       }));
                     }}
                   />
@@ -628,35 +630,49 @@ export default function KioskPage() {
                       <Badge variant="default" className="text-xs font-medium">Vision AI Active</Badge>
                     </div>
 
-                    <div className="space-y-3 text-xs">
-                      <div>
-                        <span className="font-semibold text-emerald-800 text-xs block mb-1">
-                          Active Prescribed Medicines:
-                        </span>
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                          {extractedEntities.medications.map((m, idx) => (
-                            <div key={idx} className="p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100 flex justify-between font-medium">
-                              <span className="text-slate-900">{m.name}</span>
-                              <span className="text-slate-500 text-xs">{m.dosage} · {m.frequency}</span>
-                            </div>
-                          ))}
-                        </div>
+                    {extractedEntities.medications.length === 0 && extractedEntities.labValues.length === 0 ? (
+                      <div className="py-8 text-center space-y-2 text-slate-400 bg-emerald-50/20 rounded-xl border border-dashed border-emerald-200 p-4">
+                        <FileText className="w-8 h-8 mx-auto text-emerald-600/50" />
+                        <p className="text-xs font-semibold text-slate-700">No documents scanned yet</p>
+                        <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                          Hold physical prescription in front of camera, upload a photo, or click &quot;Demo: Load Sample Rx&quot; above to see real-time Vision AI extraction.
+                        </p>
                       </div>
+                    ) : (
+                      <div className="space-y-3 text-xs">
+                        {extractedEntities.medications.length > 0 && (
+                          <div>
+                            <span className="font-semibold text-emerald-800 text-xs block mb-1">
+                              Active Prescribed Medicines:
+                            </span>
+                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                              {extractedEntities.medications.map((m, idx) => (
+                                <div key={idx} className="p-2.5 rounded-lg bg-emerald-50/40 border border-emerald-100 flex justify-between font-medium">
+                                  <span className="text-slate-900">{m.name}</span>
+                                  <span className="text-slate-500 text-xs">{m.dosage} · {m.frequency}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                      <div>
-                        <span className="font-semibold text-emerald-800 text-xs block mb-1">
-                          Laboratory Findings:
-                        </span>
-                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                          {extractedEntities.labValues.map((l, idx) => (
-                            <div key={idx} className={`p-2.5 rounded-lg border flex justify-between font-medium ${l.abnormal ? 'bg-red-50 border-red-200 text-red-950' : 'bg-emerald-50/40 border-emerald-100 text-slate-800'}`}>
-                              <span>{l.test}</span>
-                              <span className="text-xs font-medium">{l.value} ({l.range})</span>
+                        {extractedEntities.labValues.length > 0 && (
+                          <div>
+                            <span className="font-semibold text-emerald-800 text-xs block mb-1">
+                              Laboratory Findings:
+                            </span>
+                            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                              {extractedEntities.labValues.map((l, idx) => (
+                                <div key={idx} className={`p-2.5 rounded-lg border flex justify-between font-medium ${l.abnormal ? 'bg-red-50 border-red-200 text-red-950' : 'bg-emerald-50/40 border-emerald-100 text-slate-800'}`}>
+                                  <span>{l.test}</span>
+                                  <span className="text-xs font-medium">{l.value} ({l.range})</span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200/80 text-xs text-emerald-800 font-medium">
@@ -701,7 +717,11 @@ export default function KioskPage() {
                 <AudioPrompter
                   autoPlay
                   language={language}
-                  textToSpeak={stepStrings.confirmTts}
+                  textToSpeak={
+                    language === "hi"
+                      ? `${patientName} जी, आपकी मुख्य परेशानी ${CHIEF_COMPLAINTS.find(c => c.id === selectedComplaint)?.labelHi || (clinicalMode === "ayush" ? "आयुर्वेदिक केस टेकिंग" : "सामान्य स्वास्थ्य परामर्श")}, और ${extractedEntities.medications.length} दवाइयां दर्ज कर ली गई हैं। आपकी केस समरी तैयार है और डॉक्टर के कंप्यूटर पर भेज दी गई है। कृपया ओपीडी कमरा नंबर तीन में जाएं।`
+                      : `${patientName}, your intake for ${CHIEF_COMPLAINTS.find(c => c.id === selectedComplaint)?.labelEn || "Clinical Consultation"} and ${extractedEntities.medications.length} medications have been recorded. Case summary delivered to doctor. Please proceed to OPD Room 3.`
+                  }
                 />
               </div>
 
@@ -710,9 +730,7 @@ export default function KioskPage() {
                   <div className="p-4 rounded-lg bg-emerald-50/40 border border-emerald-100 space-y-1">
                     <span className="font-semibold text-emerald-800 text-xs">Mukhya Pareshani (Chief Complaint)</span>
                     <p className="text-sm font-semibold text-slate-900">
-                      {clinicalMode === "ayush"
-                        ? "Amlapitta & Agnimandya (Hyperacidity - 3 days)"
-                        : "Chest Discomfort with Exertional Symptoms (3 days)"}
+                      {CHIEF_COMPLAINTS.find(c => c.id === selectedComplaint)?.labelHi || (clinicalMode === "ayush" ? "अम्लपित्त एवं अग्निमांद्य (3 दिन)" : "सामान्य स्वास्थ्य परामर्श (3 दिन)")}
                     </p>
                   </div>
 
@@ -746,7 +764,7 @@ export default function KioskPage() {
                       const summaryDraftData = {
                         visitId: `visit-${Date.now()}`,
                         patientId: `pat-${Date.now()}`,
-                        chiefComplaint: liveSummary?.chiefComplaint || "Clinical Case Intake",
+                        chiefComplaint: liveSummary?.chiefComplaint || (CHIEF_COMPLAINTS.find(c => c.id === selectedComplaint)?.labelEn || "Clinical Case Intake"),
                         historyOfPresentIllness: liveSummary?.historyOfPresentIllness || "Detailed clinical history recorded at kiosk.",
                         socratesData: selectedAnswers,
                         ayushAssessment: clinicalMode === "ayush" ? selectedAnswers : undefined,
@@ -754,6 +772,7 @@ export default function KioskPage() {
                         currentMedications: liveSummary?.currentMedications || extractedEntities.medications,
                         allergies: liveSummary?.allergies || ["NKDA (No Known Drug Allergies)"],
                         scannedDocumentsSummary: liveSummary?.scannedDocumentsSummary || `Processed ${scannedFiles.length} records.`,
+                        classicalHistory: liveSummary?.classicalHistory,
                         status: "draft" as const,
                         isEmergencyTriage: isEmergency,
                         createdAt: new Date().toISOString()
@@ -845,8 +864,9 @@ export default function KioskPage() {
                     setIsEmergency(false);
                     setConsentGranted(false);
                     setClinicalMode("allopathy");
+                    setSelectedComplaint(null);
                     setScannedFiles([]);
-                    setExtractedEntities({ medications: [], labValues: [], diagnoses: [] });
+                    setExtractedEntities({ medications: [], labValues: [], diagnoses: [], proceduresSurgeries: [], allergies: [] });
                     setRecordedVitals(null);
                     setVoiceTranscript("");
                     setStep("identify");

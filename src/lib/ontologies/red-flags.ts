@@ -1,6 +1,6 @@
 export interface RedFlagRule {
   id: string;
-  category: 'cardiovascular' | 'respiratory' | 'neurological' | 'ayush_emergency';
+  category: 'cardiovascular' | 'respiratory' | 'neurological' | 'ayush_emergency' | 'acute_abdomen' | 'sepsis';
   titleEn: string;
   titleHi: string;
   symptoms: string[];
@@ -25,9 +25,29 @@ export const RED_FLAG_RULES: RedFlagRule[] = [
     category: 'respiratory',
     titleEn: 'Severe Respiratory Distress / Acute Dyspnoea',
     titleHi: 'तीव्र सांस संकट / ऑक्सीजन की कमी',
-    symptoms: ['acute_dyspnoea', 'cyanosis', 'stridor'],
+    symptoms: ['acute_dyspnoea', 'cyanosis', 'stridor', 'acute_gasping', 'cough_with_blood', 'breathless_at_rest'],
     actionEn: 'Immediate triage oxygenation and SpO2 monitoring.',
     actionHi: 'तत्काल ऑक्सीजन सपोर्ट व SpO2 की जांच करें।',
+    priorityLevel: 'CRITICAL_IMMEDIATE'
+  },
+  {
+    id: 'acute_abdomen',
+    category: 'acute_abdomen',
+    titleEn: 'Acute Surgical Abdomen / Internal Hemorrhage',
+    titleHi: 'तीव्र उदर संकट / आंतरिक रक्तस्राव',
+    symptoms: ['rigid_boardlike', 'blood_vomit_black_stool', 'sudden_severe_tear', 'radiates_to_back'],
+    actionEn: 'Immediate surgical triage, urgent ultrasound/CT, stop oral intake.',
+    actionHi: 'तत्काल सर्जिकल वार्ड रेफरल, अल्ट्रासाउंड व आईवी फ्लूइड्स शुरू करें।',
+    priorityLevel: 'CRITICAL_IMMEDIATE'
+  },
+  {
+    id: 'sepsis_meningitis',
+    category: 'sepsis',
+    titleEn: 'Severe Pyrexia with Sepsis / Meningitis Signs',
+    titleHi: 'अति-तीव्र ज्वर / मस्तिष्क संक्रमण (मेनिन्जाइटिस)',
+    symptoms: ['altered_sensorium_stiff_neck', 'with_rigors', 'severe_prostration'],
+    actionEn: 'Immediate IV access, blood cultures, lumbar puncture protocol.',
+    actionHi: 'तत्काल आपातकालीन वार्ड में आईवी एंटीबायोटिक व ब्लड टेस्ट शुरू करें।',
     priorityLevel: 'CRITICAL_IMMEDIATE'
   },
   {
@@ -45,7 +65,9 @@ export const RED_FLAG_RULES: RedFlagRule[] = [
 export function evaluateRedFlags(selectedOptionIds: string[]): { isEmergency: boolean; triggeredRule?: RedFlagRule } {
   for (const rule of RED_FLAG_RULES) {
     const matchCount = rule.symptoms.filter(sym => selectedOptionIds.includes(sym)).length;
-    if (matchCount >= 2) {
+    // Acute abdomen, stroke, and respiratory distress are triggered on 1 critical symptom or 2 standard
+    const threshold = (rule.category === 'acute_abdomen' || rule.category === 'respiratory') ? 1 : 2;
+    if (matchCount >= threshold) {
       return { isEmergency: true, triggeredRule: rule };
     }
   }
@@ -68,7 +90,15 @@ const RED_FLAG_TEXT_KEYWORDS: Record<string, string[]> = {
     "acute dyspnoea", "acute dyspnea", "severe breathlessness",
     "cyanosis", "stridor", "wheezing", "respiratory distress",
     "can't breathe", "unable to breathe", "spO2", "low oxygen",
-    "oxygen saturation", "blue lips", "blue fingers"
+    "oxygen saturation", "blue lips", "blue fingers", "coughing blood"
+  ],
+  acute_abdomen: [
+    "rigid abdomen", "board like", "vomiting blood", "black stool",
+    "severe stomach pain", "tearing pain", "appendix burst", "peritonitis"
+  ],
+  sepsis_meningitis: [
+    "stiff neck", "high fever with rigors", "unconscious with fever",
+    "altered sensorium", "extreme confusion", "sepsis"
   ],
   stroke_fast: [
     "facial droop", "face drooping", "arm weakness", "arm drift",
@@ -80,7 +110,6 @@ const RED_FLAG_TEXT_KEYWORDS: Record<string, string[]> = {
 
 /**
  * Evaluate red flags from free-text chief complaint string.
- * Used when structured symptom option IDs are not available.
  */
 export function evaluateRedFlagsFromText(
   chiefComplaint: string,
@@ -92,8 +121,7 @@ export function evaluateRedFlagsFromText(
   for (const rule of RED_FLAG_RULES) {
     const keywords = RED_FLAG_TEXT_KEYWORDS[rule.id] ?? [];
     const matchCount = keywords.filter(kw => text.includes(kw.toLowerCase())).length;
-    // ACS and stroke require 2+ keyword matches; respiratory requires 1+ (already severe by nature)
-    const threshold = rule.category === 'respiratory' ? 1 : 2;
+    const threshold = (rule.category === 'respiratory' || rule.category === 'acute_abdomen') ? 1 : 2;
     if (matchCount >= threshold) {
       triggeredRules.push(rule);
     }
