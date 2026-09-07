@@ -7,7 +7,6 @@ import {
   Mic, ScanLine, FileText, Languages, Zap, Lock,
   CheckCircle2, Activity, ChevronRight, Building2, Landmark
 } from "lucide-react";
-import { AnimatedTerminal } from "@/components/landing/animated-terminal";
 
 export default function HomePage() {
   return (
@@ -58,77 +57,121 @@ export default function HomePage() {
 
       {/* ============================= HERO ============================= */}
       <section className="border-b border-emerald-100/70">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            <div className="lg:col-span-7 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 mb-6">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                All India Institute of Ayurveda · Ministry of Ayush
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-22 lg:pb-24 text-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 mb-6 shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            All India Institute of Ayurveda · Ministry of Ayush · SIH 2026
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl leading-[1.1] font-bold text-slate-900 max-w-3xl mx-auto tracking-tight">
+            India's OPD has two minutes.
+            <br />
+            <span className="text-emerald-700">MediKiosk returns them.</span>
+          </h1>
+
+          <p className="mt-6 text-base sm:text-lg leading-relaxed text-slate-600 max-w-2xl mx-auto font-normal">
+            A self-service multimodal AI clinical intake platform that captures a complete patient history
+            in 8 Indian languages, digitizes physical prescriptions with
+            vision AI, and delivers a structured clinical summary to the
+            doctor's screen before the patient enters the consultation room.
+          </p>
+
+          {/* 4 Interactive Portal Entry Cards */}
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+            <Link
+              href="/login/patient"
+              className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center mb-3.5 group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">Patient Kiosk</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  Multimodal voice & touch intake in 8 Indian languages with prescription OCR.
+                </p>
               </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl leading-[1.08] font-bold text-slate-900">
-                India's OPD has two minutes.
-                <br />
-                <span className="text-emerald-700">MediKiosk returns them.</span>
-              </h1>
-
-              <p className="mt-6 text-base sm:text-lg leading-relaxed text-slate-600 max-w-2xl font-normal">
-                A self-service multimodal terminal that captures a complete patient history
-                in 8 Indian languages, digitizes physical prescriptions with
-                vision AI, and delivers a structured clinical summary to the
-                doctor's screen before the patient enters the consultation room.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/login/patient"
-                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition shadow-sm"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  Patient Kiosk
-                </Link>
-                <Link
-                  href="/desk"
-                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-teal-950 text-sm font-semibold border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition shadow-xs"
-                >
-                  <Building2 className="w-4 h-4 text-teal-700" />
-                  Hospital Desk (Nurse)
-                </Link>
-                <Link
-                  href="/login/doctor"
-                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-emerald-950 text-sm font-semibold border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition shadow-xs"
-                >
-                  <Stethoscope className="w-4 h-4 text-emerald-700" />
-                  Doctor Desk
-                </Link>
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-indigo-950 text-sm font-semibold border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition shadow-xs"
-                >
-                  <Landmark className="w-4 h-4 text-indigo-700" />
-                  Ministry Admin
-                </Link>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                <span>Launch Intake</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
+            </Link>
 
-              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-slate-600">
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200">
-                  <Languages className="w-3.5 h-3.5 text-emerald-600" />
-                  Hindi + 7 Indic languages
-                </span>
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200">
-                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                  DPDP Act 2023 Compliant
-                </span>
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200">
-                  <Zap className="w-3.5 h-3.5 text-emerald-600" />
-                  Realtime HIS sync
-                </span>
+            <Link
+              href="/desk"
+              className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-teal-500 hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center mb-3.5 group-hover:bg-teal-700 group-hover:text-white transition-colors">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-teal-800 transition-colors">Hospital Desk</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  Nurse lobby triage station, doctor & room allotment, and physical vitals logger.
+                </p>
               </div>
-            </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-teal-700">
+                <span>Open Lobby Desk</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
 
-            <div className="lg:col-span-5">
-              <AnimatedTerminal />
-            </div>
+            <Link
+              href="/doctor"
+              className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center mb-3.5 group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">Doctor OPD</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  Live queue, pre-consultation SOAP & Ayush Pariksha, and Rx order sets.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                <span>Consultation Room</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 flex items-center justify-center mb-3.5 group-hover:bg-indigo-700 group-hover:text-white transition-colors">
+                  <Landmark className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-800 transition-colors">Ministry Admin</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  National disease surveillance, tri-dosha analytics, and ABDM FHIR exports.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-700">
+                <span>Access Command</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+          </div>
+
+          <div className="mt-12 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs font-medium text-slate-600">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs">
+              <Languages className="w-3.5 h-3.5 text-emerald-600" />
+              Hindi + 7 Indic languages
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs">
+              <Lock className="w-3.5 h-3.5 text-emerald-600" />
+              DPDP Act 2023 Compliant
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs">
+              <Zap className="w-3.5 h-3.5 text-emerald-600" />
+              Realtime HIS Sync
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              100% ABDM M1/M2/M3 Ready
+            </span>
           </div>
         </div>
       </section>
