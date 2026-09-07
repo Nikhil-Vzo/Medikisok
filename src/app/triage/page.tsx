@@ -36,13 +36,15 @@ export default function TriagePage() {
   React.useEffect(() => {
     loadAlerts();
 
+    const pollInterval = setInterval(loadAlerts, 3000);
+
     try {
       const supabase = createClient();
       const channel = supabase
         .channel("triage_live_emergencies")
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "visits", filter: "is_emergency=eq.true" },
+          { event: "*", schema: "public", table: "visits" },
           () => {
             loadAlerts();
           }
@@ -54,10 +56,12 @@ export default function TriagePage() {
         });
 
       return () => {
+        clearInterval(pollInterval);
         supabase.removeChannel(channel);
       };
     } catch (err) {
       console.warn("Triage realtime error:", err);
+      return () => clearInterval(pollInterval);
     }
   }, [loadAlerts]);
 

@@ -5,7 +5,8 @@ import {
   UserCheck, ShieldCheck, Stethoscope, Mic, Volume2,
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
   FileText, Camera, QrCode, HeartPulse, RefreshCw, Flame, Wind,
-  Thermometer, Activity, Sparkles, AlertTriangle, UserPlus, RotateCcw
+  Thermometer, Activity, Sparkles, AlertTriangle, UserPlus, RotateCcw,
+  History, Shuffle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,6 +31,54 @@ import { computeContinuity, ContinuityDecision } from "@/lib/continuity-engine";
 import { CHIEF_COMPLAINTS, getQuestionsForComplaint } from "@/lib/ontologies/chief-complaints";
 import { KioskStep } from "@/types/kiosk";
 
+const RANDOM_PATIENTS = [
+  { name: "Ramesh Kumar Sharma", age: 48, gender: "Male" },
+  { name: "Priya Anand Patel", age: 34, gender: "Female" },
+  { name: "Mohan Lal Verma", age: 58, gender: "Male" },
+  { name: "Sunita Devi", age: 63, gender: "Female" },
+  { name: "Mohammad Arif", age: 52, gender: "Male" },
+  { name: "Gurpreet Kaur", age: 41, gender: "Female" },
+  { name: "Deepak Joshi", age: 29, gender: "Male" },
+  { name: "Meena Sundaram", age: 67, gender: "Female" },
+  { name: "Vijay Rathore", age: 55, gender: "Male" },
+];
+
+const RETURNING_PRESETS = [
+  {
+    name: "Kamla Devi",
+    age: 62,
+    gender: "Female",
+    abhaId: "91-4523-8819-2041",
+    gapDays: 4,
+    lastVisitDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    lastComplaint: "High grade fever with chills (Pyrexia)",
+    lastMedications: ["Tab Paracetamol 650mg BD", "Tab Cefixime 200mg BD"],
+    label: "Kamla Devi (Visited 4 days ago · Pyrexia Δ4d)",
+  },
+  {
+    name: "Rajesh Patel",
+    age: 54,
+    gender: "Male",
+    abhaId: "91-8834-1192-5503",
+    gapDays: 45,
+    lastVisitDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    lastComplaint: "Retrosternal chest discomfort & Hypertension",
+    lastMedications: ["Tab Telmisartan 40mg OD", "Tab Metformin 500mg BD"],
+    label: "Rajesh Patel (Visited 45 days ago · Chest Heaviness Δ45d)",
+  },
+  {
+    name: "Anil Gupta",
+    age: 38,
+    gender: "Male",
+    abhaId: "91-6621-9943-1209",
+    gapDays: 120,
+    lastVisitDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
+    lastComplaint: "Epigastric burning & abdominal colic",
+    lastMedications: ["Cap Omeprazole 20mg OD"],
+    label: "Anil Gupta (Visited 120 days ago · Baseline Renewal Δ120d)",
+  },
+];
+
 export default function KioskPage() {
   const [step, setStep] = React.useState<KioskStep>("identify");
   const [language, setLanguage] = React.useState("hi");
@@ -40,6 +89,64 @@ export default function KioskPage() {
   const [patientName, setPatientName] = React.useState("Kamla Devi");
   const [patientAge, setPatientAge] = React.useState(62);
   const [patientGender, setPatientGender] = React.useState("Female");
+  const [presetNotice, setPresetNotice] = React.useState<string | null>(null);
+
+  // Generate random ABHA and patient profile
+  const generateRandomPatient = () => {
+    const r4 = () => Math.floor(1000 + Math.random() * 9000).toString();
+    const newAbha = `91-${r4()}-${r4()}-${r4()}`;
+    const pick = RANDOM_PATIENTS[Math.floor(Math.random() * RANDOM_PATIENTS.length)];
+    setAbhaId(newAbha);
+    setPatientName(pick.name);
+    setPatientAge(pick.age);
+    setPatientGender(pick.gender);
+    setIsReturningPatient(false);
+    setContinuity(null);
+    setPresetNotice("Random ABHA & Patient generated for fresh OPD intake");
+    speakConfirmation("language_selected", language);
+  };
+
+  // Select returning patient profile for testing continuity engine
+  const selectReturningPreset = (preset: typeof RETURNING_PRESETS[0]) => {
+    setAbhaId(preset.abhaId);
+    setPatientName(preset.name);
+    setPatientAge(preset.age);
+    setPatientGender(preset.gender);
+    setIsReturningPatient(true);
+    setPresetNotice(
+      `Returning Patient Loaded: Last visited ${preset.gapDays} days ago for "${preset.lastComplaint}". Continuity Engine will adapt intake.`
+    );
+    const decision = computeContinuity({
+      isReturning: true,
+      lastVisitDate: preset.lastVisitDate,
+      lastChiefComplaint: preset.lastComplaint,
+      lastMedications: preset.lastMedications,
+    });
+    setContinuity(decision);
+  };
+
+  const handleAbhaInput = async (val: string) => {
+    setAbhaId(val);
+    setPresetNotice(null);
+    const digits = val.replace(/\D/g, "");
+    if (digits.length >= 14) {
+      try {
+        const res = await fetch(`/api/queue?abhaId=${encodeURIComponent(val)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.found && json.patient) {
+            setPatientName(json.patient.name);
+            if (json.patient.age) setPatientAge(json.patient.age);
+            if (json.patient.gender) setPatientGender(json.patient.gender);
+            setIsReturningPatient(true);
+            setPresetNotice(`Record found in database for ABHA ${val}. Returning patient intake activated.`);
+          }
+        }
+      } catch (e) {
+        // silent fallback
+      }
+    }
+  };
 
   // Consent State
   const [consentGranted, setConsentGranted] = React.useState(false);
@@ -208,50 +315,143 @@ export default function KioskPage() {
               {/* ABHA Input Card */}
               <div className="p-6 sm:p-8 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-6">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <label className="block text-xs font-semibold text-slate-700">
                       14-Digit ABHA ID (Ayushman Bharat Health Account)
                     </label>
                     <span className="text-xs font-medium text-emerald-700">ABDM FHIR R4 Compliant</span>
                   </div>
+
+                  {/* Quick Action Presets Bar */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={generateRandomPatient}
+                      className="h-9 px-3 text-xs font-semibold border border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-900"
+                    >
+                      <Shuffle className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
+                      🎲 Random ABHA / New Patient
+                    </Button>
+
+                    <div className="relative inline-block">
+                      <select
+                        onChange={(e) => {
+                          const idx = Number(e.target.value);
+                          if (!isNaN(idx) && RETURNING_PRESETS[idx]) {
+                            selectReturningPreset(RETURNING_PRESETS[idx]);
+                          }
+                        }}
+                        defaultValue=""
+                        className="h-9 px-3 text-xs font-semibold rounded-md border border-slate-300 bg-white hover:border-emerald-600 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                      >
+                        <option value="" disabled>
+                          📋 Revisit Returning Patient...
+                        </option>
+                        {RETURNING_PRESETS.map((p, idx) => (
+                          <option key={p.abhaId} value={idx}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => selectReturningPreset(RETURNING_PRESETS[0])}
+                      className="h-9 px-2.5 text-xs text-slate-600 hover:text-emerald-700"
+                    >
+                      <QrCode className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                      Kamla Devi
+                    </Button>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="text"
                       value={abhaId}
-                      onChange={(e) => setAbhaId(e.target.value)}
+                      onChange={(e) => handleAbhaInput(e.target.value)}
                       placeholder="91-XXXX-XXXX-XXXX"
-                      className="flex-1 h-14 px-4 rounded-lg border border-slate-200 text-lg font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      className="flex-1 h-14 px-4 rounded-lg border border-slate-200 text-lg font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 tracking-wider font-mono"
                     />
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      onClick={() => {
-                        setAbhaId("91-4523-8819-2041");
-                        setPatientName("Kamla Devi");
-                        setPatientAge(62);
-                      }}
-                      className="shrink-0 h-14 px-4 rounded-lg text-xs font-semibold border border-emerald-200 hover:border-emerald-600 hover:bg-emerald-50"
-                    >
-                      <QrCode className="w-4 h-4 mr-2 text-emerald-700" />
-                      Demo Patient ABHA
-                    </Button>
                   </div>
                 </div>
 
-                {/* Patient Quick Preview */}
-                <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center font-bold text-xs">
-                      KD
+                {/* Preset Notification Banner */}
+                {presetNotice && (
+                  <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2 animate-in fade-in duration-200">
+                    <Sparkles className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                    <span>{presetNotice}</span>
+                  </div>
+                )}
+
+                {/* Patient Editable Demographics Card */}
+                <div className="p-4 sm:p-5 rounded-xl bg-slate-50/80 border border-slate-200/90 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
+                        {patientName ? patientName.slice(0, 2).toUpperCase() : "PT"}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-800">ABDM Demographics Profile</h4>
+                        <p className="text-[11px] text-slate-500">Edit or confirm demographic fields before proceeding</p>
+                      </div>
+                    </div>
+                    <Badge variant="default" className="text-[11px] font-medium bg-emerald-100 text-emerald-900 border border-emerald-300">
+                      ✓ ABDM Verified
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Patient Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:border-emerald-600 focus:outline-none"
+                      />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900">{patientName}</h4>
-                      <p className="text-xs text-slate-500 font-medium">{patientAge} Years · Female · Verified via ABDM</p>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Age (Years)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={patientAge}
+                        onChange={(e) => setPatientAge(Number(e.target.value) || 0)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:border-emerald-600 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Gender
+                      </label>
+                      <div className="flex gap-1 h-10">
+                        {["Male", "Female", "Other"].map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setPatientGender(g)}
+                            className={`flex-1 rounded-lg text-xs font-semibold border transition-all ${
+                              patientGender === g
+                                ? "bg-emerald-700 text-white border-emerald-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <Badge variant="default" className="text-xs font-medium">
-                    ABHA Verified
-                  </Badge>
                 </div>
 
                 <Button

@@ -13,10 +13,12 @@ export function createServerClient() {
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
-    "";
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "sb_publishable_R_d-_JQhRhQ0SQOfj9NZng_FhY8wcBx";
 
   if (!serviceRoleKey) {
-    return null; // caller must guard for null
+    return null;
   }
 
   return createSupabaseClient(supabaseUrl, serviceRoleKey, {

@@ -111,17 +111,28 @@ export default function DoctorPage() {
     return `${mins.toString().padStart(2, "0")}:${remainder.toString().padStart(2, "0")}`;
   };
 
-  // Load from Supabase on mount
+  // Load from Supabase and /api/queue on mount
   const loadQueue = React.useCallback(async () => {
     const remotePatients = await fetchQueuePatientsFromSupabase();
     if (remotePatients && remotePatients.length > 0) {
       setPatients(remotePatients);
-      setSelectedPatient(remotePatients[0]);
+      setSelectedPatient((prev) => {
+        if (prev) {
+          const match = remotePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId);
+          if (match) return match;
+        }
+        return remotePatients[0];
+      });
     }
   }, []);
 
   React.useEffect(() => {
     loadQueue();
+
+    // 3-second polling to guarantee real-time updates across browsers/tabs
+    const pollInterval = setInterval(() => {
+      loadQueue();
+    }, 3000);
 
     // Setup Supabase Realtime Subscription
     try {
@@ -130,7 +141,7 @@ export default function DoctorPage() {
         .channel("doctor_live_visits")
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "visits" },
+          { event: "*", schema: "public", table: "visits" },
           () => {
             loadQueue();
           }
@@ -142,10 +153,12 @@ export default function DoctorPage() {
         });
 
       return () => {
+        clearInterval(pollInterval);
         supabase.removeChannel(channel);
       };
     } catch (err) {
       console.warn("Realtime channel setup error:", err);
+      return () => clearInterval(pollInterval);
     }
   }, [loadQueue]);
 
