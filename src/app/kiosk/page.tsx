@@ -6,7 +6,7 @@ import {
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
   FileText, Camera, QrCode, HeartPulse, RefreshCw, Flame, Wind,
   Thermometer, Activity, Sparkles, AlertTriangle, UserPlus, RotateCcw,
-  History, Shuffle
+  History, Shuffle, Clock, Printer, MapPin, Calendar, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -206,6 +206,17 @@ export default function KioskPage() {
     proceduresSurgeries: [],
     allergies: []
   });
+
+  // Dynamic OPD visit slot time & reporting time (computed for completion step)
+  const opdVisitTime = React.useMemo(() => {
+    const d = new Date(Date.now() + 15 * 60 * 1000);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  }, [step]);
+
+  const opdReportByTime = React.useMemo(() => {
+    const d = new Date(Date.now() + 10 * 60 * 1000);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  }, [step]);
 
   const stepsList = [
     { id: "identify", label: "Identity", labelHindi: "पहचान" },
@@ -1137,24 +1148,107 @@ export default function KioskPage() {
 
           {/* ================= STEP 8: COMPLETED ================= */}
           {step === "completed" && (
-            <div className="text-center p-8 sm:p-12 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-6 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto w-full">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-8 h-8" />
+            <div className="text-center p-5 sm:p-7 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-4 animate-in zoom-in-95 duration-300 max-w-2xl mx-auto w-full">
+              {/* Success Badge */}
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-800 border-2 border-emerald-200 flex items-center justify-center mx-auto shadow-xs">
+                <CheckCircle2 className="w-7 h-7" />
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-3xl font-semibold tracking-tight text-slate-900">
+              {/* Title & Assigned Doctor/Room */}
+              <div className="space-y-1.5">
+                <Badge variant="default" className="text-[11px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5">
+                  ✓ Case Routed to HIS & OPD Desk
+                </Badge>
+                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
                   Token #42 — Room 3 (Dr. Sharma)
                 </h3>
-                <p className="text-sm text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
-                  Aapka case doctor ke desk par bhej diya gaya hai. Doctor aapke aane se pehle poori clinical summary review kar rahe hain.
+                <p className="text-xs text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+                  {language === "hi"
+                    ? "आपका क्लिनिकल सारांश और डिजिटाइज़्ड पर्चे डॉक्टर के स्क्रीन पर भेज दिए गए हैं।"
+                    : "Your intake summary and digitized prescriptions have been pushed to the doctor's screen."}
                 </p>
               </div>
 
-              <div className="pt-2 flex justify-center gap-3">
+              {/* ── Highlighted OPD Visit Time & Reporting Slot ── */}
+              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-left space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/80 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wide block">
+                        {language === "hi" ? "ओपीडी परामर्श समय (OPD Visit Slot)" : "Scheduled OPD Visit Time"}
+                      </span>
+                      <span className="text-xl sm:text-2xl font-extrabold text-emerald-900">
+                        {opdVisitTime} · Today (आज)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="sm:text-right">
+                    <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300 inline-block">
+                      {language === "hi" ? "~12-15 मिनट प्रतीक्षा" : "~12-15 Mins Wait"}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-1">
+                      {language === "hi" ? "कतार में आगे: 3 मरीज़" : "3 Patients Ahead in Queue"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* OPD Schedule & Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white rounded-lg border border-emerald-100 space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span>{language === "hi" ? "स्थान व कमरा" : "Location & OPD Room"}</span>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">Room 3 · 1st Floor</p>
+                    <p className="text-[11px] text-slate-500">OPD Block B, Ayush Integrative Wing</p>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-lg border border-emerald-100 space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span>{language === "hi" ? "ओपीडी कार्य समय (Timings)" : "Hospital OPD Timings"}</span>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">08:30 AM – 01:30 PM</p>
+                    <p className="text-[11px] text-slate-500">Afternoon: 02:00 PM – 04:30 PM</p>
+                  </div>
+                </div>
+
+                {/* Reporting Instructions alert */}
+                <div className="flex items-start gap-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-xs text-amber-900">
+                  <Bell className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">
+                      {language === "hi"
+                        ? `कृपया ${opdVisitTime} से 5 मिनट पहले (करीब ${opdReportByTime} तक) रूम 3 के प्रतीक्षालय में उपस्थित रहें।`
+                        : `Please report to the waiting lobby outside Room 3 by ${opdReportByTime} (for your ${opdVisitTime} appointment slot).`}
+                    </span>
+                    <span className="text-[11px] text-amber-800">
+                      {language === "hi"
+                        ? "स्क्रीन पर टोकन #42 आने पर या आवाज़ लगने पर डॉक्टर के कमरे में प्रवेश करें।"
+                        : "When Token #42 is displayed on the LED screen or called by voice pager, please enter."}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-wrap justify-center items-center gap-3">
                 <Button
-                  variant="secondary"
-                  size="lg"
+                  variant="outline"
+                  size="md"
+                  onClick={() => window.print()}
+                  className="font-semibold text-xs rounded-lg border border-emerald-300 hover:bg-emerald-50 text-emerald-900 h-11 px-4 shadow-xs"
+                >
+                  <Printer className="w-4 h-4 mr-2 text-emerald-700" />
+                  {language === "hi" ? "ओपीडी टोकन पर्ची प्रिंट करें" : "Print OPD Token Slip"}
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={() => {
                     setSelectedAnswers({});
                     setCurrentQuestionIndex(0);
@@ -1168,10 +1262,10 @@ export default function KioskPage() {
                     setVoiceTranscript("");
                     setStep("identify");
                   }}
-                  className="font-semibold text-xs rounded-lg border border-emerald-200 hover:border-emerald-600 hover:bg-emerald-50 text-emerald-900 h-11 px-5"
+                  className="font-semibold text-xs rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white h-11 px-5 shadow-sm"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2 text-emerald-700" />
-                  Agla Mareez (Next Patient)
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {language === "hi" ? "अगला मरीज़ (Next Patient)" : "Next Patient Intake"}
                 </Button>
               </div>
             </div>
