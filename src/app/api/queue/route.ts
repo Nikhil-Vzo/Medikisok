@@ -148,18 +148,40 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Merge in-memory queue with DB queue (deduplicating by visitId / abhaId)
+    // Merge in-memory queue with DB queue (deduplicating by unique patient identity)
     const combinedMap = new Map<string, LiveQueueItem>();
-    
-    // In-memory queue items (most recent first)
-    for (const item of (globalQueue.__liveOpdQueue || [])) {
-      combinedMap.set(item.visitId, item);
-    }
-    
-    // DB items
-    for (const item of dbQueue) {
-      if (!combinedMap.has(item.visitId)) {
-        combinedMap.set(item.visitId, item);
+
+    const getPatientKey = (item: LiveQueueItem) => {
+      const cleanAbha = (item.abhaId || "").replace(/\D/g, "");
+      if (cleanAbha.length >= 10 && !cleanAbha.includes("0000000000")) {
+        return `abha_${cleanAbha}`;
+      }
+      const cleanName = (item.name || "").toLowerCase().trim();
+      return `name_${cleanName}`;
+    };
+
+    // Candidates: in-memory items followed by DB items
+    const candidates = [...(globalQueue.__liveOpdQueue || []), ...dbQueue];
+
+    for (const item of candidates) {
+      const key = getPatientKey(item);
+      const existing = combinedMap.get(key);
+      if (!existing) {
+        combinedMap.set(key, item);
+      } else {
+        // Keep the newest visit for this patient and merge any vitals / allotment
+        const itemTime = new Date(item.createdAt || 0).getTime();
+        const existTime = new Date(existing.createdAt || 0).getTime();
+        if (itemTime >= existTime) {
+          if (!item.nurseVitals && existing.nurseVitals) item.nurseVitals = existing.nurseVitals;
+          if (!item.assignedRoom && existing.assignedRoom) item.assignedRoom = existing.assignedRoom;
+          if (!item.assignedDoctor && existing.assignedDoctor) item.assignedDoctor = existing.assignedDoctor;
+          combinedMap.set(key, item);
+        } else {
+          if (!existing.nurseVitals && item.nurseVitals) existing.nurseVitals = item.nurseVitals;
+          if (!existing.assignedRoom && item.assignedRoom) existing.assignedRoom = item.assignedRoom;
+          if (!existing.assignedDoctor && item.assignedDoctor) existing.assignedDoctor = item.assignedDoctor;
+        }
       }
     }
 
@@ -357,6 +379,28 @@ export async function PATCH(req: NextRequest) {
       assignedDoctor,
       calledStatus,
     });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const visitId = searchParams.get("visitId");
+    const clearAll = searchParams.get("all") === "true";
+
+    if (clearAll) {
+      globalQueue.__liveOpdQueue = [];
+      return NextResponse.json({ success: true, message: "Queue cleared" });
+    }
+
+    if (visitId && globalQueue.__liveOpdQueue) {
+      globalQueue.__liveOpdQueue = globalQueue.__liveOpdQueue.filter((q) => q.visitId !== visitId);
+      return NextResponse.json({ success: true, message: `Removed visit ${visitId}` });
+    }
+
+    return NextResponse.json({ success: false, error: "Missing visitId or all parameter" }, { status: 400 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -12,6 +12,7 @@ import { OcrDocumentInspector } from "@/components/doctor/ocr-document-inspector
 import { ClinicalMacros } from "@/components/doctor/clinical-macros";
 import { FhirBundleModal } from "@/components/doctor/fhir-bundle-modal";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils/cn";
 import { buildFhirR4Bundle } from "@/lib/abdm/fhir-builder";
 import { fetchQueuePatientsFromSupabase, approveSummaryInSupabase, sendToHisStub } from "@/lib/supabase/db";
 import { createClient } from "@/lib/supabase/client";
@@ -111,17 +112,40 @@ export default function DoctorPage() {
     return `${mins.toString().padStart(2, "0")}:${remainder.toString().padStart(2, "0")}`;
   };
 
-  // Load from Supabase and /api/queue on mount
+  // Load from Supabase and /api/queue on mount with client-side deduplication
   const loadQueue = React.useCallback(async () => {
     const remotePatients = await fetchQueuePatientsFromSupabase();
     if (remotePatients && remotePatients.length > 0) {
-      setPatients(remotePatients);
+      // Deduplicate by unique patient identity (ABHA or name)
+      const dedupMap = new Map<string, any>();
+      for (const p of remotePatients) {
+        const cleanAbha = (p.abhaId || "").replace(/\D/g, "");
+        const key = cleanAbha.length >= 10 && !cleanAbha.includes("0000000000")
+          ? `abha_${cleanAbha}`
+          : `name_${(p.name || "").toLowerCase().trim()}`;
+        if (!dedupMap.has(key)) {
+          dedupMap.set(key, p);
+        } else {
+          // Compare dates and keep newer
+          const existing = dedupMap.get(key);
+          const pTime = new Date(p.createdAt || 0).getTime();
+          const existTime = new Date(existing.createdAt || 0).getTime();
+          if (pTime >= existTime) {
+            if (!p.nurseVitals && existing.nurseVitals) p.nurseVitals = existing.nurseVitals;
+            if (!p.assignedRoom && existing.assignedRoom) p.assignedRoom = existing.assignedRoom;
+            if (!p.assignedDoctor && existing.assignedDoctor) p.assignedDoctor = existing.assignedDoctor;
+            dedupMap.set(key, p);
+          }
+        }
+      }
+      const uniquePatients = Array.from(dedupMap.values());
+      setPatients(uniquePatients);
       setSelectedPatient((prev) => {
         if (prev) {
-          const match = remotePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId);
+          const match = uniquePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId || p.abhaId === prev.abhaId);
           if (match) return match;
         }
-        return remotePatients[0];
+        return uniquePatients[0];
       });
     }
   }, []);
@@ -304,116 +328,126 @@ export default function DoctorPage() {
               patients={patients}
               selectedVisitId={selectedPatient.visitId}
               onSelectPatient={setSelectedPatient}
+              onRefresh={loadQueue}
             />
           </div>
 
           {/* Right Column: Active Case Workspace */}
           <div className="lg:col-span-8 space-y-5">
-            {/* Patient Quick Context Card */}
-            <div className="p-5 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-center font-bold text-sm">
-                  {selectedPatient.name[0]}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[16px] font-semibold text-slate-900">{selectedPatient.name}</h3>
-                    <span className="text-xs text-slate-500 font-medium">
-                      {selectedPatient.age}y / {selectedPatient.gender}
-                    </span>
-                    {selectedPatient.isEmergency && (
-                      <Badge variant="danger" className="text-xs font-medium">
-                        EMERGENCY
-                      </Badge>
+            {/* Unified Clinical Case & Telemetry Header */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+              {/* Core Demographics & Allotment Bar */}
+              <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5">
+                  <div
+                    className={cn(
+                      "w-11 h-11 rounded-lg flex items-center justify-center font-bold text-base border shrink-0",
+                      selectedPatient.isEmergency
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-emerald-50 text-emerald-900 border-emerald-200"
                     )}
+                  >
+                    {selectedPatient.name.charAt(0)}
                   </div>
-                  <p className="text-xs font-medium text-slate-500 mt-0.5">
-                    ABHA: {selectedPatient.abhaId} · DPDP 2023 Consent Granted
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-bold text-slate-900">{selectedPatient.name}</h3>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                        {selectedPatient.age}y · {selectedPatient.gender}
+                      </span>
+                      {selectedPatient.isEmergency && (
+                        <Badge variant="danger" className="text-xs font-bold animate-pulse">
+                          EMERGENCY
+                        </Badge>
+                      )}
+                      {selectedPatient.assignedRoom && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-900 border border-emerald-200">
+                          {selectedPatient.assignedRoom} {selectedPatient.assignedDoctor ? `(${selectedPatient.assignedDoctor})` : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
+                      <span>ABHA: <strong className="text-slate-700 font-semibold">{selectedPatient.abhaId}</strong></span>
+                      <span>·</span>
+                      <span className="text-emerald-700 font-medium">DPDP 2023 Consented</span>
+                      {selectedPatient.clinicalMode && (
+                        <>
+                          <span>·</span>
+                          <span className="text-slate-600 font-medium capitalize">{selectedPatient.clinicalMode} Mode</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200 shadow-2xs">
+                    Case Ready &lt;15s
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200">
-                  Case Ready &lt;15s
-                </span>
-              </div>
-            </div>
-
-            {/* Nurse Lobby Pre-Screening & Vitals Banner */}
-            {(selectedPatient.assignedRoom || selectedPatient.nurseVitals) && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/90 to-teal-50/80 border border-emerald-200/90 shadow-xs space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-emerald-700 text-white flex items-center justify-center">
-                      <ClipboardCheck className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-semibold text-emerald-950">
-                      Pre-Screened at Lobby Hospital Desk
+              {/* Vitals Telemetry Strip */}
+              {selectedPatient.nurseVitals ? (
+                <div className="border-t border-slate-100 bg-slate-50/75 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                    <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+                      <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" /> Pre-Screening Vitals
                     </span>
-                    {selectedPatient.assignedRoom && (
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-700 text-white shadow-xs">
-                        Allotted to: {selectedPatient.assignedRoom} {selectedPatient.assignedDoctor ? `(${selectedPatient.assignedDoctor})` : ""}
+                    {selectedPatient.nurseVitals.recordedAt && (
+                      <span className="text-slate-400">
+                        Logged {new Date(selectedPatient.nurseVitals.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {selectedPatient.nurseVitals.nurseName || "Staff Nurse"}
                       </span>
                     )}
                   </div>
-                  {selectedPatient.nurseVitals?.recordedAt && (
-                    <span className="text-[11px] text-emerald-800/80">
-                      Logged {new Date(selectedPatient.nurseVitals.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {selectedPatient.nurseVitals.nurseName || "Staff Nurse"}
-                    </span>
-                  )}
-                </div>
 
-                {/* Vitals metrics */}
-                {selectedPatient.nurseVitals && (
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">BP</span>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">BP</span>
                       <span className="text-xs font-bold text-slate-900">
-                        {selectedPatient.nurseVitals.bloodPressure || "—"} <span className="text-[10px] font-normal text-slate-500">mmHg</span>
+                        {selectedPatient.nurseVitals.bloodPressure || "—"} <span className="text-[10px] font-normal text-slate-400">mmHg</span>
                       </span>
                     </div>
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Pulse</span>
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Pulse</span>
                       <span className="text-xs font-bold text-slate-900">
                         {selectedPatient.nurseVitals.pulseRate ? `${selectedPatient.nurseVitals.pulseRate} bpm` : "—"}
                       </span>
                     </div>
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">SpO2</span>
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">SpO2</span>
                       <span className="text-xs font-bold text-slate-900">
                         {selectedPatient.nurseVitals.spo2 ? `${selectedPatient.nurseVitals.spo2}%` : "—"}
                       </span>
                     </div>
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Temp</span>
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Temp</span>
                       <span className="text-xs font-bold text-slate-900">
                         {selectedPatient.nurseVitals.temperature ? `${selectedPatient.nurseVitals.temperature}°F` : "—"}
                       </span>
                     </div>
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Weight</span>
-                      <span className="text-xs font-bold text-slate-900">
-                        {selectedPatient.nurseVitals.weightKg ? `${selectedPatient.nurseVitals.weightKg} kg` : "—"}
-                      </span>
-                    </div>
-                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Blood Sugar</span>
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Sugar</span>
                       <span className="text-xs font-bold text-slate-900">
                         {selectedPatient.nurseVitals.bloodSugar ? `${selectedPatient.nurseVitals.bloodSugar} mg/dL` : "—"}
                       </span>
                     </div>
+                    <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Weight</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.weightKg ? `${selectedPatient.nurseVitals.weightKg} kg` : "—"}
+                      </span>
+                    </div>
                   </div>
-                )}
 
-                {/* Nurse triage notes */}
-                {selectedPatient.nurseNotes && (
-                  <p className="text-xs text-emerald-950 bg-white/80 px-3 py-1.5 rounded-md border border-emerald-100/80">
-                    <span className="font-semibold text-emerald-900">Nurse Triage Notes:</span> {selectedPatient.nurseNotes}
-                  </p>
-                )}
-              </div>
-            )}
+                  {selectedPatient.nurseNotes && (
+                    <p className="text-xs text-slate-700 bg-white px-3 py-1.5 rounded-md border border-slate-200/80">
+                      <strong className="text-emerald-900 font-semibold">Triage Note:</strong> {selectedPatient.nurseNotes}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
 
             {/* Red-Flag Triage Alert Banner — shown when chief complaint/vitals trigger red-flag rules */}
             {triggeredRedFlags.isEmergency && (
