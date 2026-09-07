@@ -202,7 +202,7 @@ export async function fetchQueuePatientsFromSupabase() {
       return null;
     }
 
-    return visits.map((v: any) => {
+    return visits.map((v: any, index: number) => {
       const p = v.profiles || {};
       const s = v.summaries?.[0] || {};
       const waitTime = Math.max(
@@ -223,6 +223,11 @@ export async function fetchQueuePatientsFromSupabase() {
         isEmergency: Boolean(v.is_emergency),
         waitTimeMins: waitTime,
         status: (s.status === "approved" ? "completed" : "waiting") as "completed" | "waiting" | "in_consultation",
+        tokenNumber: s.draft_summary?.tokenNumber || (index + 1),
+        assignedDoctor: s.draft_summary?.doctorAllotment?.doctorName,
+        assignedRoom: s.draft_summary?.doctorAllotment?.roomNumber,
+        nurseVitals: s.draft_summary?.nurseVitals,
+        nurseNotes: s.draft_summary?.nurseVitals?.triageNotes,
         draftSummary: s.draft_summary,
         fhirBundle: s.fhir_bundle,
       };

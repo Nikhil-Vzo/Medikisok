@@ -19,6 +19,23 @@ export interface LiveQueueItem {
   fhirBundle?: any;
   scannedDocuments?: any[];
   suggestions?: any[];
+  assignedDoctor?: string;
+  assignedRoom?: string;
+  nurseVitals?: {
+    bloodPressureSys?: number;
+    bloodPressureDia?: number;
+    pulseRate?: number;
+    spo2?: number;
+    temperature?: number;
+    weightKg?: number;
+    bloodSugarMgDl?: number;
+    nurseNotes?: string;
+    recordedAt?: string;
+  };
+  nurseNotes?: string;
+  calledStatus?: "waiting" | "called" | "with_doctor";
+  calledAt?: string;
+  hospitalName?: string;
 }
 
 // In-memory queue cache on server for sub-millisecond sync across kiosk, doctor, and triage
@@ -279,13 +296,39 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { visitId, status, doctorNotes } = await req.json();
+    const {
+      visitId,
+      status,
+      doctorNotes,
+      assignedDoctor,
+      assignedRoom,
+      nurseVitals,
+      nurseNotes,
+      calledStatus,
+      calledAt,
+      medications,
+      allergies,
+    } = await req.json();
+
     if (globalQueue.__liveOpdQueue) {
       const item = globalQueue.__liveOpdQueue.find((q) => q.visitId === visitId);
       if (item) {
-        item.status = status;
-        if (doctorNotes && item.draftSummary) {
-          item.draftSummary.doctorNotes = doctorNotes;
+        if (status) item.status = status;
+        if (assignedDoctor !== undefined) item.assignedDoctor = assignedDoctor;
+        if (assignedRoom !== undefined) item.assignedRoom = assignedRoom;
+        if (nurseVitals) item.nurseVitals = { ...item.nurseVitals, ...nurseVitals };
+        if (nurseNotes !== undefined) item.nurseNotes = nurseNotes;
+        if (calledStatus) item.calledStatus = calledStatus;
+        if (calledAt) item.calledAt = calledAt;
+
+        if (item.draftSummary) {
+          if (doctorNotes) item.draftSummary.doctorNotes = doctorNotes;
+          if (nurseNotes) item.draftSummary.nurseNotes = nurseNotes;
+          if (nurseVitals) item.draftSummary.nurseVitals = item.nurseVitals;
+          if (assignedDoctor) item.draftSummary.assignedDoctor = assignedDoctor;
+          if (assignedRoom) item.draftSummary.assignedRoom = assignedRoom;
+          if (medications) item.draftSummary.currentMedications = medications;
+          if (allergies) item.draftSummary.allergies = allergies;
         }
       }
     }
@@ -293,16 +336,27 @@ export async function PATCH(req: NextRequest) {
     const supabase = createServerClient();
     if (supabase && visitId) {
       try {
-        await supabase
-          .from("summaries")
-          .update({ status: status === "completed" ? "approved" : "in_consultation" })
-          .eq("visit_id", visitId);
+        const updatePayload: any = {};
+        if (status) updatePayload.status = status === "completed" ? "approved" : "in_consultation";
+        if (Object.keys(updatePayload).length > 0) {
+          await supabase
+            .from("summaries")
+            .update(updatePayload)
+            .eq("visit_id", visitId);
+        }
       } catch (e) {
         console.warn("Supabase status update note:", e);
       }
     }
 
-    return NextResponse.json({ success: true, visitId, status });
+    return NextResponse.json({
+      success: true,
+      visitId,
+      status,
+      assignedRoom,
+      assignedDoctor,
+      calledStatus,
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   UserCheck, Stethoscope, ArrowRight, ShieldCheck,
   Mic, ScanLine, FileText, Languages, Zap, Lock,
-  CheckCircle2, Activity, ChevronRight
+  CheckCircle2, Activity, ChevronRight, Building2, Landmark
 } from "lucide-react";
 import { AnimatedTerminal } from "@/components/landing/animated-terminal";
 
@@ -25,19 +25,34 @@ export default function HomePage() {
               SIH 2026
             </span>
           </Link>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <a href="#problem" className="hover:text-emerald-800 transition">Problem</a>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+            <Link href="/desk" className="hover:text-emerald-800 transition font-medium">
+              Hospital Desk
+            </Link>
+            <Link href="/doctor" className="hover:text-emerald-800 transition font-medium">
+              Doctor OPD
+            </Link>
+            <Link href="/admin" className="hover:text-emerald-800 transition font-medium">
+              Ministry Portal
+            </Link>
             <a href="#system" className="hover:text-emerald-800 transition">System</a>
-            <a href="#continuity" className="hover:text-emerald-800 transition">Continuity</a>
             <a href="#trust" className="hover:text-emerald-800 transition">Trust</a>
           </nav>
-          <Link
-            href="/login/patient"
-            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-md bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition shadow-xs"
-          >
-            <span>Launch Kiosk</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 px-3 h-9 rounded-md bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:border-emerald-300 hover:text-emerald-900 transition shadow-xs"
+            >
+              <span>Portals</span>
+            </Link>
+            <Link
+              href="/login/patient"
+              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-md bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition shadow-xs"
+            >
+              <span>Launch Kiosk</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -64,20 +79,34 @@ export default function HomePage() {
                 doctor's screen before the patient enters the consultation room.
               </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/login/patient"
                   className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition shadow-sm"
                 >
                   <UserCheck className="w-4 h-4" />
-                  Try the patient kiosk
+                  Patient Kiosk
+                </Link>
+                <Link
+                  href="/desk"
+                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-teal-950 text-sm font-semibold border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition shadow-xs"
+                >
+                  <Building2 className="w-4 h-4 text-teal-700" />
+                  Hospital Desk (Nurse)
                 </Link>
                 <Link
                   href="/login/doctor"
                   className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-emerald-950 text-sm font-semibold border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition shadow-xs"
                 >
                   <Stethoscope className="w-4 h-4 text-emerald-700" />
-                  Open the doctor workspace
+                  Doctor Desk
+                </Link>
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-indigo-950 text-sm font-semibold border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition shadow-xs"
+                >
+                  <Landmark className="w-4 h-4 text-indigo-700" />
+                  Ministry Admin
                 </Link>
               </div>
 
@@ -329,28 +358,35 @@ export default function HomePage() {
               workflow. Both run live in this build.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href="/login/patient"
                 className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition shadow-sm"
               >
                 <UserCheck className="w-4 h-4" />
-                Patient kiosk
+                Patient Kiosk
                 <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Link>
+              <Link
+                href="/desk"
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-teal-950 text-sm font-semibold border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition shadow-xs"
+              >
+                <Building2 className="w-4 h-4 text-teal-700" />
+                Hospital Desk
               </Link>
               <Link
                 href="/doctor"
                 className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-emerald-950 text-sm font-semibold border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition shadow-xs"
               >
                 <Stethoscope className="w-4 h-4 text-emerald-700" />
-                Doctor workspace
+                Doctor Workspace
               </Link>
               <Link
-                href="/triage"
-                className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-slate-700 text-sm font-semibold border border-slate-200 hover:border-slate-300 transition shadow-xs"
+                href="/admin"
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-white text-indigo-950 text-sm font-semibold border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition shadow-xs"
               >
-                <Activity className="w-4 h-4 text-slate-600" />
-                Triage monitor
+                <Landmark className="w-4 h-4 text-indigo-700" />
+                Ministry Admin
               </Link>
             </div>
           </div>

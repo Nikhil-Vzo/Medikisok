@@ -98,8 +98,33 @@ export interface ClinicalSummaryDraft {
   reviewOfSystems?: Record<string, string>;
   scannedDocumentsSummary: string;
   doctorNotes?: string;
+  nurseNotes?: string;
+  nurseVitals?: NurseVitals;
+  assignedDoctor?: string;
+  assignedRoom?: string;
   status: 'draft' | 'approved' | 'amended' | 'rejected';
   isEmergencyTriage: boolean;
   createdAt: string;
   classicalHistory?: ClassicalEightPartHistory;
+}
+
+export interface NurseVitals {
+  bloodPressureSys?: number;
+  bloodPressureDia?: number;
+  pulseRate?: number;
+  spo2?: number;
+  temperature?: number;
+  respiratoryRate?: number;
+  weightKg?: number;
+  bloodSugarMgDl?: number;
+  recordedAt?: string;
+  nurseNotes?: string;
+}
+
+export interface DoctorAllotment {
+  doctorId: string;
+  doctorName: string;
+  department: string;
+  roomNumber: string;
+  allottedAt: string;
 }

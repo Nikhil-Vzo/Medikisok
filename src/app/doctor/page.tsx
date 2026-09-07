@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Stethoscope, User, AlertCircle, CheckCircle2, FileText, Code2, RefreshCw, Eye, Wifi, Clock, Play, Pause, RotateCcw, ArrowRight } from "lucide-react";
+import { Stethoscope, User, AlertCircle, CheckCircle2, FileText, Code2, RefreshCw, Eye, Wifi, Clock, Play, Pause, RotateCcw, ArrowRight, ClipboardCheck } from "lucide-react";
 import { PatientQueueTable, QueuePatient } from "@/components/doctor/patient-queue-table";
 import { SoapSummaryEditor } from "@/components/doctor/soap-summary-editor";
 import { AyushParikshaCard } from "@/components/doctor/ayush-pariksha-card";
@@ -339,6 +339,81 @@ export default function DoctorPage() {
                 </span>
               </div>
             </div>
+
+            {/* Nurse Lobby Pre-Screening & Vitals Banner */}
+            {(selectedPatient.assignedRoom || selectedPatient.nurseVitals) && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/90 to-teal-50/80 border border-emerald-200/90 shadow-xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-emerald-700 text-white flex items-center justify-center">
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-950">
+                      Pre-Screened at Lobby Hospital Desk
+                    </span>
+                    {selectedPatient.assignedRoom && (
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-700 text-white shadow-xs">
+                        Allotted to: {selectedPatient.assignedRoom} {selectedPatient.assignedDoctor ? `(${selectedPatient.assignedDoctor})` : ""}
+                      </span>
+                    )}
+                  </div>
+                  {selectedPatient.nurseVitals?.recordedAt && (
+                    <span className="text-[11px] text-emerald-800/80">
+                      Logged {new Date(selectedPatient.nurseVitals.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {selectedPatient.nurseVitals.nurseName || "Staff Nurse"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Vitals metrics */}
+                {selectedPatient.nurseVitals && (
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">BP</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.bloodPressure || "—"} <span className="text-[10px] font-normal text-slate-500">mmHg</span>
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Pulse</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.pulseRate ? `${selectedPatient.nurseVitals.pulseRate} bpm` : "—"}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">SpO2</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.spo2 ? `${selectedPatient.nurseVitals.spo2}%` : "—"}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Temp</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.temperature ? `${selectedPatient.nurseVitals.temperature}°F` : "—"}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Weight</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.weightKg ? `${selectedPatient.nurseVitals.weightKg} kg` : "—"}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-lg border border-emerald-100/90">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Blood Sugar</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedPatient.nurseVitals.bloodSugar ? `${selectedPatient.nurseVitals.bloodSugar} mg/dL` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nurse triage notes */}
+                {selectedPatient.nurseNotes && (
+                  <p className="text-xs text-emerald-950 bg-white/80 px-3 py-1.5 rounded-md border border-emerald-100/80">
+                    <span className="font-semibold text-emerald-900">Nurse Triage Notes:</span> {selectedPatient.nurseNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Red-Flag Triage Alert Banner — shown when chief complaint/vitals trigger red-flag rules */}
             {triggeredRedFlags.isEmergency && (

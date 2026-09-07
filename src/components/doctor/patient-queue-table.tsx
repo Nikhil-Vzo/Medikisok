@@ -17,6 +17,28 @@ export interface QueuePatient {
   isEmergency: boolean;
   waitTimeMins: number;
   status: "waiting" | "in_consultation" | "completed";
+  tokenNumber?: number;
+  assignedDoctor?: string;
+  assignedRoom?: string;
+  nurseVitals?: {
+    bloodPressure?: string;
+    pulseRate?: number;
+    spo2?: number;
+    temperature?: number;
+    respiratoryRate?: number;
+    weightKg?: number;
+    bloodSugar?: number;
+    recordedAt?: string;
+    nurseName?: string;
+    triageNotes?: string;
+  };
+  nurseNotes?: string;
+  isCalled?: boolean;
+  verifiedMedications?: any[];
+  draftSummary?: any;
+  fhirBundle?: any;
+  suggestions?: any[];
+  scannedDocuments?: any[];
 }
 
 export interface PatientQueueTableProps {
@@ -92,6 +114,11 @@ export const PatientQueueTable: React.FC<PatientQueueTableProps> = ({
                       <Badge variant={patient.clinicalMode === "ayush" ? "vedic" : "default"} className="text-xs py-0 px-2 font-medium">
                         {patient.clinicalMode === "ayush" ? "Ayush" : "Allopathy"}
                       </Badge>
+                      {patient.assignedRoom && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100/80 text-emerald-900 border border-emerald-200">
+                          {patient.assignedRoom}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-xs text-slate-600 truncate mt-1">
