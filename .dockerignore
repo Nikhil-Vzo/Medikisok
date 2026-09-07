@@ -1,0 +1,19 @@
+.git
+.gitignore
+.env*.local
+.env
+.next
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+.vercelignore
+render.yaml
+docs/
+supabase/
+*.md
+!README.md
+choosen problem statemet.txt
+reasearch done by user.txt
+doctor.png

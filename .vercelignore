@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env*.local
+.env
+supabase/
+docs/
+*.md
+!README.md
+choosen problem statemet.txt
+reasearch done by user.txt
+doctor.png
+Dockerfile
+docker-compose*.yml
+.dockerignore
+render.yaml

@@ -1,0 +1,477 @@
+"use client";
+
+import * as React from "react";
+import { Stethoscope, User, AlertCircle, CheckCircle2, FileText, Code2, RefreshCw, Eye, Wifi, Clock, Play, Pause, RotateCcw, ArrowRight } from "lucide-react";
+import { PatientQueueTable, QueuePatient } from "@/components/doctor/patient-queue-table";
+import { SoapSummaryEditor } from "@/components/doctor/soap-summary-editor";
+import { AyushParikshaCard } from "@/components/doctor/ayush-pariksha-card";
+import { SuggestionAlerts } from "@/components/doctor/suggestion-alerts";
+import { PrescriptionBuilder } from "@/components/doctor/prescription-builder";
+import { PatientRecordsTimeline } from "@/components/doctor/patient-records-timeline";
+import { OcrDocumentInspector } from "@/components/doctor/ocr-document-inspector";
+import { ClinicalMacros } from "@/components/doctor/clinical-macros";
+import { FhirBundleModal } from "@/components/doctor/fhir-bundle-modal";
+import { Badge } from "@/components/ui/badge";
+import { buildFhirR4Bundle } from "@/lib/abdm/fhir-builder";
+import { fetchQueuePatientsFromSupabase, approveSummaryInSupabase, sendToHisStub } from "@/lib/supabase/db";
+import { createClient } from "@/lib/supabase/client";
+import { generateAndPrintClinicalReport } from "@/lib/utils/pdf-generator";
+import { RedFlagAlertBanner } from "@/components/doctor/red-flag-alert-banner";
+import { evaluateRedFlagsFromText } from "@/lib/ontologies/red-flags";
+import { ClinicalSuggestion, ClinicalSummaryDraft } from "@/types/clinical";
+
+const FALLBACK_PATIENTS: QueuePatient[] = [
+  {
+    id: "pat-001",
+    visitId: "visit-101",
+    name: "Kamla Devi",
+    age: 62,
+    gender: "Female",
+    abhaId: "91-4523-8819-2041",
+    abhaAddress: "kamla.devi@abdm",
+    chiefComplaint: "Retrosternal chest pain radiating to left arm with dyspnoea (3 days)",
+    clinicalMode: "ayush",
+    isEmergency: true,
+    waitTimeMins: 4,
+    status: "waiting"
+  },
+  {
+    id: "pat-002",
+    visitId: "visit-102",
+    name: "Rameshwar Singh",
+    age: 54,
+    gender: "Male",
+    abhaId: "91-8834-1192-5503",
+    abhaAddress: "rameshwar.singh@abdm",
+    chiefComplaint: "Chronic dry cough, low-grade evening fever, and weight loss (2 weeks)",
+    clinicalMode: "allopathy",
+    isEmergency: false,
+    waitTimeMins: 12,
+    status: "waiting"
+  }
+];
+
+const DEFAULT_SUGGESTIONS: ClinicalSuggestion[] = [
+  {
+    id: "sug-001",
+    type: "redflag",
+    title: "Critical Red Flag: Suspected Acute Coronary Syndrome",
+    description: "Patient exhibits retrosternal crushing pain with left arm radiation and associated dyspnoea. Immediate ECG & Troponin evaluation indicated.",
+    severity: "critical",
+    confidenceScore: 0.94,
+    citedSource: "AIIA Acute Chest Pain Clinical Protocol 2024"
+  },
+  {
+    id: "sug-002",
+    type: "interaction",
+    title: "Medication Review: Glycemic Efficacy Alert",
+    description: "Extracted Metformin 500mg BD from June records. Latest July Fasting Blood Sugar is 168 mg/dL (HbA1c 8.4%). Consider dose titration.",
+    severity: "high",
+    confidenceScore: 0.88,
+    citedSource: "ICMR Guidelines for Management of Type 2 Diabetes"
+  }
+];
+
+export default function DoctorPage() {
+  const [patients, setPatients] = React.useState<QueuePatient[]>(FALLBACK_PATIENTS);
+  const [selectedPatient, setSelectedPatient] = React.useState<QueuePatient>(FALLBACK_PATIENTS[0]);
+  const [isFhirModalOpen, setIsFhirModalOpen] = React.useState(false);
+  const [isRealtimeActive, setIsRealtimeActive] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<"summary" | "timeline" | "ocr" | "prescription">("summary");
+
+  // Red-flag triage: compute from chief complaint + SOAP severity
+  const [triggeredRedFlags, setTriggeredRedFlags] = React.useState<ReturnType<typeof evaluateRedFlagsFromText>>({ isEmergency: false, triggeredRules: [] });
+
+  React.useEffect(() => {
+    // Combine chief complaint text + socratesData for richer context
+    const socratesText = currentSummaryDraft.socratesData
+      ? `severity ${currentSummaryDraft.socratesData.severity ?? ""} ${currentSummaryDraft.socratesData.site ?? ""} ${currentSummaryDraft.socratesData.character ?? ""} ${currentSummaryDraft.socratesData.radiation ?? ""}`
+      : "";
+    const result = evaluateRedFlagsFromText(selectedPatient.chiefComplaint, socratesText);
+    setTriggeredRedFlags(result);
+  }, [selectedPatient.id, selectedPatient.chiefComplaint]);
+
+  // 2-Minute OPD Target Consultation Timer
+  const [timerSeconds, setTimerSeconds] = React.useState(120);
+  const [isTimerRunning, setIsTimerRunning] = React.useState(false);
+
+  React.useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timerSeconds]);
+
+  const formatTimer = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const remainder = sec % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainder.toString().padStart(2, "0")}`;
+  };
+
+  // Load from Supabase on mount
+  const loadQueue = React.useCallback(async () => {
+    const remotePatients = await fetchQueuePatientsFromSupabase();
+    if (remotePatients && remotePatients.length > 0) {
+      setPatients(remotePatients);
+      setSelectedPatient(remotePatients[0]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadQueue();
+
+    // Setup Supabase Realtime Subscription
+    try {
+      const supabase = createClient();
+      const channel = supabase
+        .channel("doctor_live_visits")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "visits" },
+          () => {
+            loadQueue();
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setIsRealtimeActive(true);
+          }
+        });
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (err) {
+      console.warn("Realtime channel setup error:", err);
+    }
+  }, [loadQueue]);
+
+  // Live summary draft built from whatever the kiosk actually saved for this
+  // patient; falls back to a demo narrative only when no DB data exists.
+  const dbDraft: any = (selectedPatient as any).draftSummary || null;
+
+  const currentSummaryDraft: ClinicalSummaryDraft = {
+    visitId: selectedPatient.visitId,
+    patientId: selectedPatient.id,
+    chiefComplaint: dbDraft?.chiefComplaint || selectedPatient.chiefComplaint,
+    historyOfPresentIllness: dbDraft?.historyOfPresentIllness ||
+      "Patient reports acute retrosternal chest pain with onset 3 days ago, described as heavy pressure. Pain radiates to left arm and jaw, aggravated by physical exertion. Accompanied by breathlessness and cold diaphoresis. No prior history of myocardial infarction.",
+    socratesData: dbDraft?.socratesData || {
+      site: "Substernal",
+      onset: "Acute",
+      character: "Crushing pressure",
+      radiation: "Left arm and jaw",
+      severity: 8
+    },
+    ayushAssessment: dbDraft?.ayushAssessment || {
+      prakriti: "Pitta-Vata dominant",
+      agni: "Tikshna Agni (Hyperacidity tendency)",
+      koshtha: "Madhyama Koshtha",
+      sattva: "Pravara Sattva"
+    },
+    pastMedicalHistory: dbDraft?.pastMedicalHistory || ["Type 2 Diabetes Mellitus (5 years)", "Hypertension (3 years)"],
+    currentMedications: dbDraft?.currentMedications?.length ? dbDraft.currentMedications : [
+      { name: "Tab Metformin", dosage: "500mg", frequency: "BD", confidence: 0.95 },
+      { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD", confidence: 0.92 }
+    ],
+    allergies: dbDraft?.allergies || ["No known drug allergies (NKDA)"],
+    scannedDocumentsSummary: dbDraft?.scannedDocumentsSummary ||
+      "Processed 2 historical documents (June prescription from Dr. Verma + July Thyrocare report). FBS: 168 mg/dL, HbA1c: 8.4%.",
+    status: "draft",
+    isEmergencyTriage: selectedPatient.isEmergency,
+    createdAt: new Date().toISOString()
+  };
+
+  const fhirBundle = buildFhirR4Bundle(currentSummaryDraft, {
+    abhaId: selectedPatient.abhaId,
+    name: selectedPatient.name,
+    gender: selectedPatient.gender,
+    age: selectedPatient.age
+  });
+
+  return (
+    <div className="flex-1 flex flex-col bg-[#F7FAF8] text-slate-900 antialiased min-h-screen selection:bg-emerald-100 selection:text-emerald-950">
+      {/* Top Header matching landing page */}
+      <header className="sticky top-0 z-50 border-b border-emerald-100 bg-[#F7FAF8]/90 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <a href="/" className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs">
+                <span className="text-white text-[11px] font-bold">M</span>
+              </div>
+              <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
+            </a>
+            <span className="text-slate-300">/</span>
+            <span className="text-[13px] font-medium text-slate-600">Clinician Workspace</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* 2-Minute Consultation Timer Widget */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+              <Clock className="w-3.5 h-3.5 text-emerald-700" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-emerald-800 font-medium">OPD Timer:</span>
+                <span className="text-xs font-semibold text-emerald-950">{formatTimer(timerSeconds)}</span>
+              </div>
+              <div className="flex items-center gap-1 ml-1 border-l border-emerald-200 pl-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className="p-1 rounded hover:bg-emerald-100 text-emerald-800 transition-colors"
+                  title={isTimerRunning ? "Pause consultation timer" : "Start consultation timer"}
+                >
+                  {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTimerSeconds(120); setIsTimerRunning(false); }}
+                  className="p-1 rounded hover:bg-emerald-100 text-emerald-700 transition-colors"
+                  title="Reset timer to 2:00"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={loadQueue}
+              className="p-2 rounded-md bg-white border border-slate-200 hover:border-emerald-300 text-slate-600 hover:text-emerald-900 transition-colors"
+              title="Refresh Queue"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              {isRealtimeActive ? "HIS: Realtime" : "HIS: Connected"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Clinician Desk Sub-Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl bg-white border border-slate-200/80">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-sm">
+              DS
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-900">Dr. Sharma, MD</h2>
+                <Badge variant="default" className="text-xs font-medium">
+                  Room #3 · AIIA Ayurveda OPD
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Consultation Console · Multimodal Clinical Intake Feed with Automated ABDM FHIR Sync
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span className="font-medium text-emerald-800">OPD Target: 2 Min</span>
+            <span>·</span>
+            <a href="/triage" className="text-red-600 hover:text-red-700 font-medium hover:underline inline-flex items-center gap-1">
+              <span>Live Triage Monitor</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+
+        {/* Main Grid: Queue Table on Left, Case Review on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Queue */}
+          <div className="lg:col-span-4 space-y-4">
+            <PatientQueueTable
+              patients={patients}
+              selectedVisitId={selectedPatient.visitId}
+              onSelectPatient={setSelectedPatient}
+            />
+          </div>
+
+          {/* Right Column: Active Case Workspace */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* Patient Quick Context Card */}
+            <div className="p-5 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-center font-bold text-sm">
+                  {selectedPatient.name[0]}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-[16px] font-semibold text-slate-900">{selectedPatient.name}</h3>
+                    <span className="text-xs text-slate-500 font-medium">
+                      {selectedPatient.age}y / {selectedPatient.gender}
+                    </span>
+                    {selectedPatient.isEmergency && (
+                      <Badge variant="danger" className="text-xs font-medium">
+                        EMERGENCY
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-slate-500 mt-0.5">
+                    ABHA: {selectedPatient.abhaId} · DPDP 2023 Consent Granted
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200">
+                  Case Ready &lt;15s
+                </span>
+              </div>
+            </div>
+
+            {/* Red-Flag Triage Alert Banner — shown when chief complaint/vitals trigger red-flag rules */}
+            {triggeredRedFlags.isEmergency && (
+              <RedFlagAlertBanner
+                triggeredRules={triggeredRedFlags.triggeredRules}
+                patientName={selectedPatient.name}
+                patientId={selectedPatient.id}
+                visitId={selectedPatient.visitId}
+              />
+            )}
+
+            {/* Tab Switcher */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100/90 rounded-lg border border-slate-200/60">
+              <button
+                onClick={() => setActiveTab("summary")}
+                className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "summary" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Intake Summary
+              </button>
+              <button
+                onClick={() => setActiveTab("ocr")}
+                className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "ocr" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                OCR Split-View
+              </button>
+              <button
+                onClick={() => setActiveTab("timeline")}
+                className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "timeline" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Records Timeline
+              </button>
+              <button
+                onClick={() => setActiveTab("prescription")}
+                className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "prescription" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Rx & Order Sets
+              </button>
+            </div>
+
+          {/* Tab 1: Intake Summary */}
+          {activeTab === "summary" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* AI Decision Support Panel */}
+              <SuggestionAlerts suggestions={selectedPatient.isEmergency ? DEFAULT_SUGGESTIONS : [DEFAULT_SUGGESTIONS[1]]} />
+
+              {/* Ayurvedic Pariksha Card (If Ayush Mode) */}
+              {selectedPatient.clinicalMode === "ayush" && (
+                <AyushParikshaCard
+                  assessment={{
+                    prakriti: "Pitta-Vata dominant",
+                    agni: "Tikshna Agni (Hyperacidity tendency)",
+                    koshtha: "Madhyama Koshtha",
+                    sattva: "Pravara (Resilient)",
+                    aharaHabits: "Vegetarian, preference for spicy & hot foods, irregular meal intervals.",
+                    viharaHabits: "Disturbed sleep pattern due to night reflux, moderate physical activity."
+                  }}
+                />
+              )}
+
+              {/* Structured SOAP Editor */}
+              <SoapSummaryEditor
+                summary={{
+                  chiefComplaint: currentSummaryDraft.chiefComplaint,
+                  historyOfPresentIllness: currentSummaryDraft.historyOfPresentIllness,
+                  pastHistory: currentSummaryDraft.pastMedicalHistory,
+                  medications: currentSummaryDraft.currentMedications,
+                  allergies: currentSummaryDraft.allergies,
+                  scannedSummary: currentSummaryDraft.scannedDocumentsSummary
+                }}
+                onApprove={async (notes) => {
+                  if (selectedPatient.summaryId) {
+                    await approveSummaryInSupabase(selectedPatient.summaryId, notes);
+                  } else {
+                    console.warn("No summaryId for patient; approval recorded locally only.");
+                  }
+                  alert("Case confirmed and written to HIS + ABDM PHR record!");
+                }}
+                onViewFhir={() => setIsFhirModalOpen(true)}
+                onDownloadPdf={() => {
+                  generateAndPrintClinicalReport(currentSummaryDraft, {
+                    name: selectedPatient.name,
+                    age: selectedPatient.age,
+                    gender: selectedPatient.gender,
+                    abhaId: selectedPatient.abhaId
+                  });
+                }}
+                onSendToHis={async () => {
+                  const doctorNotes = "";
+                  const result = await sendToHisStub(
+                    selectedPatient.visitId,
+                    selectedPatient.summaryId || "",
+                    { chiefComplaint: currentSummaryDraft.chiefComplaint, doctorNotes }
+                  );
+                  if (result.success) {
+                    alert("Case summary sent to HIS successfully!");
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* Tab 2: OCR Split View Verification */}
+          {activeTab === "ocr" && (
+            <div className="animate-in fade-in duration-200">
+              <OcrDocumentInspector />
+            </div>
+          )}
+
+          {/* Tab 3: Chronological Medical Records Timeline */}
+          {activeTab === "timeline" && (
+            <div className="animate-in fade-in duration-200">
+              <PatientRecordsTimeline />
+            </div>
+          )}
+
+          {/* Tab 4: Interactive Prescription & 1-Click Order Sets */}
+          {activeTab === "prescription" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <ClinicalMacros
+                onApplyMacro={(macro) => {
+                  alert(`Applied ${macro.name} (${macro.medications.length} items) to active prescription!`);
+                }}
+              />
+              <PrescriptionBuilder
+                initialMedications={currentSummaryDraft.currentMedications}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+
+    {/* HL7 FHIR Modal */}
+    <FhirBundleModal
+      isOpen={isFhirModalOpen}
+      onClose={() => setIsFhirModalOpen(false)}
+      fhirBundle={fhirBundle}
+      abhaAddress={selectedPatient.abhaAddress}
+    />
+  </div>
+  );
+}

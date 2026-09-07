@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  /* Custom high-contrast focus rings for accessibility */
+  :focus-visible {
+    @apply outline-none ring-4 ring-ayush-600/30 ring-offset-2;
+  }
+}
+
+/* Kiosk Pulse Animations */
+@keyframes voice-wave {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1.6); }
+}
+
+.animate-voice-wave {
+  animation: voice-wave 1s ease-in-out infinite;
+}
+
+/* ============================================================
+   LANDING — AURORA / AMBIENT EFFECTS (pure CSS, no assets)
+   ============================================================ */
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(6vw, -4vh) scale(1.15); }
+  66% { transform: translate(-5vw, 5vh) scale(0.92); }
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.45;
+  will-change: transform;
+}
+.aurora-a {
+  width: 46vw; height: 46vw; min-width: 420px; min-height: 420px;
+  left: -12vw; top: -14vh;
+  background: radial-gradient(circle at 40% 40%, rgba(16,185,129,0.55), transparent 65%);
+  animation: aurora-drift 22s ease-in-out infinite;
+}
+.aurora-b {
+  width: 38vw; height: 38vw; min-width: 340px; min-height: 340px;
+  right: -10vw; top: 8vh;
+  background: radial-gradient(circle at 55% 45%, rgba(20,184,166,0.42), transparent 65%);
+  animation: aurora-drift 27s ease-in-out infinite reverse;
+}
+.aurora-c {
+  width: 34vw; height: 34vw; min-width: 300px; min-height: 300px;
+  left: 28vw; bottom: -18vh;
+  background: radial-gradient(circle at 50% 50%, rgba(245,158,11,0.18), transparent 62%);
+  animation: aurora-drift 31s ease-in-out infinite;
+}
+
+@keyframes particle-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.4; }
+  100% { transform: translateY(-70vh); opacity: 0; }
+}
+.particle {
+  position: absolute;
+  bottom: -2%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(to top, rgba(110,231,183,0), rgba(110,231,183,0.85));
+  animation-name: particle-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* ECG trace draw */
+@keyframes ecg-draw {
+  0% { stroke-dashoffset: 1; }
+  55% { stroke-dashoffset: -1; }
+  100% { stroke-dashoffset: -2; }
+}
+.ecg-trace {
+  stroke-dasharray: 0.5 0.5;
+  animation: ecg-draw 3.2s linear infinite;
+}
+
+/* Glass chip (floating labels around kiosk mockup) */
+.glass-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d1fae5;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.glass-chip.accent {
+  color: #fef3c7;
+  border-color: rgba(253,230,138,0.25);
+  background: rgba(245,158,11,0.10);
+}
+
+/* Screen scan sweep inside kiosk mockup */
+@keyframes screen-scan-move {
+  0% { top: -25%; }
+  60% { top: 105%; }
+  100% { top: 105%; }
+}
+.screen-scan {
+  animation: screen-scan-move 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Marquee for trust strip */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-x 32s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Gradient text shimmer */
+@keyframes shimmer-x {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.text-shimmer {
+  background: linear-gradient(110deg, #6EE7B7 20%, #FFFFFF 40%, #FCD34D 55%, #6EE7B7 75%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-x 5s linear infinite;
+}
+
+/* Card hover lift with spotlight border */
+.spotlight-card {
+  position: relative;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s;
+}
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(52,211,153,0.5), rgba(255,255,255,0.08) 40%, rgba(52,211,153,0.35));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+.spotlight-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 48px -16px rgba(16,185,129,0.18);
+}
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+/* ============================================================
+   HIGH-CONTRAST KIOSK MODE
+   Black on white, 60px min touch targets, no animations
+   ============================================================ */
+.kiosk-high-contrast {
+  --hc-bg: #ffffff;
+  --hc-text: #000000;
+  --hc-border: #000000;
+  --hc-accent: #000000;
+}
+
+.kiosk-high-contrast,
+.kiosk-high-contrast body {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+}
+
+/* Force white background on all children for full coverage */
+.kiosk-high-contrast * {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  border-color: var(--hc-border) !important;
+}
+
+/* Preserve image and icon visibility — override them specifically */
+.kiosk-high-contrast img,
+.kiosk-high-contrast svg,
+.kiosk-high-contrast video {
+  background-color: transparent !important;
+}
+
+/* Kill all transitions and animations in high-contrast mode */
+.kiosk-high-contrast *,
+.kiosk-high-contrast *::before,
+.kiosk-high-contrast *::after {
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0s !important;
+  transition-property: none !important;
+}
+
+/* Enforce 60px minimum touch targets */
+.kiosk-high-contrast button,
+.kiosk-high-contrast a,
+.kiosk-high-contrast [role="button"],
+.kiosk-high-contrast input,
+.kiosk-high-contrast select,
+.kiosk-high-contrast textarea,
+.kiosk-high-contrast [tabindex] {
+  min-height: 60px !important;
+  min-width: 60px !important;
+}
+
+/* Keep text legible — reset any shadow / gradient text */
+.kiosk-high-contrast h1,
+.kiosk-high-contrast h2,
+.kiosk-high-contrast h3,
+.kiosk-high-contrast h4,
+.kiosk-high-contrast h5,
+.kiosk-high-contrast h6,
+.kiosk-high-contrast p,
+.kiosk-high-contrast span,
+.kiosk-high-contrast label {
+  color: var(--hc-text) !important;
+  text-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* High-contrast focus rings: solid black outline */
+.kiosk-high-contrast :focus-visible {
+  outline: 3px solid var(--hc-border) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Buttons: solid black background, white text */
+.kiosk-high-contrast button {
+  background-color: var(--hc-accent) !important;
+  color: #ffffff !important;
+  border: 2px solid var(--hc-border) !important;
+}
+
+/* Inputs: white background, black border */
+.kiosk-high-contrast input,
+.kiosk-high-contrast select,
+.kiosk-high-contrast textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob, .particle, .ecg-trace, .marquee-track,
+  .text-shimmer, .screen-scan, .animate-voice-wave {
+    animation: none !important;
+  }
+}

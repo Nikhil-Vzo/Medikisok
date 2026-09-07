@@ -1,0 +1,39 @@
+# Render Blueprint Specification
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: medikiosk
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/ocr/status
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.16.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: BHASHINI_API_KEY
+        sync: false
+      - key: BHASHINI_ENDPOINT
+        sync: false
+      - key: ABDM_CLIENT_ID
+        sync: false
+      - key: ABDM_CLIENT_SECRET
+        sync: false
+      - key: PADDLEOCR_API_KEY
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
