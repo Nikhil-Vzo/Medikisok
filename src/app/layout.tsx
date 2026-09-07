@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-// import { Header } from "@/components/shared/header";
-import { Footer } from "@/components/shared/footer";
 
 export const metadata: Metadata = {
   title: "MediKiosk — AI Clinical Intake Platform | Ministry of Ayush",
@@ -28,7 +26,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans bg-[#FBFDFD] text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
         <main className="flex-1 flex flex-col">{children}</main>
-        <Footer />
       </body>
     </html>
   );

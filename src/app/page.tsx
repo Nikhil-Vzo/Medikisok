@@ -444,17 +444,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ============================= FOOTER ============================= */}
-      <footer className="bg-[#F8FAF9] border-t border-emerald-100/80">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-emerald-700 text-white flex items-center justify-center font-bold text-[10px]">M</div>
-            <span>MediKiosk · All India Institute of Ayurveda · Ministry of Ayush</span>
-          </div>
-          <div>Smart India Hackathon 2026 · Problem SIH26047</div>
-        </div>
-      </footer>
     </div>
   );
 }
