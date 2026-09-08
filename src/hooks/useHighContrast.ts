@@ -14,6 +14,7 @@ export function useHighContrast() {
       if (stored === "true") {
         setIsHighContrast(true);
         document.body.classList.add("kiosk-high-contrast");
+        document.documentElement.classList.add("dark");
       }
     } catch {
       // localStorage not available (SSR / private browsing)
@@ -30,8 +31,10 @@ export function useHighContrast() {
     }
     if (next) {
       document.body.classList.add("kiosk-high-contrast");
+      document.documentElement.classList.add("dark");
     } else {
       document.body.classList.remove("kiosk-high-contrast");
+      document.documentElement.classList.remove("dark");
     }
   };
 

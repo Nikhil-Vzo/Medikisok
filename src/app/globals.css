@@ -175,94 +175,261 @@
 }
 
 /* ============================================================
-   HIGH-CONTRAST KIOSK MODE
-   Black on white, 60px min touch targets, no animations
+   HIGH-CONTRAST / DARK MODE KIOSK
+   WCAG AAA high contrast dark theme for kiosk & patient terminal
    ============================================================ */
 .kiosk-high-contrast {
-  --hc-bg: #ffffff;
-  --hc-text: #000000;
-  --hc-border: #000000;
-  --hc-accent: #000000;
+  --hc-bg: #070c18;
+  --hc-card: #0f172a;
+  --hc-card-elevated: #141f32;
+  --hc-border: #334155;
+  --hc-border-strong: #475569;
+  --hc-text-primary: #ffffff;
+  --hc-text-secondary: #cbd5e1;
+  --hc-text-muted: #94a3b8;
+  --hc-accent: #10b981;
 }
 
 .kiosk-high-contrast,
-.kiosk-high-contrast body {
+.kiosk-high-contrast body,
+.kiosk-high-contrast .min-h-screen,
+.kiosk-high-contrast [class*="bg-[#F7FAF8]"] {
   background-color: var(--hc-bg) !important;
-  color: var(--hc-text) !important;
+  color: var(--hc-text-primary) !important;
 }
 
-/* Force white background on all children for full coverage */
-.kiosk-high-contrast * {
-  background-color: var(--hc-bg) !important;
-  color: var(--hc-text) !important;
+/* Header */
+.kiosk-high-contrast header {
+  background-color: rgba(11, 17, 32, 0.95) !important;
   border-color: var(--hc-border) !important;
 }
-
-/* Preserve image and icon visibility — override them specifically */
-.kiosk-high-contrast img,
-.kiosk-high-contrast svg,
-.kiosk-high-contrast video {
-  background-color: transparent !important;
+.kiosk-high-contrast header a span,
+.kiosk-high-contrast header span.text-slate-900 {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast header span.text-slate-600 {
+  color: #94a3b8 !important;
+}
+.kiosk-high-contrast header span.text-slate-300 {
+  color: #475569 !important;
 }
 
-/* Kill all transitions and animations in high-contrast mode */
-.kiosk-high-contrast *,
-.kiosk-high-contrast *::before,
-.kiosk-high-contrast *::after {
-  animation-duration: 0s !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0s !important;
-  transition-property: none !important;
+/* Cards & Surfaces */
+.kiosk-high-contrast .bg-white {
+  background-color: var(--hc-card) !important;
+  border-color: var(--hc-border) !important;
+  color: var(--hc-text-primary) !important;
 }
 
-/* Enforce 60px minimum touch targets */
-.kiosk-high-contrast button,
-.kiosk-high-contrast a,
-.kiosk-high-contrast [role="button"],
-.kiosk-high-contrast input,
-.kiosk-high-contrast select,
-.kiosk-high-contrast textarea,
-.kiosk-high-contrast [tabindex] {
-  min-height: 60px !important;
-  min-width: 60px !important;
+.kiosk-high-contrast .bg-slate-50,
+.kiosk-high-contrast [class*="bg-slate-50/"] {
+  background-color: var(--hc-card-elevated) !important;
+  border-color: var(--hc-border) !important;
+  color: var(--hc-text-primary) !important;
 }
 
-/* Keep text legible — reset any shadow / gradient text */
+/* Headings & Text */
 .kiosk-high-contrast h1,
 .kiosk-high-contrast h2,
 .kiosk-high-contrast h3,
 .kiosk-high-contrast h4,
 .kiosk-high-contrast h5,
 .kiosk-high-contrast h6,
-.kiosk-high-contrast p,
-.kiosk-high-contrast span,
-.kiosk-high-contrast label {
-  color: var(--hc-text) !important;
-  text-shadow: none !important;
-  background-color: transparent !important;
+.kiosk-high-contrast .text-slate-900,
+.kiosk-high-contrast .text-slate-800 {
+  color: #ffffff !important;
 }
 
-/* High-contrast focus rings: solid black outline */
+.kiosk-high-contrast p,
+.kiosk-high-contrast label,
+.kiosk-high-contrast .text-slate-700,
+.kiosk-high-contrast .text-slate-600 {
+  color: var(--hc-text-secondary) !important;
+}
+
+.kiosk-high-contrast .text-slate-500,
+.kiosk-high-contrast .text-slate-400 {
+  color: var(--hc-text-muted) !important;
+}
+
+/* Generic borders */
+.kiosk-high-contrast .border-slate-200,
+.kiosk-high-contrast .border-slate-300,
+.kiosk-high-contrast .border-emerald-100,
+.kiosk-high-contrast [class*="border-slate-200/"],
+.kiosk-high-contrast [class*="border-emerald-100/"] {
+  border-color: var(--hc-border) !important;
+}
+
+/* Stepper Bar & Progress */
+.kiosk-high-contrast nav[aria-label="Progress"] .bg-emerald-100 {
+  background-color: #1e293b !important;
+}
+.kiosk-high-contrast nav[aria-label="Progress"] .bg-white {
+  background-color: #162238 !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+.kiosk-high-contrast nav[aria-label="Progress"] .bg-emerald-50 {
+  background-color: #064e3b !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast nav[aria-label="Progress"] .text-emerald-950,
+.kiosk-high-contrast nav[aria-label="Progress"] .text-emerald-800 {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast nav[aria-label="Progress"] .text-emerald-700,
+.kiosk-high-contrast nav[aria-label="Progress"] .text-emerald-600 {
+  color: #34d399 !important;
+}
+
+/* Audio Prompter */
+.kiosk-high-contrast div[class*="bg-emerald-50"] {
+  background-color: rgba(6, 78, 59, 0.45) !important;
+  border-color: #10b981 !important;
+}
+.kiosk-high-contrast div[class*="bg-emerald-50"] button {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast div[class*="bg-emerald-50"] .text-emerald-950 {
+  color: #a7f3d0 !important;
+}
+.kiosk-high-contrast div[class*="bg-emerald-50"] .bg-emerald-700 {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast div[class*="bg-emerald-50"] button.bg-white {
+  background-color: #162238 !important;
+  border-color: #334155 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast div[class*="bg-emerald-50"] .border-emerald-200 {
+  border-color: #047857 !important;
+}
+
+/* Language Selector Buttons */
+.kiosk-high-contrast .grid button.border-slate-200,
+.kiosk-high-contrast .grid button:not([class*="border-emerald-600"]) {
+  background-color: #131e30 !important;
+  border-color: #334155 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast .grid button.border-slate-200:hover,
+.kiosk-high-contrast .grid button:not([class*="border-emerald-600"]):hover {
+  background-color: #1a2840 !important;
+  border-color: #10b981 !important;
+}
+.kiosk-high-contrast .grid button p.text-base {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast .grid button p.text-xs {
+  color: #94a3b8 !important;
+}
+.kiosk-high-contrast .grid button.border-emerald-600,
+.kiosk-high-contrast .grid button[class*="bg-emerald-50"] {
+  background-color: #064e3b !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px #10b981 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast .grid button.border-emerald-600 p,
+.kiosk-high-contrast .grid button[class*="bg-emerald-50"] p {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast .grid button .bg-emerald-700 {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+/* Form Inputs, Textarea, Selects */
+.kiosk-high-contrast input[type="text"],
+.kiosk-high-contrast input[type="number"],
+.kiosk-high-contrast input[type="tel"],
+.kiosk-high-contrast input[type="password"],
+.kiosk-high-contrast textarea,
+.kiosk-high-contrast select {
+  background-color: #070d18 !important;
+  border-color: #475569 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast input::placeholder,
+.kiosk-high-contrast textarea::placeholder {
+  color: #64748b !important;
+}
+.kiosk-high-contrast input:focus,
+.kiosk-high-contrast textarea:focus,
+.kiosk-high-contrast select:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35) !important;
+  outline: none !important;
+}
+.kiosk-high-contrast select option {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+/* Quick preset buttons & gender pills */
+.kiosk-high-contrast button[class*="bg-emerald-50"] {
+  background-color: rgba(6, 78, 59, 0.45) !important;
+  border-color: #059669 !important;
+  color: #a7f3d0 !important;
+}
+.kiosk-high-contrast button.bg-white:not([class*="bg-emerald"]) {
+  background-color: #162238 !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.kiosk-high-contrast button.bg-white:not([class*="bg-emerald"]):hover {
+  background-color: #1e2e4a !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+/* Choice Cards (Intake Symptoms) */
+.kiosk-high-contrast button[role="radio"] {
+  background-color: #131e30 !important;
+  border-color: #334155 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast button[role="radio"]:hover {
+  border-color: #10b981 !important;
+  background-color: #18263e !important;
+}
+.kiosk-high-contrast button[role="radio"] h4 {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast button[role="radio"] p {
+  color: #94a3b8 !important;
+}
+.kiosk-high-contrast button[role="radio"] div.bg-emerald-50 {
+  background-color: #16253c !important;
+  color: #34d399 !important;
+}
+.kiosk-high-contrast button[role="radio"][aria-checked="true"] {
+  background-color: #064e3b !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px #10b981 !important;
+}
+.kiosk-high-contrast button[role="radio"][aria-checked="true"] h4 {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast button[role="radio"][aria-checked="true"] p {
+  color: #d1fae5 !important;
+}
+
+/* Badges & Status Indicators */
+.kiosk-high-contrast span[class*="bg-emerald-50"] {
+  background-color: rgba(6, 78, 59, 0.45) !important;
+  border-color: #059669 !important;
+  color: #6ee7b7 !important;
+}
+
+/* High-contrast focus rings */
 .kiosk-high-contrast :focus-visible {
-  outline: 3px solid var(--hc-border) !important;
+  outline: 3px solid #10b981 !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
-}
-
-/* Buttons: solid black background, white text */
-.kiosk-high-contrast button {
-  background-color: var(--hc-accent) !important;
-  color: #ffffff !important;
-  border: 2px solid var(--hc-border) !important;
-}
-
-/* Inputs: white background, black border */
-.kiosk-high-contrast input,
-.kiosk-high-contrast select,
-.kiosk-high-contrast textarea {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 2px solid #000000 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
