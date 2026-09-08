@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const paddleOcrApiKey = process.env.PADDLEOCR_API_KEY;
-const modelName = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-const geminiConfigured = Boolean(genAI);
-const paddleConfigured = Boolean(paddleOcrApiKey);
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const paddleOcrApiKey = process.env.PADDLEOCR_API_KEY;
+    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+    const geminiConfigured = Boolean(genAI);
+    const paddleConfigured = Boolean(paddleOcrApiKey);
     const body = await req.json();
     const { imageBase64, mimeType = "image/jpeg" } = body;
 

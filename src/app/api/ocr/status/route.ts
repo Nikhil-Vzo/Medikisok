@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
-const paddleConfigured = Boolean(process.env.PADDLEOCR_API_KEY);
-const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
+export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const paddleConfigured = Boolean(process.env.PADDLEOCR_API_KEY);
+  const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
+
   if (paddleConfigured) {
     return NextResponse.json({
       configured: true,
