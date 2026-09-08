@@ -9,8 +9,8 @@ import { DpdpConsentArtefact } from "@/types/abdm";
 export function withAbhaLinking(
   patient: FhirPatientResource,
   opts: {
-    healthId?: string;        // ABHA ID e.g. "91-4523-8819-2041"
-    healthAddress?: string;   // ABHA Address e.g. "kamla.devi@abdm"
+    healthId?: string;        // ABHA ID e.g. ""
+    healthAddress?: string;   // ABHA Address e.g. "patient@abdm"
     careContextReference?: string;
     careContextDisplay?: string;
     linkedOn?: string;        // ISO timestamp of ABHA linkage
@@ -216,7 +216,7 @@ export function generateFhirBundle(params: {
     identifier: [
       {
         system: "https://healthid.abdm.gov.in",
-        value: params.patientDetails.abhaId || "91-4523-8819-2041",
+        value: params.patientDetails.abhaId || "",
         type: {
           coding: [
             {
@@ -230,9 +230,9 @@ export function generateFhirBundle(params: {
     ],
     name: [
       {
-        text: params.patientDetails.name || "Kamla Devi",
-        family: params.patientDetails.name?.split(" ").slice(-1)[0] || "Devi",
-        given: params.patientDetails.name?.split(" ").slice(0, -1) || ["Kamla"]
+        text: params.patientDetails.name || "Patient",
+        family: params.patientDetails.name?.split(" ").slice(-1)[0] || "Patient",
+        given: params.patientDetails.name?.split(" ").slice(0, -1) || ["Patient"]
       }
     ],
     gender: (params.patientDetails.gender?.toLowerCase() as any) || "female",
@@ -302,7 +302,7 @@ export function generateFhirBundle(params: {
     },
     subject: {
       reference: patientRefId,
-      display: params.patientDetails.name || "Kamla Devi"
+      display: params.patientDetails.name || "Patient"
     },
     onsetDateTime: new Date().toISOString()
   };
@@ -322,7 +322,7 @@ export function generateFhirBundle(params: {
       ],
       text: "OPD Clinical Case-Taking & AYUSH Assessment Summary"
     },
-    subject: { reference: patientRefId, display: params.patientDetails.name || "Kamla Devi" },
+    subject: { reference: patientRefId, display: params.patientDetails.name || "Patient" },
     date: new Date().toISOString(),
     author: [{ reference: practitionerRefId, display: "Dr. Sharma, MD (AIIA)" }],
     title: "All India Institute of Ayurveda — OPD Intake Record",
@@ -380,7 +380,7 @@ export function generateFhirBundle(params: {
         },
         subject: {
           reference: patientRefId,
-          display: params.patientDetails.name || "Kamla Devi"
+          display: params.patientDetails.name || "Patient"
         },
         dosage: [{ text: `${med.dosage} ${med.frequency}` }]
       };
@@ -446,7 +446,7 @@ export function generateFhirBundle(params: {
         }
       ],
       code: { coding: [{ system: "http://loinc.org", code: v.code, display: v.display }] },
-      subject: { reference: patientRefId, display: params.patientDetails.name || "Kamla Devi" },
+      subject: { reference: patientRefId, display: params.patientDetails.name || "Patient" },
       effectiveDateTime: new Date().toISOString(),
       valueString: v.value
     };
@@ -480,7 +480,7 @@ export function generateFhirBundle(params: {
         ],
         text: "Ayurvedic Dashavidha Pariksha Clinical Evaluation"
       },
-      subject: { reference: patientRefId, display: params.patientDetails.name || "Kamla Devi" },
+      subject: { reference: patientRefId, display: params.patientDetails.name || "Patient" },
       effectiveDateTime: new Date().toISOString(),
       component: Object.entries(params.summary.ayushAssessment).map(([key, val]) => ({
         code: { text: key },
@@ -495,7 +495,7 @@ export function generateFhirBundle(params: {
     const consentResource = buildAbdmConsent(
       params.patientDetails.consent,
       patientRefId,
-      params.patientDetails.name || "Kamla Devi"
+      params.patientDetails.name || "Patient"
     );
     entries.push({
       fullUrl: `urn:uuid:consent-${Date.now()}`,
@@ -559,7 +559,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
     identifier: [
       {
         system: 'https://healthid.abdm.gov.in',
-        value: patientDetails.abhaId || '91-4523-8819-2041',
+        value: patientDetails.abhaId || '',
         type: {
           coding: [{ system: 'http://terminology.hl7.org/CodeSystem/v2-0203', code: 'MR', display: 'ABHA Health Account Identifier' }]
         }
@@ -567,9 +567,9 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
     ],
     name: [
       {
-        text: patientDetails.name || 'Kamla Devi',
-        family: patientDetails.name?.split(' ').slice(-1)[0] || 'Devi',
-        given: patientDetails.name?.split(' ').slice(0, -1) || ['Kamla']
+        text: patientDetails.name || 'Patient',
+        family: patientDetails.name?.split(' ').slice(-1)[0] || 'Patient',
+        given: patientDetails.name?.split(' ').slice(0, -1) || ['Patient']
       }
     ],
     gender: (patientDetails.gender?.toLowerCase() as any) || 'female',
@@ -616,7 +616,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
     },
     subject: {
       reference: patientRefId,
-      display: patientDetails.name || 'Kamla Devi'
+      display: patientDetails.name || 'Patient'
     },
     onsetDateTime: new Date().toISOString()
   };
@@ -636,7 +636,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
       ],
       text: 'OPD Clinical Case-Taking & AYUSH Assessment Summary'
     },
-    subject: { reference: patientRefId, display: patientDetails.name || 'Kamla Devi' },
+    subject: { reference: patientRefId, display: patientDetails.name || 'Patient' },
     date: new Date().toISOString(),
     author: [{ reference: practitionerRefId, display: 'Dr. Sharma, MD (AIIA)' }],
     title: 'All India Institute of Ayurveda — OPD Intake Record',
@@ -678,7 +678,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
           ],
           text: `${med.name} ${med.dosage} (${med.frequency})`
         },
-        subject: { reference: patientRefId, display: patientDetails.name || 'Kamla Devi' },
+        subject: { reference: patientRefId, display: patientDetails.name || 'Patient' },
         dosage: [{ text: `${med.dosage} ${med.frequency}` }]
       };
       entries.push({ fullUrl: `urn:uuid:medication-${idx + 1}`, resource: medResource });
@@ -706,7 +706,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
       status: 'final',
       category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs', display: 'Vital Signs' }] }],
       code: { coding: [{ system: 'http://loinc.org', code: v.code, display: v.display }] },
-      subject: { reference: patientRefId, display: patientDetails.name || 'Kamla Devi' },
+      subject: { reference: patientRefId, display: patientDetails.name || 'Patient' },
       effectiveDateTime: new Date().toISOString(),
       valueString: v.value
     };
@@ -728,7 +728,7 @@ export function buildFhirR4Bundle(summary: ClinicalSummaryDraft, patientDetails:
         coding: [{ system: 'https://namstp.ayush.gov.in', code: 'AYU-OBS-DASH', display: 'Dashavidha Pariksha Assessment' }],
         text: 'Ayurvedic Dashavidha Pariksha Clinical Evaluation'
       },
-      subject: { reference: patientRefId, display: patientDetails.name || 'Kamla Devi' },
+      subject: { reference: patientRefId, display: patientDetails.name || 'Patient' },
       effectiveDateTime: new Date().toISOString(),
       component: Object.entries(summary.ayushAssessment).map(([key, val]) => ({
         code: { text: key },

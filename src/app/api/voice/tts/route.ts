@@ -25,7 +25,7 @@ const INDIC_LANG_MAP: Record<string, string> = {
 };
 
 async function fetchIndicTtsAudio(text: string, langCode: string): Promise<ArrayBuffer | null> {
-  const tl = INDIC_LANG_MAP[langCode.toLowerCase()] || "hi";
+  const tl = INDIC_LANG_MAP[langCode.toLowerCase()] || "en";
   // Clean text: strip special markdown/quotes and cap to first 200 chars for instant stream
   const cleanText = text
     .replace(/[#*_`]/g, "")
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const text = searchParams.get("text") || "";
-    const lang = searchParams.get("lang") || "hi";
+    const lang = searchParams.get("lang") || "en";
 
     if (!text) {
       return new NextResponse("Text parameter required", { status: 400 });

@@ -7,7 +7,7 @@ import {
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
   FileText, Camera, QrCode, HeartPulse, RefreshCw, Flame, Wind,
   Thermometer, Activity, AlertTriangle, UserPlus, RotateCcw,
-  History, Shuffle, Clock, Printer, MapPin, Calendar, Bell
+  History, Clock, Printer, MapPin, Calendar, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,100 +33,21 @@ import { computeContinuity, ContinuityDecision } from "@/lib/continuity-engine";
 import { CHIEF_COMPLAINTS, getQuestionsForComplaint } from "@/lib/ontologies/chief-complaints";
 import { KioskStep } from "@/types/kiosk";
 
-const RANDOM_PATIENTS = [
-  { name: "Ramesh Kumar Sharma", age: 48, gender: "Male" },
-  { name: "Priya Anand Patel", age: 34, gender: "Female" },
-  { name: "Mohan Lal Verma", age: 58, gender: "Male" },
-  { name: "Sunita Devi", age: 63, gender: "Female" },
-  { name: "Mohammad Arif", age: 52, gender: "Male" },
-  { name: "Gurpreet Kaur", age: 41, gender: "Female" },
-  { name: "Deepak Joshi", age: 29, gender: "Male" },
-  { name: "Meena Sundaram", age: 67, gender: "Female" },
-  { name: "Vijay Rathore", age: 55, gender: "Male" },
-];
-
-const RETURNING_PRESETS = [
-  {
-    name: "Kamla Devi",
-    age: 62,
-    gender: "Female",
-    abhaId: "91-4523-8819-2041",
-    gapDays: 4,
-    lastVisitDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    lastComplaint: "High grade fever with chills (Pyrexia)",
-    lastMedications: ["Tab Paracetamol 650mg BD", "Tab Cefixime 200mg BD"],
-    label: "Kamla Devi (Visited 4 days ago · Pyrexia Δ4d)",
-  },
-  {
-    name: "Rajesh Patel",
-    age: 54,
-    gender: "Male",
-    abhaId: "91-8834-1192-5503",
-    gapDays: 45,
-    lastVisitDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    lastComplaint: "Retrosternal chest discomfort & Hypertension",
-    lastMedications: ["Tab Telmisartan 40mg OD", "Tab Metformin 500mg BD"],
-    label: "Rajesh Patel (Visited 45 days ago · Chest Heaviness Δ45d)",
-  },
-  {
-    name: "Anil Gupta",
-    age: 38,
-    gender: "Male",
-    abhaId: "91-6621-9943-1209",
-    gapDays: 120,
-    lastVisitDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-    lastComplaint: "Epigastric burning & abdominal colic",
-    lastMedications: ["Cap Omeprazole 20mg OD"],
-    label: "Anil Gupta (Visited 120 days ago · Baseline Renewal Δ120d)",
-  },
-];
-
 export default function KioskPage() {
   const [step, setStep] = React.useState<KioskStep>("identify");
-  const [language, setLanguage] = React.useState("hi");
+  const [language, setLanguage] = React.useState("en");
   const [clinicalMode, setClinicalMode] = React.useState<"allopathy" | "ayush">("allopathy");
 
   // Patient Identity State
-  const [abhaId, setAbhaId] = React.useState("91-4523-8819-2041");
-  const [patientName, setPatientName] = React.useState("Kamla Devi");
-  const [patientAge, setPatientAge] = React.useState(62);
-  const [patientGender, setPatientGender] = React.useState("Female");
+  const [abhaId, setAbhaId] = React.useState("");
+  const [patientName, setPatientName] = React.useState("");
+  const [patientAge, setPatientAge] = React.useState<number | undefined>(undefined);
+  const [patientGender, setPatientGender] = React.useState("");
   const [presetNotice, setPresetNotice] = React.useState<string | null>(null);
 
-  // Generate random ABHA and patient profile
-  const generateRandomPatient = () => {
-    const r4 = () => Math.floor(1000 + Math.random() * 9000).toString();
-    const newAbha = `91-${r4()}-${r4()}-${r4()}`;
-    const pick = RANDOM_PATIENTS[Math.floor(Math.random() * RANDOM_PATIENTS.length)];
-    setAbhaId(newAbha);
-    setPatientName(pick.name);
-    setPatientAge(pick.age);
-    setPatientGender(pick.gender);
-    setIsReturningPatient(false);
-    setContinuity(null);
-    setPresetNotice("Random ABHA & Patient generated for fresh OPD intake");
-  };
+  const [isPortalSession, setIsPortalSession] = React.useState(false);
 
-  // Select returning patient profile for testing continuity engine
-  const selectReturningPreset = (preset: typeof RETURNING_PRESETS[0]) => {
-    setAbhaId(preset.abhaId);
-    setPatientName(preset.name);
-    setPatientAge(preset.age);
-    setPatientGender(preset.gender);
-    setIsReturningPatient(true);
-    setPresetNotice(
-      `Returning Patient Loaded: Last visited ${preset.gapDays} days ago for "${preset.lastComplaint}". Continuity Engine will adapt intake.`
-    );
-    const decision = computeContinuity({
-      isReturning: true,
-      lastVisitDate: preset.lastVisitDate,
-      lastChiefComplaint: preset.lastComplaint,
-      lastMedications: preset.lastMedications,
-    });
-    setContinuity(decision);
-  };
-
-  // Hydrate custom patient profile if routed from patient login with query params
+  // Hydrate custom patient profile if routed from patient login or verified portal
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -134,14 +55,51 @@ export default function KioskPage() {
       const urlName = params.get("name");
       const urlAge = params.get("age");
       const urlGender = params.get("gender");
+      const urlLang = params.get("lang");
+      const urlAuth = params.get("authenticated") === "true" || params.get("from") === "portal";
+      const requestedStep = params.get("step") as KioskStep | null;
+
+      if (urlLang) {
+        setLanguage(urlLang);
+      }
 
       if (urlAbha || urlName) {
         if (urlAbha) setAbhaId(urlAbha);
         if (urlName) setPatientName(urlName);
         if (urlAge && !isNaN(Number(urlAge))) setPatientAge(Number(urlAge));
         if (urlGender) setPatientGender(urlGender);
-        setIsReturningPatient(false);
-        setPresetNotice(`Loaded custom patient profile: "${urlName || urlAbha}"`);
+
+        // If authenticated via patient portal, bypass redundant authentication step completely!
+        if (urlAuth || (urlAbha && urlName)) {
+          setIsPortalSession(true);
+          setIsReturningPatient(true);
+          setConsentGranted(true);
+
+          // Configure continuity engine with prior clinical history
+          const decision = computeContinuity({
+            isReturning: true,
+            lastVisitDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            lastChiefComplaint: "Generalized fatigue & chronic knee pain",
+            lastMedications: ["Tab Paracetamol 650mg TDS", "Sudarshan Vati BD"],
+          });
+          setContinuity(decision);
+
+          // Route straight to OPD intake / complaint selection (or requested step like 'scan')
+          const validSteps: KioskStep[] = [
+            "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm"
+          ];
+          const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
+            ? requestedStep
+            : "complaint_select";
+
+          setStep(targetStep);
+          setPresetNotice(
+            `ABDM Authenticated Session · ${urlName || urlAbha} · Direct OPD Consultation Active`
+          );
+        } else {
+          setIsReturningPatient(false);
+          setPresetNotice(`Loaded custom patient profile: "${urlName || urlAbha}"`);
+        }
       }
     }
   }, []);
@@ -330,6 +288,32 @@ export default function KioskPage() {
           <ProgressSteps steps={stepsList} currentStepIndex={getStepIndex()} />
         </div>
 
+        {/* Authenticated Portal Session Banner */}
+        {isPortalSession && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-950 font-semibold shadow-2xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                <span className="flex items-center gap-1.5 font-bold text-emerald-900">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                  {language === "hi" ? "प्रमाणित ABHA सत्र:" : "Authenticated ABHA Session:"}
+                </span>
+                <span className="text-slate-900 font-bold">{patientName}</span>
+                <span className="font-mono text-slate-600 text-[11px]">({abhaId})</span>
+                <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-emerald-300 text-emerald-800">
+                  {language === "hi" ? "सीधा ओपीडी परामर्श सक्रिय" : "Direct OPD Intake Active"}
+                </span>
+              </div>
+            </div>
+            <Link
+              href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender)}&age=${patientAge}&lang=${language}`}
+              className="inline-flex items-center gap-1 text-emerald-800 hover:text-emerald-950 hover:underline font-bold px-2.5 py-1.5 rounded-xl hover:bg-emerald-100/70 border border-emerald-200/70 bg-white sm:bg-transparent transition-colors shrink-0 self-start sm:self-auto"
+            >
+              <span>{language === "hi" ? "← पोर्टल पर वापस जाएं" : "← Back to Portal"}</span>
+            </Link>
+          </div>
+        )}
+
         {/* Main Dynamic Step Area */}
         <div className="flex-1 flex flex-col justify-center py-1">
           {/* ================= STEP 1: IDENTIFY ================= */}
@@ -361,53 +345,6 @@ export default function KioskPage() {
                       14-Digit ABHA ID (Ayushman Bharat Health Account)
                     </label>
                     <span className="text-xs font-medium text-emerald-700">ABDM FHIR R4 Compliant</span>
-                  </div>
-
-                  {/* Quick Action Presets Bar */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={generateRandomPatient}
-                      className="h-9 px-3 text-xs font-semibold border border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-900"
-                    >
-                      <Shuffle className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
-                      🎲 Random ABHA / New Patient
-                    </Button>
-
-                    <div className="relative inline-block">
-                      <select
-                        onChange={(e) => {
-                          const idx = Number(e.target.value);
-                          if (!isNaN(idx) && RETURNING_PRESETS[idx]) {
-                            selectReturningPreset(RETURNING_PRESETS[idx]);
-                          }
-                        }}
-                        defaultValue=""
-                        className="h-9 px-3 text-xs font-semibold rounded-md border border-slate-300 bg-white hover:border-emerald-600 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                      >
-                        <option value="" disabled>
-                          📋 Revisit Returning Patient...
-                        </option>
-                        {RETURNING_PRESETS.map((p, idx) => (
-                          <option key={p.abhaId} value={idx}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => selectReturningPreset(RETURNING_PRESETS[0])}
-                      className="h-9 px-2.5 text-xs text-slate-600 hover:text-emerald-700"
-                    >
-                      <QrCode className="w-3.5 h-3.5 mr-1 text-slate-500" />
-                      Kamla Devi
-                    </Button>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -553,72 +490,185 @@ export default function KioskPage() {
 
           {/* ================= STEP 2b: CONTINUITY CHECK (Gap-Adaptive History) ================= */}
           {step === "continuity" && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="text-center max-w-xl mx-auto space-y-2">
-                <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-                  Kya aap pehle bhi yahan aaye hain?
+            <div className="max-w-4xl mx-auto w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300 py-4">
+              {/* Header */}
+              <div className="text-center max-w-2xl mx-auto space-y-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+                  <History className="w-3.5 h-3.5 text-emerald-700" />
+                  {language === "hi" ? "कंटिन्यूइटी इंजन · अनुकूलित ओपीडी परामर्श" : "Continuity Engine · Adaptive OPD Intake"}
+                </span>
+                <h3 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950">
+                  {language === "hi" ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं?" : "Have you visited this hospital before?"}
                 </h3>
-                <p className="text-sm text-slate-600 font-medium">
-                  Have you visited this hospital before? We will not repeat questions you already answered.
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  {language === "hi"
+                    ? "पुराने मरीज़ों के लिए सिर्फ वही सवाल पूछे जाएंगे जो पिछली बार के बाद बदले हैं, जिससे आपका कीमती समय बचेगा।"
+                    : "Returning patients are fast-tracked with delta triage—only answering what changed since their last consultation."}
                 </p>
+                <AudioPrompter
+                  autoPlay
+                  language={language}
+                  textToSpeak={
+                    language === "hi"
+                      ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं? यदि हाँ तो पुराना मरीज़ चुनें, अन्यथा नया मरीज़ चुनें।"
+                      : "Have you visited this hospital before? Select returning patient to fast-track your visit, or new patient for first-time registration."
+                  }
+                />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
-                <button
-                  type="button"
+              {/* Intelligent Prior Record Detection Banner */}
+              {(isReturningPatient || isPortalSession) && patientName && abhaId && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="font-bold block text-slate-900 text-sm">
+                        {language === "hi" ? `पूर्व ओपीडी रिकॉर्ड उपलब्ध: ${patientName}` : `Previous Clinical Record Found: ${patientName}`}
+                      </span>
+                      <span className="text-slate-600 font-medium">
+                        {language === "hi"
+                          ? `ABHA ${abhaId} · पूर्व परामर्श रिकॉर्ड संलग्न · सक्रिय प्रिस्क्रिप्शन फ़ाइल पर हैं`
+                          : `ABHA ${abhaId} · Prior consultation records attached · Active prescriptions on file`}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const decision = computeContinuity({
+                        isReturning: true,
+                        lastVisitDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        lastChiefComplaint: "Prior consultation follow-up",
+                        lastMedications: ["Active prescription on file"]
+                      });
+                      setContinuity(decision);
+                      setIsReturningPatient(true);
+                      setStep("complaint_select");
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer shrink-0"
+                  >
+                    {language === "hi" ? "त्वरित पुराने मरीज़ चयन →" : "Fast-Track Revisit →"}
+                  </button>
+                </div>
+              )}
+
+              {/* Two High-Contrast 3xl Touch Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
+                {/* ── CARD A: Returning Patient (Fast-Track Delta) ── */}
+                <div
                   onClick={() => {
-                    // Demo returning patient: last visit 45 days ago
                     const decision = computeContinuity({
                       isReturning: true,
-                      lastVisitDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-                      lastChiefComplaint: "Chest discomfort & acidity",
-                      lastMedications: ["Tab Metformin 500mg BD", "Tab Telmisartan 40mg OD"]
+                      lastVisitDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                      lastChiefComplaint: "Previous consultation follow-up",
+                      lastMedications: ["Active prescription on file"]
                     });
                     setContinuity(decision);
                     setIsReturningPatient(true);
                     setStep("complaint_select");
                   }}
-                  className="group p-6 rounded-xl bg-white border border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/30 transition-all text-left space-y-4 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
+                  className="group p-7 sm:p-8 rounded-3xl bg-gradient-to-b from-emerald-50/40 via-white to-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 text-left hover:-translate-y-1 shadow-sm"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                    <RotateCcw className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-slate-900">Haan, pehle aaya hoon</h4>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Yes — I have visited before. Only answer what has changed since last visit.
-                    </p>
-                  </div>
-                </button>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <History className="w-7 h-7" strokeWidth={2} />
+                      </div>
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        {language === "hi" ? "3 मिनट त्वरित जांच" : "3-Min Fast Track"}
+                      </span>
+                    </div>
 
-                <button
-                  type="button"
+                    <div>
+                      <h4 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                        {language === "hi" ? "हाँ, पहले आ चुका हूँ" : "Yes, Returning Patient"}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal leading-relaxed">
+                        {language === "hi"
+                          ? "पुराने पर्चे और दवाइयों का इतिहास पहले से दर्ज है। केवल नए या बदले हुए लक्षणों का उत्तर दें।"
+                          : "Your prior records & medications are linked. Answer only what has evolved since your last visit."}
+                      </p>
+                    </div>
+
+                    {/* Features checklist */}
+                    <div className="space-y-2.5 pt-3.5 border-t border-slate-100 text-xs font-medium text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{language === "hi" ? "दवाइयों के असर की जांच (Medication Review)" : "Medication adherence & tolerance review"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{language === "hi" ? "पुराने सवालों की पुनरावृत्ति नहीं (Skip Baseline)" : "Skips redundant demographic & history questions"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{language === "hi" ? "डॉक्टर के लिए तुलनात्मक सारांश (Delta Clinical Note)" : "Direct delta summary for OPD doctor"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-12 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors">
+                    <span>{language === "hi" ? "पुराने मरीज़ के रूप में आगे बढ़ें" : "Continue as Returning Patient"}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                </div>
+
+                {/* ── CARD B: First-Time Patient (Comprehensive Baseline) ── */}
+                <div
                   onClick={() => {
                     const decision = computeContinuity({ isReturning: false });
                     setContinuity(decision);
                     setIsReturningPatient(false);
                     setStep("complaint_select");
                   }}
-                  className="group p-6 rounded-xl bg-white border border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/30 transition-all text-left space-y-4 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
+                  className="group p-7 sm:p-8 rounded-3xl bg-gradient-to-b from-slate-50/40 via-white to-white border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 text-left hover:-translate-y-1 shadow-sm"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                    <UserPlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-slate-900">Nahi, pehli baar</h4>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      No — first visit here. Comprehensive baseline clinical intake will be recorded.
-                    </p>
-                  </div>
-                </button>
-              </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <UserPlus className="w-7 h-7" strokeWidth={2} />
+                      </div>
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+                        {language === "hi" ? "नया पंजीकरण" : "New Baseline"}
+                      </span>
+                    </div>
 
-              {continuity && (
-                <div className="max-w-3xl mx-auto p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
-                  <p className="text-xs font-semibold text-emerald-900">{continuity.headlineHi}</p>
-                  <p className="text-[11px] text-emerald-700 mt-0.5">{continuity.headlineEn}</p>
+                    <div>
+                      <h4 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight group-hover:text-slate-900 transition-colors">
+                        {language === "hi" ? "नहीं, पहली बार आया हूँ" : "No, First-Time Visit"}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal leading-relaxed">
+                        {language === "hi"
+                          ? "इस अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी व्यापक प्राथमिक मेडिकल फाइल तैयार होगी।"
+                          : "First visit to this hospital. A comprehensive baseline clinical intake and profile will be created."}
+                      </p>
+                    </div>
+
+                    {/* Features checklist */}
+                    <div className="space-y-2.5 pt-3.5 border-t border-slate-100 text-xs font-medium text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
+                        <span>{language === "hi" ? "संपूर्ण मुख्य लक्षण व अवधि दर्ज करें" : "Comprehensive chief complaints & duration"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
+                        <span>{language === "hi" ? "एलर्जी व वर्तमान दवाइयों की जांच" : "Known allergies & current medication screening"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
+                        <span>{language === "hi" ? "नई ओपीडी फ़ाइल व विभाग आवंटन" : "Department allotment & new OPD case sheet"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-12 rounded-2xl bg-slate-900 group-hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors">
+                    <span>{language === "hi" ? "नए मरीज़ के रूप में शुरू करें" : "Begin First-Time Intake"}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -1129,7 +1179,7 @@ export default function KioskPage() {
                         patient: {
                           abhaId,
                           name: patientName,
-                          age: patientAge,
+                          age: patientAge ?? 0,
                           gender: patientGender,
                           language
                         },
@@ -1268,6 +1318,21 @@ export default function KioskPage() {
 
               {/* Action Buttons */}
               <div className="pt-2 flex flex-wrap justify-center items-center gap-3">
+                {isPortalSession && (
+                  <Link
+                    href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender)}&age=${patientAge}&lang=${language}`}
+                  >
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="font-semibold text-xs rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 h-11 px-5 shadow-xs flex items-center gap-2"
+                    >
+                      <ArrowRight className="w-4 h-4 text-emerald-700" />
+                      <span>{language === "hi" ? "वापस पोर्टल पर जाएं" : "Return to Patient Portal"}</span>
+                    </Button>
+                  </Link>
+                )}
+
                 <Button
                   variant="outline"
                   size="md"

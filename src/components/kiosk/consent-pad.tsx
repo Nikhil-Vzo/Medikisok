@@ -127,7 +127,7 @@ function generateAbdmConsentResource(
   abhaId: string | undefined,
   consentStep: number,
   signatureDataUrl: string | null,
-  language: string = "hi"
+  language: string = "en"
 ): AbdmConsentResource {
   const now = new Date().toISOString();
   const validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h
@@ -377,7 +377,7 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
 export const ConsentPad: React.FC<ConsentPadProps> = ({
   patientName,
   abhaId,
-  language = "hi",
+  language = "en",
   onConsentComplete,
   onAudioConsentGranted,
 }) => {
@@ -602,7 +602,7 @@ export const ConsentPad: React.FC<ConsentPadProps> = ({
           className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-white border border-slate-300 hover:border-emerald-400 text-slate-700 text-xs font-semibold hover:bg-emerald-50/50 transition-colors"
         >
           <Mic className="w-3.5 h-3.5 text-emerald-700" />
-          <span>{language === "hi" ? "🎙️ मौखिक सहमति (Voice)" : "🎙️ Oral Voice Consent"}</span>
+          <span>{language === "hi" ? "मौखिक सहमति (Voice)" : "Oral Voice Consent"}</span>
         </button>
 
         <Button

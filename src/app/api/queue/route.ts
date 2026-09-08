@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
               full_name: patient.name,
               age: patient.age,
               gender: patient.gender,
-              preferred_language: patient.language || "hi",
+              preferred_language: patient.language || "en",
             })
             .select("id")
             .maybeSingle();

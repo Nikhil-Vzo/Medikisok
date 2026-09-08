@@ -46,7 +46,7 @@ const SAMPLE_TIMELINE: TimelineRecord[] = [
   }
 ];
 
-export const PatientRecordsTimeline: React.FC = () => {
+export const PatientRecordsTimeline: React.FC<{ records?: TimelineRecord[] }> = ({ records = [] }) => {
   return (
     <div className="p-6 bg-white rounded-xl border border-slate-200 space-y-6">
       <div className="flex items-center justify-between">
@@ -64,9 +64,16 @@ export const PatientRecordsTimeline: React.FC = () => {
         </Badge>
       </div>
 
-      {/* Timeline List */}
-      <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-emerald-100">
-        {SAMPLE_TIMELINE.map((rec) => (
+      {records.length === 0 ? (
+        <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-xl border border-slate-100">
+          <Calendar className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
+          <p className="text-xs font-semibold text-slate-700">No Historical Records On File</p>
+          <p className="text-[11px] text-slate-500">Scanned prescriptions and laboratory reports linked via ABDM will appear here.</p>
+        </div>
+      ) : (
+        /* Timeline List */
+        <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-emerald-100">
+          {records.map((rec) => (
           <div key={rec.id} className="relative group">
             {/* Timeline Dot */}
             <div className={`absolute -left-6 top-1.5 w-5 h-5 rounded-full border-4 border-white shadow-sm ${rec.isAbnormal ? 'bg-red-600 ring-2 ring-red-200' : 'bg-emerald-700'}`} />
@@ -115,6 +122,7 @@ export const PatientRecordsTimeline: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 };

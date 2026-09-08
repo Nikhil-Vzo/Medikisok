@@ -65,14 +65,14 @@ export type KioskConfirmationAction = keyof typeof CONFIRMATION_MESSAGES;
  */
 export function speakConfirmation(
   action: KioskConfirmationAction,
-  language: string = "hi"
+  language: string = "en"
 ): void {
   if (typeof window === "undefined") return;
 
   const msg = CONFIRMATION_MESSAGES[action];
   if (!msg) return;
 
-  const text = msg[language] || msg.hi || msg.en;
+  const text = msg[language] || msg.en || msg.hi;
   // Cancel any ongoing speech or audio across the entire kiosk
   stopAllAudio();
   speak(text, language, { rate: 1.0 }).catch(() => {
@@ -105,7 +105,7 @@ const LANG_BCP47_MAP: Record<string, { tag: string; label: string; voiceKeywords
 
 export const AudioPrompter: React.FC<AudioPrompterProps> = ({
   textToSpeak,
-  language = "hi",
+  language = "en",
   autoPlay = true,
   className,
 }) => {

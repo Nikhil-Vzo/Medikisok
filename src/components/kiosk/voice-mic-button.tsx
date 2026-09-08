@@ -26,7 +26,7 @@ const LANG_SPEECH_TAGS: Record<string, { tag: string; listeningText: string; tap
 
 export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
   onTranscriptReceived,
-  language = "hi",
+  language = "en",
   isListening: externalListening,
   onListeningChange,
   className
@@ -36,7 +36,7 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
   const recognitionRef = React.useRef<any>(null);
   const transcriptRef = React.useRef<string>("");
 
-  const langConfig = LANG_SPEECH_TAGS[language] || LANG_SPEECH_TAGS.hi;
+  const langConfig = LANG_SPEECH_TAGS[language] || LANG_SPEECH_TAGS.en || LANG_SPEECH_TAGS.hi;
   const isListening = externalListening !== undefined ? externalListening : internalListening;
 
   const setListening = (val: boolean) => {
@@ -48,6 +48,7 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
     if (typeof window === "undefined") return;
 
     transcriptRef.current = "";
+    setLiveTranscript("");
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -55,20 +56,19 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
     if (!SpeechRecognition) {
       // Fallback for browsers without native SpeechRecognition
       setListening(true);
-      setLiveTranscript(langConfig.listeningText);
       setTimeout(() => {
         const mockResponses: Record<string, string> = {
-          hi: "छाती के ठीक बीच में",
-          en: "Center of the chest",
+          hi: "छाती के बिल्कुल बीच में",
+          en: "Right in the center of my chest",
           bn: "বুকের ঠিক মাঝখানে",
-          ta: "மார்பின் நடுப்பகுதியில்",
+          ta: "நெஞ்சின் நடுப்பகுதியில்",
           te: "ఛాతీ మధ్యలో",
           mr: "छातीच्या मध्यभागी",
           gu: "છાતીની બરાબર વચ્ચે",
           mai: "छातीक ठीक बीचमे",
         };
-        const mockResponse = mockResponses[language] || mockResponses.hi;
-        setLiveTranscript(`पहचाना: "${mockResponse}"`);
+        const mockResponse = mockResponses[language] || mockResponses.en || mockResponses.hi;
+        setLiveTranscript(language === "hi" ? `पहचाना: "${mockResponse}"` : `Recognized: "${mockResponse}"`);
         onTranscriptReceived?.(mockResponse);
         setListening(false);
       }, 1500);

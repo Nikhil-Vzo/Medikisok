@@ -7,28 +7,13 @@ import { Button } from "@/components/ui/button";
 import { fetchEmergencyAlertsFromSupabase } from "@/lib/supabase/db";
 import { createClient } from "@/lib/supabase/client";
 
-const FALLBACK_ALERTS = [
-  {
-    id: "triage-001",
-    token: "#42",
-    patientName: "Kamla Devi",
-    age: 62,
-    gender: "Female",
-    symptom: "Acute crushing chest pain with left arm radiation + dyspnoea",
-    priority: "CRITICAL_IMMEDIATE",
-    time: "2 mins ago",
-    assignedBay: "Emergency Bay 1",
-    status: "Dispatched"
-  }
-];
-
 export default function TriagePage() {
-  const [alerts, setAlerts] = React.useState(FALLBACK_ALERTS);
+  const [alerts, setAlerts] = React.useState<any[]>([]);
   const [isRealtime, setIsRealtime] = React.useState(false);
 
   const loadAlerts = React.useCallback(async () => {
     const remote = await fetchEmergencyAlertsFromSupabase();
-    if (remote && remote.length > 0) {
+    if (remote) {
       setAlerts(remote);
     }
   }, []);
@@ -136,54 +121,64 @@ export default function TriagePage() {
             </span>
           </div>
 
-          {alerts.map((alertItem) => (
-            <article
-              key={alertItem.id}
-              className="p-6 rounded-xl border border-red-200 bg-white hover:border-red-300 transition shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-700 font-bold text-base shrink-0">
-                  {alertItem.token}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base font-semibold text-slate-900">
-                      {alertItem.patientName}
-                    </h3>
-                    <span className="text-sm font-medium text-slate-500">
-                      ({alertItem.age}y / {alertItem.gender})
-                    </span>
-                    <Badge variant="danger" className="text-xs">
-                      {alertItem.priority}
-                    </Badge>
+          {alerts.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center space-y-3">
+              <Activity className="w-10 h-10 text-emerald-600 mx-auto opacity-40" />
+              <h3 className="text-base font-bold text-slate-800">No Active Emergency Red Flags</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                When patients reporting high-severity symptoms (acute chest pain, severe dyspnoea, altered consciousness) complete intake at the Kiosk, emergency alerts will trigger here in real-time.
+              </p>
+            </div>
+          ) : (
+            alerts.map((alertItem) => (
+              <article
+                key={alertItem.id}
+                className="p-6 rounded-xl border border-red-200 bg-white hover:border-red-300 transition shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-700 font-bold text-base shrink-0">
+                    {alertItem.token}
                   </div>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {alertItem.symptom}
-                  </p>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 font-medium pt-1">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                      Detected: {alertItem.time}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span>Assigned: {alertItem.assignedBay}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-semibold text-slate-900">
+                        {alertItem.patientName}
+                      </h3>
+                      <span className="text-sm font-medium text-slate-500">
+                        ({alertItem.age}y / {alertItem.gender})
+                      </span>
+                      <Badge variant="danger" className="text-xs">
+                        {alertItem.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      {alertItem.symptom}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 font-medium pt-1">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                        Detected: {alertItem.time}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span>Assigned: {alertItem.assignedBay}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <Button
-                  variant="danger"
-                  size="md"
-                  onClick={() => alert("Notified cardiology emergency resuscitation team!")}
-                  className="w-full md:w-auto font-semibold"
-                >
-                  <Phone className="w-4 h-4 mr-2" aria-hidden="true" />
-                  Alert Resuscitation Team
-                </Button>
-              </div>
-            </article>
-          ))}
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <Button
+                    variant="danger"
+                    size="md"
+                    onClick={() => alert("Notified cardiology emergency resuscitation team!")}
+                    className="w-full md:w-auto font-semibold"
+                  >
+                    <Phone className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Alert Resuscitation Team
+                  </Button>
+                </div>
+              </article>
+            ))
+          )}
         </section>
       </main>
     </div>

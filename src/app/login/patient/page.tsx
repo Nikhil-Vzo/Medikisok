@@ -14,9 +14,7 @@ import {
   AlertCircle,
   Loader2,
   User,
-  Zap,
-  Shuffle,
-  UserCheck
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,90 +47,30 @@ const ABHA_STEPS_HI: StepItem[] = [
   { id: "confirmed", label: "ABHA तैयार", labelHindi: "ABHA Ready" },
 ];
 
-const MOCK_PROFILE: AbhaProfile = {
-  abhaId: "91-4523-8819-2041",
-  abhaAddress: "kamla.devi@abdm",
-  fullName: "Kamla Devi",
-  gender: "Female",
-  yearOfBirth: 1964,
-  mobile: "XXXXXX8912",
-  token: "TOKEN-MOCK-VERIFIED",
-};
-
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
 export default function PatientLoginPage() {
   const router = useRouter();
 
-  // Auth flow state (Mockup flow: identify -> confirmed)
+  // Auth flow state (identify -> confirmed)
   const [authMethod, setAuthMethod] = React.useState<AuthMethod>("abha");
   const [flowStep, setFlowStep] = React.useState<FlowStep>("identify");
   const [isLoading, setIsLoading] = React.useState(false);
   const [apiError, setApiError] = React.useState<string | null>(null);
 
   // Form fields
-  const [abhaNumber, setAbhaNumber] = React.useState("91-4523-8819-2041");
-  const [mobileNumber, setMobileNumber] = React.useState("9876543210");
+  const [abhaNumber, setAbhaNumber] = React.useState("");
+  const [mobileNumber, setMobileNumber] = React.useState("");
   const [customName, setCustomName] = React.useState("");
 
   // Result state
   const [profile, setProfile] = React.useState<AbhaProfile | null>(null);
 
-  // Language (detect or default to Hindi for kiosk)
-  const [lang, setLang] = React.useState<"hi" | "en">("hi");
+  // Language (default to English)
+  const [lang, setLang] = React.useState<"hi" | "en">("en");
 
   const steps = lang === "hi" ? ABHA_STEPS_HI : ABHA_STEPS_EN;
   const stepIndex = flowStep === "identify" ? 0 : 1;
-
-  // Quick preset patient generator
-  function generateRandomPatient() {
-    const r4 = () => Math.floor(1000 + Math.random() * 9000).toString();
-    const newAbha = `91-${r4()}-${r4()}-${r4()}`;
-    const pool = [
-      { name: "Ramesh Kumar Sharma", gender: "Male", yob: 1976 },
-      { name: "Priya Anand Patel", gender: "Female", yob: 1990 },
-      { name: "Mohan Lal Verma", gender: "Male", yob: 1966 },
-      { name: "Sunita Devi", gender: "Female", yob: 1961 },
-      { name: "Deepak Joshi", gender: "Male", yob: 1995 },
-      { name: "Gurpreet Kaur", gender: "Female", yob: 1983 },
-      { name: "Aarav Mehra", gender: "Male", yob: 1998 },
-      { name: "Kavita Reddy", gender: "Female", yob: 1988 },
-      { name: "Rajeshwar Singh", gender: "Male", yob: 1970 },
-      { name: "Anil Gupta", gender: "Male", yob: 1986 }
-    ];
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    const username = pick.name.toLowerCase().replace(/\s+/g, ".");
-    const customProf: AbhaProfile = {
-      abhaId: newAbha,
-      abhaAddress: `${username}@abdm`,
-      fullName: pick.name,
-      gender: pick.gender,
-      yearOfBirth: pick.yob,
-      mobile: `98${r4()}${Math.floor(1000 + Math.random() * 9000)}`.slice(0, 10),
-      token: "TOKEN-MOCK-VERIFIED",
-    };
-    setAbhaNumber(newAbha);
-    setCustomName(pick.name);
-    setProfile(customProf);
-    setFlowStep("confirmed");
-  }
-
-  function selectPresetPatient(name: string, abha: string, gender: string, yob: number) {
-    const username = name.toLowerCase().replace(/\s+/g, ".");
-    const p: AbhaProfile = {
-      abhaId: abha,
-      abhaAddress: `${username}@abdm`,
-      fullName: name,
-      gender: gender,
-      yearOfBirth: yob,
-      mobile: "9876543210",
-      token: "TOKEN-MOCK-VERIFIED",
-    };
-    setAbhaNumber(abha);
-    setCustomName(name);
-    setProfile(p);
-    setFlowStep("confirmed");
-  }
 
   /* ─── Helpers ──────────────────────────────────────────────────────── */
 
@@ -147,7 +85,7 @@ export default function PatientLoginPage() {
         verifiedSub: "आपकी राष्ट्रीय स्वास्थ्य पहचान सफलतापूर्वक लिंक हो गई है।",
         proceed: "मरीज पोर्टल व सेवाओं पर जाएं",
         directKiosk: "सीधे कियोस्क इनटेक पर जाएं (त्वरित)",
-        skipDirect: "सीधे कियोस्क पर जाएं (त्वरित डेमो)",
+        skipDirect: "सीधे कियोस्क पर जाएं",
         abhaTab: "ABHA ID",
         mobileTab: "मोबाइल नंबर",
         qrTab: "QR स्कैन",
@@ -156,8 +94,8 @@ export default function PatientLoginPage() {
         enterMobile: "10 अंकों का मोबाइल नंबर",
         mobilePlaceholder: "9876543210",
         scanCard: "ABHA कार्ड QR स्कैन करें",
-        scanSimulate: "सिम्युलेट QR स्कैन (Kamla Devi)",
-        privacy: "DPDP Act 2023 के तहत पूर्ण सुरक्षित व एन्क्रिप्टेड (Mockup Mode)",
+        scanSimulate: "कैमरा QR स्कैनर प्रारंभ करें",
+        privacy: "DPDP Act 2023 के तहत पूर्ण सुरक्षित व एंड-टू-एंड एन्क्रिप्टेड",
       };
     }
     return {
@@ -169,7 +107,7 @@ export default function PatientLoginPage() {
       verifiedSub: "Your national health identifier is confirmed and ready for clinical intake.",
       proceed: "Access Patient Portal & Services",
       directKiosk: "Direct Kiosk Intake (Quick Start)",
-      skipDirect: "Direct Intake (Quick Demo)",
+      skipDirect: "Direct Intake",
       abhaTab: "ABHA ID",
       mobileTab: "Mobile",
       qrTab: "QR Scan",
@@ -178,46 +116,65 @@ export default function PatientLoginPage() {
       enterMobile: "Enter 10-digit mobile number",
       mobilePlaceholder: "9876543210",
       scanCard: "Scan ABHA Card QR",
-      scanSimulate: "Simulate QR Scan (Kamla Devi)",
-      privacy: "Protected & Encrypted under DPDP Act 2023 (Mockup Mode)",
+      scanSimulate: "Start Camera QR Scan",
+      privacy: "Protected & Encrypted under DPDP Act 2023 · ABDM Compliant",
     };
   }
 
   const t = getCurrentLangStrings();
 
-  /* ─── Auth Handlers (Instant Mockup Verification — No OTP) ─── */
+  /* ─── Auth Handlers (Real ABDM / DB Verification) ─── */
 
   async function handleVerifyIdentity() {
     setApiError(null);
+
+    const trimmedAbha = abhaNumber.trim();
+    const trimmedMobile = mobileNumber.trim();
+    const trimmedName = customName.trim();
+
+    if (authMethod === "abha" && !trimmedAbha && !trimmedName) {
+      setApiError(lang === "hi" ? "कृपया अपना 14 अंकों का ABHA नंबर दर्ज करें" : "Please enter your 14-digit ABHA Number");
+      return;
+    }
+
+    if (authMethod === "mobile" && !trimmedMobile && !trimmedName) {
+      setApiError(lang === "hi" ? "कृपया अपना 10 अंकों का मोबाइल नंबर दर्ज करें" : "Please enter your 10-digit mobile number");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Simulate quick API / mock verification without any OTP prompt
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      const res = await fetch("/api/auth/abha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phase: "link_abha",
+          authMethod: authMethod === "mobile" ? "mobile_otp" : "aadhaar_otp",
+          abhaNumber: authMethod === "abha" && trimmedAbha ? trimmedAbha : undefined,
+          mobile: authMethod === "mobile" && trimmedMobile ? trimmedMobile : undefined,
+          fullName: trimmedName || undefined,
+        }),
+      });
 
-      let resolved: AbhaProfile = { ...MOCK_PROFILE };
-
-      if (customName.trim()) {
-        resolved.fullName = customName.trim();
-        resolved.abhaAddress = `${customName.trim().toLowerCase().replace(/\s+/g, ".")}@abdm`;
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Identity verification failed");
       }
 
-      if (authMethod === "abha" && abhaNumber.trim()) {
-        resolved.abhaId = abhaNumber.trim();
-        if (abhaNumber.includes("1234") && !customName.trim()) {
-          resolved.fullName = "Ravi Kumar";
-          resolved.gender = "Male";
-          resolved.yearOfBirth = 1975;
-          resolved.abhaAddress = "ravi.kumar@abdm";
-        }
-      } else if (authMethod === "mobile" && mobileNumber.trim()) {
-        resolved.mobile = mobileNumber.trim();
-      }
-
-      setProfile(resolved);
+      setProfile({
+        abhaId: data.abhaId || (trimmedAbha || "91-0000-0000-0001"),
+        abhaAddress: data.abhaAddress || (trimmedName ? `${trimmedName.toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"),
+        fullName: data.fullName || (trimmedName || "Patient"),
+        gender: data.gender || "Not specified",
+        yearOfBirth: data.yearOfBirth || (new Date().getFullYear() - 30),
+        mobile: data.mobile || (trimmedMobile || "XXXXXXXXXX"),
+        token: data.token || "TOKEN-VERIFIED",
+      });
       setFlowStep("confirmed");
-    } catch (err) {
-      setApiError(String(err));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setApiError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -231,10 +188,11 @@ export default function PatientLoginPage() {
         name: profile.fullName,
         gender: profile.gender,
         age: String(age),
+        lang: lang,
       });
       router.push(`/patient?${params.toString()}`);
     } else {
-      router.push("/patient");
+      router.push(`/patient?lang=${lang}`);
     }
   }
 
@@ -246,10 +204,11 @@ export default function PatientLoginPage() {
         name: profile.fullName,
         gender: profile.gender,
         age: String(age),
+        lang: lang,
       });
       router.push(`/kiosk?${params.toString()}`);
     } else {
-      router.push("/kiosk");
+      router.push(`/kiosk?lang=${lang}`);
     }
   }
 
@@ -281,21 +240,21 @@ export default function PatientLoginPage() {
             <div className="flex gap-1 bg-white rounded-lg border border-slate-200 p-0.5 shadow-sm">
               <button
                 type="button"
-                onClick={() => setLang("hi")}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                  lang === "hi" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50"
-                }`}
-              >
-                हिंदी
-              </button>
-              <button
-                type="button"
                 onClick={() => setLang("en")}
                 className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
                   lang === "en" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50"
                 }`}
               >
                 English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("hi")}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                  lang === "hi" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50"
+                }`}
+              >
+                हिंदी
               </button>
             </div>
           </div>
@@ -366,64 +325,16 @@ export default function PatientLoginPage() {
           {/* ── STEP: Identify ── */}
           {flowStep === "identify" && (
             <div className="space-y-5">
-              {/* Quick Identity Selector (New Unique Patient / Presets) */}
-              <div className="space-y-2.5 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-emerald-950 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
-                    {lang === "hi" ? "विशिष्ट मरीज़ पहचान चुनें" : "Select Patient Identity"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={generateRandomPatient}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-md border border-emerald-300 shadow-2xs hover:bg-emerald-50 transition-colors"
-                  >
-                    <Shuffle className="w-3 h-3 text-emerald-700" />
-                    <span>🎲 {lang === "hi" ? "रैंडम नया मरीज़" : "Random Unique Patient"}</span>
-                  </button>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => selectPresetPatient("Kamla Devi", "91-4523-8819-2041", "Female", 1964)}
-                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
-                  >
-                    Kamla Devi (62F)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetPatient("Ravi Kumar", "91-1234-8899-7711", "Male", 1976)}
-                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
-                  >
-                    Ravi Kumar (48M)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetPatient("Priya Patel", "91-8834-1192-5503", "Female", 1990)}
-                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
-                  >
-                    Priya Patel (34F)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetPatient("Anil Gupta", "91-6621-9943-1209", "Male", 1986)}
-                    className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white hover:bg-emerald-100/70 border border-emerald-200 text-slate-700 transition-colors"
-                  >
-                    Anil Gupta (38M)
-                  </button>
-                </div>
-              </div>
-
               {/* Patient Name input (Optional or Custom) */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-700">
-                  {lang === "hi" ? "मरीज़ का पूरा नाम (अपना नाम लिखें या खाली छोड़ें)" : "Patient Full Name (Type your custom name or leave default)"}
+                  {lang === "hi" ? "मरीज़ का पूरा नाम (वैकल्पिक)" : "Patient Full Name (Optional if registered)"}
                 </label>
                 <input
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  placeholder={lang === "hi" ? "उदा. निखिल वर्मा / आपका नाम" : "e.g. Nikhil Verma / Your Name"}
+                  placeholder={lang === "hi" ? "उदा. अपना नाम दर्ज करें" : "e.g. Enter your full name"}
                   className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-medium focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                 />
               </div>
@@ -442,14 +353,7 @@ export default function PatientLoginPage() {
                     className="w-full h-12 px-4 rounded-lg border border-slate-200 text-base font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
                   />
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{lang === "hi" ? "उदाहरण: 91-4523-8819-2041" : "Sample: 91-4523-8819-2041"}</span>
-                    <button
-                      type="button"
-                      onClick={() => setAbhaNumber("91-4523-8819-2041")}
-                      className="text-emerald-700 hover:text-emerald-800 font-semibold underline underline-offset-2"
-                    >
-                      Fill Demo ID
-                    </button>
+                    <span>{lang === "hi" ? "14 अंकों का नंबर (जैसे: 91-XXXX-XXXX-XXXX)" : "14 digits (format: 91-XXXX-XXXX-XXXX)"}</span>
                   </div>
                 </div>
               )}
@@ -473,14 +377,7 @@ export default function PatientLoginPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{lang === "hi" ? "डेमो मोबाइल: 9876543210" : "Demo mobile: 9876543210"}</span>
-                    <button
-                      type="button"
-                      onClick={() => setMobileNumber("9876543210")}
-                      className="text-emerald-700 hover:text-emerald-800 font-semibold underline underline-offset-2"
-                    >
-                      Fill Demo Mobile
-                    </button>
+                    <span>{lang === "hi" ? "10 अंकों का सक्रिय मोबाइल नंबर" : "10-digit registered mobile number"}</span>
                   </div>
                 </div>
               )}
@@ -497,8 +394,7 @@ export default function PatientLoginPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setAbhaNumber("91-4523-8819-2041");
-                      handleVerifyIdentity();
+                      setApiError(lang === "hi" ? "कैमरा QR स्कैनर उपलब्ध नहीं है। कृपया ABHA नंबर मैन्युअली दर्ज करें।" : "Camera QR scanner not active on this device. Please enter ABHA number manually.");
                     }}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs"
                   >

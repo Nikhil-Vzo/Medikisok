@@ -22,61 +22,11 @@ import { evaluateRedFlagsFromText } from "@/lib/ontologies/red-flags";
 import { ClinicalSuggestion, ClinicalSummaryDraft } from "@/types/clinical";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 
-const FALLBACK_PATIENTS: QueuePatient[] = [
-  {
-    id: "pat-001",
-    visitId: "visit-101",
-    name: "Kamla Devi",
-    age: 62,
-    gender: "Female",
-    abhaId: "91-4523-8819-2041",
-    abhaAddress: "kamla.devi@abdm",
-    chiefComplaint: "Retrosternal chest pain radiating to left arm with dyspnoea (3 days)",
-    clinicalMode: "ayush",
-    isEmergency: true,
-    waitTimeMins: 4,
-    status: "waiting"
-  },
-  {
-    id: "pat-002",
-    visitId: "visit-102",
-    name: "Rameshwar Singh",
-    age: 54,
-    gender: "Male",
-    abhaId: "91-8834-1192-5503",
-    abhaAddress: "rameshwar.singh@abdm",
-    chiefComplaint: "Chronic dry cough, low-grade evening fever, and weight loss (2 weeks)",
-    clinicalMode: "allopathy",
-    isEmergency: false,
-    waitTimeMins: 12,
-    status: "waiting"
-  }
-];
-
-const DEFAULT_SUGGESTIONS: ClinicalSuggestion[] = [
-  {
-    id: "sug-001",
-    type: "redflag",
-    title: "Critical Red Flag: Suspected Acute Coronary Syndrome",
-    description: "Patient exhibits retrosternal crushing pain with left arm radiation and associated dyspnoea. Immediate ECG & Troponin evaluation indicated.",
-    severity: "critical",
-    confidenceScore: 0.94,
-    citedSource: "AIIA Acute Chest Pain Clinical Protocol 2024"
-  },
-  {
-    id: "sug-002",
-    type: "interaction",
-    title: "Medication Review: Glycemic Efficacy Alert",
-    description: "Extracted Metformin 500mg BD from June records. Latest July Fasting Blood Sugar is 168 mg/dL (HbA1c 8.4%). Consider dose titration.",
-    severity: "high",
-    confidenceScore: 0.88,
-    citedSource: "ICMR Guidelines for Management of Type 2 Diabetes"
-  }
-];
+const DEFAULT_SUGGESTIONS: ClinicalSuggestion[] = [];
 
 export default function DoctorPage() {
-  const [patients, setPatients] = React.useState<QueuePatient[]>(FALLBACK_PATIENTS);
-  const [selectedPatient, setSelectedPatient] = React.useState<QueuePatient>(FALLBACK_PATIENTS[0]);
+  const [patients, setPatients] = React.useState<QueuePatient[]>([]);
+  const [selectedPatient, setSelectedPatient] = React.useState<QueuePatient | null>(null);
   const [isFhirModalOpen, setIsFhirModalOpen] = React.useState(false);
   const [isRealtimeActive, setIsRealtimeActive] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<"summary" | "timeline" | "ocr" | "prescription">("summary");
@@ -85,13 +35,18 @@ export default function DoctorPage() {
   const [triggeredRedFlags, setTriggeredRedFlags] = React.useState<ReturnType<typeof evaluateRedFlagsFromText>>({ isEmergency: false, triggeredRules: [] });
 
   React.useEffect(() => {
-    // Combine chief complaint text + socratesData for richer context
-    const socratesText = currentSummaryDraft.socratesData
-      ? `severity ${currentSummaryDraft.socratesData.severity ?? ""} ${currentSummaryDraft.socratesData.site ?? ""} ${currentSummaryDraft.socratesData.character ?? ""} ${currentSummaryDraft.socratesData.radiation ?? ""}`
+    if (!selectedPatient) {
+      setTriggeredRedFlags({ isEmergency: false, triggeredRules: [] });
+      return;
+    }
+    const dbDraft: any = (selectedPatient as any).draftSummary || null;
+    const socrates = dbDraft?.socratesData;
+    const socratesText = socrates
+      ? `severity ${socrates.severity ?? ""} ${socrates.site ?? ""} ${socrates.character ?? ""} ${socrates.radiation ?? ""}`
       : "";
-    const result = evaluateRedFlagsFromText(selectedPatient.chiefComplaint, socratesText);
+    const result = evaluateRedFlagsFromText(selectedPatient.chiefComplaint || "", socratesText);
     setTriggeredRedFlags(result);
-  }, [selectedPatient.id, selectedPatient.chiefComplaint]);
+  }, [selectedPatient?.id, selectedPatient?.chiefComplaint]);
 
   // 2-Minute OPD Target Consultation Timer
   const [timerSeconds, setTimerSeconds] = React.useState(120);
@@ -146,8 +101,11 @@ export default function DoctorPage() {
           const match = uniquePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId || p.abhaId === prev.abhaId);
           if (match) return match;
         }
-        return uniquePatients[0];
+        return uniquePatients[0] || null;
       });
+    } else {
+      setPatients([]);
+      setSelectedPatient(null);
     }
   }, []);
 
@@ -187,49 +145,38 @@ export default function DoctorPage() {
     }
   }, [loadQueue]);
 
-  // Live summary draft built from whatever the kiosk actually saved for this
-  // patient; falls back to a demo narrative only when no DB data exists.
-  const dbDraft: any = (selectedPatient as any).draftSummary || null;
+  // Live summary draft built from whatever the kiosk actually saved for this patient
+  const dbDraft: any = selectedPatient ? (selectedPatient as any).draftSummary || null : null;
 
-  const currentSummaryDraft: ClinicalSummaryDraft = {
-    visitId: selectedPatient.visitId,
-    patientId: selectedPatient.id,
-    chiefComplaint: dbDraft?.chiefComplaint || selectedPatient.chiefComplaint,
-    historyOfPresentIllness: dbDraft?.historyOfPresentIllness ||
-      "Patient reports acute retrosternal chest pain with onset 3 days ago, described as heavy pressure. Pain radiates to left arm and jaw, aggravated by physical exertion. Accompanied by breathlessness and cold diaphoresis. No prior history of myocardial infarction.",
-    socratesData: dbDraft?.socratesData || {
-      site: "Substernal",
-      onset: "Acute",
-      character: "Crushing pressure",
-      radiation: "Left arm and jaw",
-      severity: 8
-    },
-    ayushAssessment: dbDraft?.ayushAssessment || {
-      prakriti: "Pitta-Vata dominant",
-      agni: "Tikshna Agni (Hyperacidity tendency)",
-      koshtha: "Madhyama Koshtha",
-      sattva: "Pravara Sattva"
-    },
-    pastMedicalHistory: dbDraft?.pastMedicalHistory || ["Type 2 Diabetes Mellitus (5 years)", "Hypertension (3 years)"],
-    currentMedications: dbDraft?.currentMedications?.length ? dbDraft.currentMedications : [
-      { name: "Tab Metformin", dosage: "500mg", frequency: "BD", confidence: 0.95 },
-      { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD", confidence: 0.92 }
-    ],
-    allergies: dbDraft?.allergies || ["No known drug allergies (NKDA)"],
-    scannedDocumentsSummary: dbDraft?.scannedDocumentsSummary ||
-      "Processed 2 historical documents (June prescription from Dr. Verma + July Thyrocare report). FBS: 168 mg/dL, HbA1c: 8.4%.",
-    classicalHistory: dbDraft?.classicalHistory || null,
-    status: "draft",
-    isEmergencyTriage: selectedPatient.isEmergency,
-    createdAt: new Date().toISOString()
-  };
+  const currentSummaryDraft: ClinicalSummaryDraft | null = selectedPatient
+    ? {
+        visitId: selectedPatient.visitId,
+        patientId: selectedPatient.id,
+        chiefComplaint: dbDraft?.chiefComplaint || selectedPatient.chiefComplaint || "",
+        historyOfPresentIllness:
+          dbDraft?.historyOfPresentIllness || selectedPatient.chiefComplaint || "Clinical intake completed at terminal.",
+        socratesData: dbDraft?.socratesData || undefined,
+        ayushAssessment: dbDraft?.ayushAssessment || undefined,
+        pastMedicalHistory: dbDraft?.pastMedicalHistory || [],
+        currentMedications: dbDraft?.currentMedications || [],
+        allergies: dbDraft?.allergies || [],
+        scannedDocumentsSummary: dbDraft?.scannedDocumentsSummary || "",
+        classicalHistory: dbDraft?.classicalHistory || null,
+        status: "draft",
+        isEmergencyTriage: selectedPatient.isEmergency || false,
+        createdAt: new Date().toISOString(),
+      }
+    : null;
 
-  const fhirBundle = buildFhirR4Bundle(currentSummaryDraft, {
-    abhaId: selectedPatient.abhaId,
-    name: selectedPatient.name,
-    gender: selectedPatient.gender,
-    age: selectedPatient.age
-  });
+  const fhirBundle =
+    selectedPatient && currentSummaryDraft
+      ? buildFhirR4Bundle(currentSummaryDraft, {
+          abhaId: selectedPatient.abhaId,
+          name: selectedPatient.name,
+          gender: selectedPatient.gender,
+          age: selectedPatient.age,
+        })
+      : null;
 
   return (
     <div className="flex-1 flex flex-col bg-[#F7FAF8] text-slate-900 antialiased min-h-screen selection:bg-emerald-100 selection:text-emerald-950">
@@ -329,14 +276,15 @@ export default function DoctorPage() {
           <div className="lg:col-span-4 space-y-4">
             <PatientQueueTable
               patients={patients}
-              selectedVisitId={selectedPatient.visitId}
+              selectedVisitId={selectedPatient?.visitId}
               onSelectPatient={setSelectedPatient}
               onRefresh={loadQueue}
             />
           </div>
 
           {/* Right Column: Active Case Workspace */}
-          <div className="lg:col-span-8 space-y-5">
+          {selectedPatient && currentSummaryDraft ? (
+            <div className="lg:col-span-8 space-y-5">
             {/* Unified Clinical Case & Telemetry Header */}
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
               {/* Core Demographics & Allotment Bar */}
@@ -571,7 +519,7 @@ export default function DoctorPage() {
           {/* Tab 3: Chronological Medical Records Timeline */}
           {activeTab === "timeline" && (
             <div className="animate-in fade-in duration-200">
-              <PatientRecordsTimeline />
+              <PatientRecordsTimeline records={selectedPatient.scannedDocuments || []} />
             </div>
           )}
 
@@ -589,16 +537,27 @@ export default function DoctorPage() {
             </div>
           )}
         </div>
-      </div>
-    </main>
+      ) : (
+            <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 flex flex-col items-center justify-center min-h-[460px]">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <Stethoscope className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">No Patient Selected in OPD Queue</h3>
+              <p className="text-xs text-slate-500 max-w-md">
+                Patients who complete clinical intake at the Kiosk will appear in the queue on the left. Select a patient to review their case, AI differential notes, and prescribe medications.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
 
-    {/* HL7 FHIR Modal */}
-    <FhirBundleModal
-      isOpen={isFhirModalOpen}
-      onClose={() => setIsFhirModalOpen(false)}
-      fhirBundle={fhirBundle}
-      abhaAddress={selectedPatient.abhaAddress}
-    />
-  </div>
+      {/* HL7 FHIR Modal */}
+      <FhirBundleModal
+        isOpen={isFhirModalOpen}
+        onClose={() => setIsFhirModalOpen(false)}
+        fhirBundle={fhirBundle}
+        abhaAddress={selectedPatient?.abhaAddress}
+      />
+    </div>
   );
 }

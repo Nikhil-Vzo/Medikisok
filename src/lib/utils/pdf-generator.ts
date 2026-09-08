@@ -5,6 +5,7 @@ export function generateAndPrintClinicalReport(summary: ClinicalSummaryDraft, pa
   name?: string;
   gender?: string;
   age?: number;
+  tokenNumber?: number | string;
 }) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
@@ -149,19 +150,19 @@ export function generateAndPrintClinicalReport(summary: ClinicalSummaryDraft, pa
   <div class="patient-box">
     <div>
       <strong>Patient Name</strong>
-      ${patientDetails.name || "Kamla Devi"}
+      ${patientDetails.name || "Patient"}
     </div>
     <div>
       <strong>Age / Gender</strong>
-      ${patientDetails.age || 62} Y / ${patientDetails.gender || "Female"}
+      ${patientDetails.age ? `${patientDetails.age} Y` : "--"} / ${patientDetails.gender || "--"}
     </div>
     <div>
       <strong>ABHA ID</strong>
-      ${patientDetails.abhaId || "91-4523-8819-2041"}
+      ${patientDetails.abhaId || "--"}
     </div>
     <div>
       <strong>Visit Token</strong>
-      #42 (Room 3)
+      ${patientDetails.tokenNumber ? `#${patientDetails.tokenNumber}` : "OPD"}
     </div>
   </div>
 

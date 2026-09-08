@@ -11,7 +11,7 @@ export interface QueuePatient {
   age: number;
   gender: string;
   abhaId: string;
-  abhaAddress?: string;   // ABHA Address e.g. "kamla.devi@abdm"
+  abhaAddress?: string;   // ABHA Address e.g. "patient@abdm"
   chiefComplaint: string;
   clinicalMode: "allopathy" | "ayush";
   isEmergency: boolean;

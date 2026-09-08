@@ -79,7 +79,7 @@ export async function savePatientIntake(data: {
             full_name: data.patient.name,
             age: data.patient.age,
             gender: data.patient.gender,
-            preferred_language: data.patient.language || "hi",
+            preferred_language: data.patient.language || "en",
           })
           .select("id")
           .maybeSingle();
@@ -406,3 +406,129 @@ export async function fetchAuditLogsFromSupabase() {
     return null;
   }
 }
+
+// ==========================================
+// 4. PATIENT PORTAL DB ACTIONS (4 FEATURES)
+// ==========================================
+
+export interface PortalPrescription {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  prescribedBy: string;
+  hospital: string;
+  date: string;
+  category: "allopathy" | "ayurveda";
+}
+
+export interface PortalLabReport {
+  test: string;
+  value: string;
+  unit: string;
+  normalRange: string;
+  status: "high" | "normal" | "low";
+  date: string;
+}
+
+export interface PortalDepartment {
+  id: string;
+  departmentName: string;
+  category: string;
+  roomNumber: string;
+  doctorInCharge: string;
+  status: string;
+  timings: string;
+}
+
+export async function fetchPatientPrescriptionsFromDb(abhaId?: string): Promise<PortalPrescription[] | null> {
+  if (!abhaId) return null;
+  try {
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("abha_id", abhaId)
+      .maybeSingle();
+
+    if (!patient) return null;
+
+    const { data, error } = await supabase
+      .from("prescriptions")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false });
+
+    if (error || !data || data.length === 0) return null;
+
+    return data.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      dosage: r.dosage,
+      frequency: r.frequency,
+      duration: r.duration,
+      prescribedBy: r.prescribed_by || "Dr. AIIA OPD",
+      hospital: r.hospital || "All India Institute of Ayurveda (AIIA)",
+      date: r.date || new Date().toISOString().split("T")[0],
+      category: r.category === "ayurveda" ? "ayurveda" : "allopathy",
+    }));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function fetchPatientLabReportsFromDb(abhaId?: string): Promise<PortalLabReport[] | null> {
+  if (!abhaId) return null;
+  try {
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("abha_id", abhaId)
+      .maybeSingle();
+
+    if (!patient) return null;
+
+    const { data, error } = await supabase
+      .from("lab_reports")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false });
+
+    if (error || !data || data.length === 0) return null;
+
+    return data.map((l: any) => ({
+      test: l.test_name,
+      value: l.test_value,
+      unit: l.unit,
+      normalRange: l.normal_range,
+      status: (l.status === "high" || l.status === "low" ? l.status : "normal") as "high" | "normal" | "low",
+      date: l.date || new Date().toISOString().split("T")[0],
+    }));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function fetchHospitalDepartmentsFromDb(): Promise<PortalDepartment[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("hospital_departments")
+      .select("*")
+      .order("department_name", { ascending: true });
+
+    if (error || !data || data.length === 0) return null;
+
+    return data.map((d: any) => ({
+      id: d.id,
+      departmentName: d.department_name,
+      category: d.category,
+      roomNumber: d.room_number,
+      doctorInCharge: d.doctor_in_charge,
+      status: d.status,
+      timings: d.timings,
+    }));
+  } catch (err) {
+    return null;
+  }
+}
+

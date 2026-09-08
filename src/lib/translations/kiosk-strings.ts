@@ -604,20 +604,20 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
   }
 };
 
-export function getKioskStepStrings(lang: string = "hi"): KioskStepStrings {
-  return KIOSK_STEP_TRANSLATIONS[lang] || KIOSK_STEP_TRANSLATIONS.hi;
+export function getKioskStepStrings(lang: string = "en"): KioskStepStrings {
+  return KIOSK_STEP_TRANSLATIONS[lang] || KIOSK_STEP_TRANSLATIONS.en || KIOSK_STEP_TRANSLATIONS.hi;
 }
 
 export function getQuestionContent(
-  lang: string = "hi",
+  lang: string = "en",
   questionId: string
 ): QuestionTranslation {
-  const langGroup = KIOSK_TRANSLATIONS[lang] || KIOSK_TRANSLATIONS.hi;
+  const langGroup = KIOSK_TRANSLATIONS[lang] || KIOSK_TRANSLATIONS.en || KIOSK_TRANSLATIONS.hi;
   if (langGroup[questionId]) {
     return langGroup[questionId];
   }
-  // Fallback to Hindi or English
-  return KIOSK_TRANSLATIONS.hi[questionId] || KIOSK_TRANSLATIONS.en[questionId] || {
+  // Fallback to English or Hindi
+  return KIOSK_TRANSLATIONS.en[questionId] || KIOSK_TRANSLATIONS.hi[questionId] || {
     title: "Please select an option",
     subtitle: "Select the answer that applies to you",
     ttsAudioText: "Please select an option.",

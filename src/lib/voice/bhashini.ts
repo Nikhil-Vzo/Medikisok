@@ -132,13 +132,13 @@ function bcp47Tag(lang: string): string {
     te: "te-IN", mr: "mr-IN", mai: "hi-IN", gu: "gu-IN", kn: "kn-IN",
     ml: "ml-IN", pa: "pa-IN",
   };
-  return map[lang] ?? "hi-IN";
+  return map[lang] ?? "en-IN";
 }
 
 /** Speak text using the browser's native Web Speech API (TTS fallback) */
 export async function speakWithBrowserTTS(
   text: string,
-  lang: string = "hi",
+  lang: string = "en",
   options: SpeakOptions = {}
 ): Promise<void> {
   const { pitch = 1.0, volume = 1.0 } = options;
@@ -223,7 +223,7 @@ export async function speakWithBrowserTTS(
 /** Transcribe audio using the browser's native Web Speech API (ASR fallback) */
 export function transcribeWithBrowserASR(
   audioBlob: Blob,
-  lang: string = "hi"
+  lang: string = "en"
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
@@ -296,7 +296,7 @@ async function audioBlobToBase64(blob: Blob): Promise<string> {
  */
 export async function transcribe(
   audioBlob: Blob,
-  lang: string = "hi"
+  lang: string = "en"
 ): Promise<TranscribeResult> {
   if (!isBhashiniConfigured()) {
     // Fallback to browser Web Speech API
@@ -305,7 +305,7 @@ export async function transcribe(
   }
 
   const { apiKey, endpoint } = getBhashiniConfig();
-  const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "hi";
+  const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "en";
 
   try {
     const base64Audio = await audioBlobToBase64(audioBlob);
@@ -367,7 +367,7 @@ export async function transcribe(
  */
 export async function speak(
   text: string,
-  lang: string = "hi",
+  lang: string = "en",
   options: SpeakOptions = {}
 ): Promise<void> {
   const { pitch = 1.0, volume = 1.0 } = options;
@@ -428,7 +428,7 @@ export async function speak(
   // 2. If Bhashini credentials configured on server side
   if (isBhashiniConfigured()) {
     const { apiKey, endpoint } = getBhashiniConfig();
-    const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "hi";
+    const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "en";
 
     try {
       const response = await fetch(`${endpoint}/tts/v1/convert`, {

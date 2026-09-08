@@ -81,7 +81,7 @@ const MOCK_AUDIT_LOGS = [
     timestamp: "2026-08-30 09:22:38 IST",
     actor: "Patient (Kiosk #2)",
     action: "ABHA_CREATED",
-    resource: "ABHA 91-4523-8819-2041",
+    resource: "ABHA 91-0000-0000-4202",
     status: "VERIFIED"
   },
   {

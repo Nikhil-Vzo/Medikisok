@@ -5,16 +5,22 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   User, ShieldCheck, QrCode, FileText, Activity, Clock,
-  ArrowRight, PhoneCall, Stethoscope, Mic, Download,
-  CheckCircle2, AlertTriangle, Pill, ChevronRight, X,
-  ExternalLink, Calendar, MapPin, RefreshCw, Eye, HeartPulse,
-  Share2, Shield, Layers, HelpCircle
+  ArrowRight, PhoneCall, Stethoscope, Download,
+  CheckCircle2, AlertCircle, Pill, X,
+  RefreshCw, HeartPulse, Building2, Sun, Moon, Sunrise, Printer,
+  Phone, Ambulance, Mic, Info, Check, LogOut, ChevronRight,
+  Calendar, CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  fetchPatientPrescriptionsFromDb,
+  fetchPatientLabReportsFromDb,
+  fetchHospitalDepartmentsFromDb,
+  PortalDepartment,
+} from "@/lib/supabase/db";
 
-/* ─── Mock Data ────────────────────────────────────────────────────────── */
+/* ─── Data Types & Defaults ─────────────────────────────────────────────── */
 
 interface PrescriptionItem {
   id: string;
@@ -37,117 +43,91 @@ interface LabItem {
   date: string;
 }
 
-const MOCK_PRESCRIPTIONS: PrescriptionItem[] = [
-  {
-    id: "rx-1",
-    name: "Tab Paracetamol",
-    dosage: "650mg",
-    frequency: "TDS (Thrice daily)",
-    duration: "5 Days",
-    prescribedBy: "Dr. Rajesh Mehra (MD Gen Med)",
-    hospital: "All India Institute of Ayurveda (AIIA)",
-    date: "04 Sep 2026",
-    category: "allopathy"
-  },
-  {
-    id: "rx-2",
-    name: "Tab Cefixime",
-    dosage: "200mg",
-    frequency: "BD (Twice daily)",
-    duration: "7 Days",
-    prescribedBy: "Dr. Rajesh Mehra (MD Gen Med)",
-    hospital: "All India Institute of Ayurveda (AIIA)",
-    date: "04 Sep 2026",
-    category: "allopathy"
-  },
-  {
-    id: "rx-3",
-    name: "Sudarshan Vati",
-    dosage: "2 Tabs",
-    frequency: "BD with lukewarm water",
-    duration: "10 Days",
-    prescribedBy: "Dr. Ananya Sharma (MD Ayur)",
-    hospital: "AIIA Ayush OPD",
-    date: "28 Aug 2026",
-    category: "ayurveda"
-  },
-  {
-    id: "rx-4",
-    name: "Tab Telmisartan",
-    dosage: "40mg",
-    frequency: "OD (Morning after food)",
-    duration: "30 Days (Chronic)",
-    prescribedBy: "Dr. V. K. Shastri",
-    hospital: "Apex OPD Corridor 2",
-    date: "15 Aug 2026",
-    category: "allopathy"
-  },
-];
-
-const MOCK_LABS: LabItem[] = [
-  {
-    test: "Fasting Blood Sugar (FBS)",
-    value: "168",
-    unit: "mg/dL",
-    normalRange: "70 - 100",
-    status: "high",
-    date: "04 Sep 2026"
-  },
-  {
-    test: "Glycated Hemoglobin (HbA1c)",
-    value: "8.4",
-    unit: "%",
-    normalRange: "< 5.7 (Normal)",
-    status: "high",
-    date: "04 Sep 2026"
-  },
-  {
-    test: "Serum Creatinine",
-    value: "0.9",
-    unit: "mg/dL",
-    normalRange: "0.6 - 1.2",
-    status: "normal",
-    date: "04 Sep 2026"
-  },
-  {
-    test: "Blood Pressure (Systolic/Diastolic)",
-    value: "138/86",
-    unit: "mmHg",
-    normalRange: "< 120/80",
-    status: "high",
-    date: "04 Sep 2026"
-  },
-];
-
-/* ─── Main Component ────────────────────────────────────────────────────── */
+/* ─── Main Portal Component ─────────────────────────────────────────────── */
 
 function PatientPortalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Profile data from query or default
-  const paramAbha = searchParams.get("abha") || "91-4523-8819-2041";
-  const paramName = searchParams.get("name") || "Kamla Devi";
-  const paramGender = searchParams.get("gender") || "Female";
-  const paramAge = searchParams.get("age") || "62";
+  // Patient profile from query or verified session
+  const paramAbha = searchParams.get("abha") || "";
+  const paramName = searchParams.get("name") || "";
+  const paramGender = searchParams.get("gender") || "Not Specified";
+  const paramAge = searchParams.get("age") || "";
+  const paramLang = (searchParams.get("lang") === "hi" ? "hi" : "en") as "hi" | "en";
 
-  const [lang, setLang] = React.useState<"hi" | "en">("hi");
+  const [lang, setLang] = React.useState<"hi" | "en">(paramLang);
   const [showAbhaModal, setShowAbhaModal] = React.useState(false);
   const [showRxModal, setShowRxModal] = React.useState(false);
-  const [showLabsModal, setShowLabsModal] = React.useState(false);
-  const [showFhirModal, setShowFhirModal] = React.useState(false);
+  const [rxActiveTab, setRxActiveTab] = React.useState<"rx" | "labs">("rx");
+  const [showTokenModal, setShowTokenModal] = React.useState(false);
+  const [showHelpModal, setShowHelpModal] = React.useState(false);
+
   const [liveQueueServing, setLiveQueueServing] = React.useState(38);
   const [isRefreshingQueue, setIsRefreshingQueue] = React.useState(false);
+  const [prescriptions, setPrescriptions] = React.useState<PrescriptionItem[]>([]);
+  const [labReports, setLabReports] = React.useState<LabItem[]>([]);
+  const [departments, setDepartments] = React.useState<PortalDepartment[]>([
+    {
+      id: "dept-1",
+      departmentName: "Kayachikitsa (Ayurveda OPD)",
+      category: "ayurveda",
+      roomNumber: "Room 104",
+      doctorInCharge: "Dr. Ananya Sharma (MD Ayur)",
+      status: "active",
+      timings: "09:00 AM - 02:00 PM",
+    },
+    {
+      id: "dept-2",
+      departmentName: "General Medicine",
+      category: "allopathy",
+      roomNumber: "Room 102",
+      doctorInCharge: "Dr. Rajesh Mehra (MD Gen Med)",
+      status: "active",
+      timings: "08:30 AM - 03:00 PM",
+    },
+    {
+      id: "dept-3",
+      departmentName: "Panchakarma Unit",
+      category: "ayurveda",
+      roomNumber: "Room 108",
+      doctorInCharge: "Dr. P. K. Namboodiri",
+      status: "active",
+      timings: "09:30 AM - 01:30 PM",
+    },
+  ]);
 
-  // Build kiosk launch query
+  React.useEffect(() => {
+    async function loadPortalDbData() {
+      try {
+        const [rxData, labsData, deptsData] = await Promise.all([
+          fetchPatientPrescriptionsFromDb(paramAbha),
+          fetchPatientLabReportsFromDb(paramAbha),
+          fetchHospitalDepartmentsFromDb(),
+        ]);
+        if (rxData && rxData.length > 0) setPrescriptions(rxData);
+        if (labsData && labsData.length > 0) setLabReports(labsData);
+        if (deptsData && deptsData.length > 0) setDepartments(deptsData);
+      } catch (e) {
+        // graceful fallback to preset data
+      }
+    }
+    loadPortalDbData();
+  }, [paramAbha]);
+
+  // Build kiosk launch query with authenticated session so kiosk skips redundant login
   const kioskParams = new URLSearchParams({
     abha: paramAbha,
     name: paramName,
     gender: paramGender,
     age: paramAge,
+    lang: lang,
+    authenticated: "true",
+    from: "portal",
   }).toString();
 
-  const refreshQueue = () => {
+  const refreshQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsRefreshingQueue(true);
     setTimeout(() => {
       setLiveQueueServing((prev) => (prev < 41 ? prev + 1 : prev));
@@ -156,427 +136,528 @@ function PatientPortalContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6FAF7] text-slate-900 flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-950 font-sans">
-      {/* ── Top Government Header ────────────────────────────────────────── */}
-      <header className="border-b border-emerald-100 bg-white/95 backdrop-blur-sm sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-bold text-sm shadow-xs">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-950 font-sans">
+      {/* ── Top Government Masthead Header ───────────────────────────────── */}
+      <header className="border-b border-slate-200/90 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-xs">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="flex items-center gap-3 group min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-800 flex items-center justify-center text-white font-black text-lg shadow-sm group-hover:bg-emerald-900 transition-colors shrink-0">
                 M
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-900 tracking-tight">MediKiosk</span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold">
-                    ABDM Enabled
-                  </Badge>
+                  <span className="text-base font-bold text-slate-950 tracking-tight">MediKiosk</span>
+                  <span className="hidden md:inline-flex text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    ABDM M1/M2 Certified
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium">National Health Authority · Ayush HMIS</p>
+                <p className="hidden sm:block text-xs text-slate-500 font-medium truncate">
+                  National Health Authority · Ministry of Health
+                </p>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Language Toggle */}
-            <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200 text-xs font-semibold">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Bilingual Segmented Toggle */}
+            <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200 text-xs font-semibold">
               <button
-                onClick={() => setLang("hi")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  lang === "hi" ? "bg-white text-emerald-800 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                हिंदी
-              </button>
-              <button
+                type="button"
                 onClick={() => setLang("en")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  lang === "en" ? "bg-white text-emerald-800 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                  lang === "en" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 English
               </button>
+              <button
+                type="button"
+                onClick={() => setLang("hi")}
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                  lang === "hi" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                हिंदी
+              </button>
             </div>
 
-            {/* Switch User Link */}
-            <Link href="/login/patient">
-              <Button variant="ghost" size="sm" className="text-xs text-slate-600 hover:text-emerald-800 font-medium">
-                {lang === "hi" ? "बदलें" : "Switch User"}
-              </Button>
+            <Link
+              href="/login/patient"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+              title={lang === "hi" ? "मरीज़ बदलें" : "Switch User"}
+            >
+              <LogOut className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden sm:inline">{lang === "hi" ? "मरीज़ बदलें" : "Switch User"}</span>
             </Link>
           </div>
         </div>
       </header>
 
       {/* ── Main Content Container ───────────────────────────────────────── */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-7 sm:space-y-8">
 
-        {/* ── 1. Official Patient Identity & UMID Card Strip ───────────────── */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-white shadow-xs overflow-hidden">
-          {/* Top National Health Bar */}
-          <div className="bg-linear-to-r from-emerald-800 to-teal-800 text-white px-5 py-2.5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              <span>Ayushman Bharat Health Account (ABHA) · Registered Patient</span>
+        {/* Unauthenticated Session Banner */}
+        {(!paramName && !paramAbha) && (
+          <div className="p-5 rounded-3xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-700 text-white flex items-center justify-center shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-slate-900">
+                  {lang === "hi" ? "सक्रिय मरीज़ सत्र नहीं मिला" : "No Active Patient Session"}
+                </p>
+                <p className="text-xs text-slate-600">
+                  {lang === "hi"
+                    ? "अपने व्यक्तिगत स्वास्थ्य रिकॉर्ड, टोकन और पर्चे देखने के लिए कृपया ABHA आईडी से लॉगिन करें।"
+                    : "Please authenticate with your ABHA ID or mobile number to view your personal prescriptions, token, and records."}
+                </p>
+              </div>
             </div>
-            <span className="text-[11px] text-emerald-200 font-medium hidden sm:inline">
-              CRN: 229152300039896
+            <Link
+              href="/login/patient"
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shrink-0 transition-colors"
+            >
+              {lang === "hi" ? "ABHA लॉगिन करें →" : "Sign In with ABHA →"}
+            </Link>
+          </div>
+        )}
+
+        {/* ── 1. Official Ayushman Bharat Patient Identity Card (rounded-3xl) ── */}
+        <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+          {/* Top Institutional Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-600" />
+              <span className="text-xs font-bold tracking-wide uppercase text-slate-600">
+                {lang === "hi"
+                  ? "आयुष्मान भारत डिजिटल मिशन · स्वास्थ्य एवं परिवार कल्याण मंत्रालय"
+                  : "Ayushman Bharat Digital Mission · MoHFW Govt. of India"}
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              {lang === "hi" ? "सत्यापित ABHA ID" : "Verified ABHA ID"}
             </span>
           </div>
 
-          {/* Profile Body */}
-          <div className="p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-            <div className="flex items-start sm:items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-2xl shrink-0 shadow-2xs">
-                <User className="w-7 h-7" />
+          {/* Identity Grid */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <User className="w-8 h-8 sm:w-9 sm:h-9 text-slate-600" strokeWidth={1.75} />
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">{paramName}</h2>
-                  <Badge variant="success" className="text-[11px] px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border-emerald-200 font-semibold">
-                    ✓ Verified M1/M2
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 font-medium">
-                  <span>ABHA ID: <strong className="text-slate-800 font-semibold">{paramAbha}</strong></span>
+              <div className="space-y-1.5">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                  {paramName || (lang === "hi" ? "अतिथि मरीज़" : "Guest Patient")}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600 font-medium">
+                  <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
+                    {paramAbha || (lang === "hi" ? "ABHA दर्ज नहीं" : "No ABHA Linked")}
+                  </span>
                   <span>·</span>
-                  <span>{paramGender}, {paramAge} Years</span>
+                  <span>{paramGender}{paramAge ? `, ${paramAge} ${lang === "hi" ? "वर्ष" : "Years"}` : ""}</span>
                   <span>·</span>
-                  <span className="text-slate-500">CRN: 229152300039896</span>
+                  <span className="text-slate-500">
+                    {paramName ? `${paramName.toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions for Profile */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
+            {/* Quick Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAbhaModal(true)}
-                className="h-10 px-3.5 text-xs font-semibold border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 text-slate-700 hover:text-emerald-900 shadow-2xs whitespace-nowrap"
+                className="h-12 px-5 text-xs sm:text-sm font-bold border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-800 rounded-2xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                <QrCode className="w-4 h-4 mr-1.5 text-emerald-700 shrink-0" />
+                <QrCode className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={1.75} />
                 <span>{lang === "hi" ? "ABHA कार्ड देखें" : "View ABHA Card"}</span>
               </Button>
 
-              <Link href={`/kiosk?${kioskParams}`} className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto h-10 px-4 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
-                  <Stethoscope className="w-4 h-4 shrink-0" />
-                  <span>{lang === "hi" ? "ओपीडी इनटेक शुरू करें" : "Start OPD Intake"}</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-0.5 shrink-0" />
-                </Button>
+              <Link
+                href={`/kiosk?${kioskParams}&step=complaint_select`}
+                className="w-full sm:w-auto h-12 px-6 text-xs sm:text-sm font-bold bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl shadow-xs inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <Stethoscope className="w-4 h-4 shrink-0" strokeWidth={2} />
+                <span>{lang === "hi" ? "डॉक्टर से परामर्श लें" : "Talk to Doctor"}</span>
+                <ArrowRight className="w-4 h-4 ml-0.5 shrink-0" strokeWidth={2} />
               </Link>
             </div>
           </div>
         </div>
 
-        {/* ── 2. Four Core Real Feature Cards Grid ─────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* ── 2. Four Purpose-Built Core Service Cards (Grid) ─────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
 
-          {/* ── Card 1: Services (OPD Self Registration & AI Intake) ───────── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-colors">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-emerald-900 font-bold text-base">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-800">
-                    <Stethoscope className="w-4 h-4" />
-                  </div>
-                  <h3>{lang === "hi" ? "ओपीडी सेवाएं एवं AI इनटेक" : "OPD Services & AI Intake"}</h3>
+          {/* ── CARD 1: Doctor Consultation (Kiosk Entry) ─────────────────── */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="w-13 h-13 rounded-2xl bg-emerald-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Stethoscope className="w-6 h-6" strokeWidth={2} />
                 </div>
-                <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-200 bg-emerald-50 font-semibold">
-                  Module A & B
-                </Badge>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                    {lang === "hi" ? "डॉक्टर से परामर्श लें" : "Doctor Consultation"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-0.5 font-normal leading-relaxed">
+                    {lang === "hi"
+                      ? "अपनी भाषा में बोलकर तकलीफ बताएं या पुराना पर्चा दिखाकर ओपीडी जांच शुरू करें।"
+                      : "Walk-in OPD check-in with bilingual voice symptom intake or prescription scanning."}
+                  </p>
+                </div>
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                {lang === "hi"
-                  ? "डॉक्टर के कमरे में जाने से पहले अपनी बीमारी की पूरी जानकारी हिंदी या क्षेत्रीय भाषा में बोलें, और पुराने पर्चे स्कैन करें।"
-                  : "Complete your voice-driven history intake in 8 Indic languages and scan paper records before entering the consultation room."}
-              </p>
+              {/* Structured 2-Step Intake Preview */}
+              <div className="bg-slate-50/90 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-3">
+                <Link
+                  href={`/kiosk?${kioskParams}&step=complaint_select`}
+                  className="flex items-start gap-3 hover:bg-emerald-100/50 p-2 -m-2 rounded-xl transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-emerald-800 shrink-0 shadow-2xs group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-950 flex items-center gap-1.5">
+                      <span>{lang === "hi" ? "1. आवाज द्वारा लक्षण बताएं" : "1. Voice Symptom Intake"}</span>
+                      <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      {lang === "hi" ? "हिंदी, अंग्रेजी और 10 क्षेत्रीय भाषाओं में उपलब्ध" : "Speaks Hindi, English & 10 Indian regional languages"}
+                    </p>
+                  </div>
+                </Link>
 
-              {/* Quick Feature Pills */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="text-[11px] px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-medium">
-                  🎤 {lang === "hi" ? "आवाज द्वारा संवाद" : "Voice Dialogue (Bhashini)"}
-                </span>
-                <span className="text-[11px] px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-medium">
-                  📄 {lang === "hi" ? "पुराने पर्चे OCR" : "Prescription OCR"}
-                </span>
-                <span className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
-                  🌿 {lang === "hi" ? "दशविध परीक्षा" : "Dashavidha Pariksha"}
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row gap-2">
-              <Link href={`/kiosk?${kioskParams}`} className="flex-1">
-                <Button className="w-full h-10 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs inline-flex items-center justify-center gap-1.5">
-                  <Mic className="w-3.5 h-3.5" />
-                  <span>{lang === "hi" ? "आवाज से इनटेक शुरू करें" : "Start Voice Intake"}</span>
-                </Button>
-              </Link>
-              <Link href={`/kiosk?step=scan&${kioskParams}`} className="sm:w-auto">
-                <Button variant="outline" className="w-full sm:w-auto h-10 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50">
-                  {lang === "hi" ? "पर्चे स्कैन करें" : "Scan Records"}
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* ── Card 2: Health Records & Referrals (Prescriptions & Labs) ──── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-colors">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-emerald-900 font-bold text-base">
-                  <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center text-teal-800">
+                <Link
+                  href={`/kiosk?${kioskParams}&step=scan`}
+                  className="flex items-start gap-3 pt-3 border-t border-slate-200/80 hover:bg-emerald-100/50 p-2 -mx-2 rounded-xl transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-emerald-800 shrink-0 shadow-2xs group-hover:bg-emerald-700 group-hover:text-white transition-colors">
                     <FileText className="w-4 h-4" />
                   </div>
-                  <h3>{lang === "hi" ? "डिजिटल स्वास्थ्य रिकॉर्ड एवं पर्चे" : "Health Records & Prescriptions"}</h3>
-                </div>
-                <Badge variant="outline" className="text-[10px] text-teal-700 border-teal-200 bg-teal-50 font-semibold">
-                  FHIR Timeline
-                </Badge>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                {lang === "hi"
-                  ? "AI द्वारा स्कैन किए गए पुराने पर्चे, चालू दवाइयां, जांच रिपोर्ट एवं एब्नॉर्मल लैब मान सीधे अपने फोन या स्क्रीन पर देखें।"
-                  : "View AI-digitized past prescriptions, active ongoing medications, and laboratory investigation findings."}
-              </p>
-
-              {/* Active Medication Summary Preview */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-1.5 text-xs">
-                <div className="flex items-center justify-between font-semibold text-slate-700">
-                  <span className="flex items-center gap-1.5">
-                    <Pill className="w-3.5 h-3.5 text-emerald-700" />
-                    {lang === "hi" ? "चालू दवाएं (4 सक्रिय)" : "Active Medications (4 Active)"}
-                  </span>
-                  <span className="text-[11px] text-emerald-700 font-medium">AIIA OPD</span>
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Tab Paracetamol 650mg, Tab Cefixime 200mg, Sudarshan Vati...
-                </p>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-950 flex items-center gap-1.5">
+                      <span>{lang === "hi" ? "2. पुराना पर्चा व रिपोर्ट स्कैन करें" : "2. Prescription & OCR Scanner"}</span>
+                      <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      {lang === "hi" ? "कैमरे के सामने पर्चा रखें, डॉक्टर के लिए तैयार" : "Instant clinical OCR digitization directly onto doctor's screen"}
+                    </p>
+                  </div>
+                </Link>
               </div>
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowRxModal(true)}
-                className="flex-1 h-10 text-xs font-semibold border-slate-200 text-slate-800 hover:border-emerald-300 hover:bg-emerald-50/40"
-              >
-                <Eye className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
-                {lang === "hi" ? "दवाई पर्चे देखें" : "View Prescriptions"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowLabsModal(true)}
-                className="flex-1 h-10 text-xs font-semibold border-slate-200 text-slate-800 hover:border-emerald-300 hover:bg-emerald-50/40"
-              >
-                <Activity className="w-3.5 h-3.5 mr-1.5 text-teal-700" />
-                {lang === "hi" ? "जांच रिपोर्ट" : "Lab Reports"}
-              </Button>
-            </div>
+            {/* Bottom Button Action */}
+            <Link
+              href={`/kiosk?${kioskParams}&step=complaint_select`}
+              className="w-full h-12 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              <span>{lang === "hi" ? "परामर्श शुरू करें" : "Start Doctor Consultation"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          {/* ── Card 3: Transaction Status / Live OPD Q-Slip ────────────────── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-colors">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-emerald-900 font-bold text-base">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-800">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <h3>{lang === "hi" ? "ओपीडी लाइव टोकन एवं पर्ची" : "Live OPD Q-Slip & Status"}</h3>
+          {/* ── CARD 2: Active Medicines & Lab Reports ────────────────────── */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="w-13 h-13 rounded-2xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Pill className="w-6 h-6" strokeWidth={2} />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={refreshQueue}
-                  disabled={isRefreshingQueue}
-                  className="h-7 px-2 text-[11px] text-slate-500 hover:text-emerald-800"
-                >
-                  <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshingQueue ? "animate-spin" : ""}`} />
-                  {lang === "hi" ? "रिफ्रेश" : "Refresh"}
-                </Button>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                    {lang === "hi" ? "मेरी दवाइयां और जांच पर्चे" : "My Medicines & Lab Reports"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-0.5 font-normal leading-relaxed">
+                    {lang === "hi"
+                      ? "दैनिक दवाइयों का सही समय (सुबह/दोपहर/रात) और हालिया पैथोलॉजी जांच रिपोर्ट।"
+                      : "Daily medication schedule, dosages, and verified laboratory test findings."}
+                  </p>
+                </div>
               </div>
 
-              {/* Live Token Ticket Box */}
-              <div className="p-4 bg-linear-to-br from-emerald-50/80 to-teal-50/60 rounded-xl border border-emerald-200/90 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
-                      {lang === "hi" ? "आपका टोकन नंबर" : "Your Token Number"}
-                    </span>
-                    <span className="text-2xl font-black text-emerald-950">Token #42</span>
+              {/* Medication Preview Box */}
+              <div className="bg-slate-50/90 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-3">
+                {prescriptions.length === 0 ? (
+                  <div className="text-center py-3 space-y-1">
+                    <p className="text-xs font-semibold text-slate-700">
+                      {lang === "hi" ? "कोई सक्रिय पर्चा दर्ज नहीं है" : "No Active Prescriptions On File"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {lang === "hi"
+                        ? "डॉक्टर द्वारा जारी किए गए डिजिटल पर्चे यहां स्वतः दिखाई देंगे।"
+                        : "Digital prescriptions issued during OPD consultations will appear here."}
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
-                      {lang === "hi" ? "ओपीडी कमरा" : "Consultation Room"}
-                    </span>
-                    <span className="text-sm font-extrabold text-emerald-900">Room 104</span>
+                ) : (
+                  <>
+                    {prescriptions.slice(0, 2).map((rx) => (
+                      <div key={rx.id} className="flex items-center justify-between text-xs pb-2 border-b border-slate-200/80 last:border-0 last:pb-0">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{rx.name}</h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            {rx.dosage} · {rx.frequency}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                          {rx.category === "ayurveda" ? "Ayurveda" : "Allopathy"}
+                        </span>
+                      </div>
+                    ))}
+
+                    <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                      <span>{prescriptions.length > 2 ? `+${prescriptions.length - 2} ${lang === "hi" ? "अन्य दवाइयां उपलब्ध" : "more active prescriptions"}` : `${prescriptions.length} ${lang === "hi" ? "सक्रिय दवाइयां" : "prescriptions on file"}`}</span>
+                      <span className="font-semibold text-teal-800">{labReports.length} {lang === "hi" ? "लैब रिपोर्ट" : "Lab Reports on File"}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Button Action */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRxActiveTab("rx");
+                setShowRxModal(true);
+              }}
+              className="w-full h-12 rounded-2xl border-teal-800/30 text-teal-900 hover:bg-teal-50 hover:border-teal-800 font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{lang === "hi" ? "दवाइयां और जांच देखें" : "View Prescriptions & Test Results"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* ── CARD 3: Live OPD Token & Room Allotment ───────────────────── */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-13 h-13 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Clock className="w-6 h-6" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                      {lang === "hi" ? "मेरा टोकन नंबर और कमरा" : "My OPD Token & Room"}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5 font-normal leading-relaxed">
+                      {lang === "hi"
+                        ? "ओपीडी लाइन में अपनी बारी, डॉक्टर का कमरा नंबर और इंतजार का समय देखें।"
+                        : "Live queue position, doctor room assignment, and estimated wait duration."}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60 text-xs">
-                  <span className="text-slate-600 font-medium">
-                    {lang === "hi" ? "वर्तमान में सेवारत:" : "Currently Serving:"}{" "}
-                    <strong className="text-emerald-800 font-bold">#{liveQueueServing}</strong>
+                <button
+                  type="button"
+                  onClick={refreshQueue}
+                  disabled={isRefreshingQueue}
+                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
+                  title="Refresh Queue"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshingQueue ? "animate-spin text-emerald-700" : ""}`} />
+                </button>
+              </div>
+
+              {/* High Contrast Hospital Ticket Container */}
+              <div className="p-4 sm:p-5 bg-slate-950 text-white rounded-2xl space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    AIIA New Delhi · Ayush HMIS
                   </span>
-                  <span className="text-xs font-semibold text-emerald-700">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Live OPD Desk
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                      {lang === "hi" ? "आपका टोकन" : "Your Token"}
+                    </span>
+                    <span className="text-3xl font-black text-white font-mono tracking-tight">
+                      #42
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                      {lang === "hi" ? "परामर्श कक्ष" : "Room Assignment"}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-emerald-400">
+                      Room 104 (Dr. Ananya)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-xs">
+                  <span className="text-slate-300 font-medium">
+                    {lang === "hi" ? "वर्तमान नंबर:" : "Now Serving:"}{" "}
+                    <strong className="text-white font-bold font-mono">#{liveQueueServing}</strong>
+                  </span>
+                  <span className="font-semibold text-emerald-400">
                     ~{Math.max(0, (42 - liveQueueServing) * 2)} {lang === "hi" ? "मिनट शेष" : "mins wait"}
                   </span>
                 </div>
               </div>
-
-              {/* Status Indicator */}
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-100/50 p-2.5 rounded-lg border border-emerald-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                <span>
-                  {lang === "hi"
-                    ? "क्लिनिकल समरी डॉक्टर के कंप्यूटर पर भेज दी गई है"
-                    : "Intake Summary Transmitted to Doctor Desk"}
-                </span>
-              </div>
             </div>
 
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowFhirModal(true)}
-                className="w-full h-10 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50 inline-flex items-center justify-center gap-1.5"
-              >
-                <Layers className="w-3.5 h-3.5 text-indigo-700" />
-                <span>{lang === "hi" ? "ABDM FHIR बंडल स्थिति देखें" : "View ABDM FHIR Bundle Status"}</span>
-              </Button>
-            </div>
+            {/* Bottom Button Action */}
+            <Button
+              variant="outline"
+              onClick={() => setShowTokenModal(true)}
+              className="w-full h-12 rounded-2xl border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-slate-400 font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{lang === "hi" ? "ओपीडी डिजिटल पर्ची खोलें" : "View Digital OPD Pass"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </div>
 
-          {/* ── Card 4: Hospital Enquiry & 24x7 Emergency ───────────────────── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-colors">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-emerald-900 font-bold text-base">
-                  <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-800">
-                    <PhoneCall className="w-4 h-4" />
+          {/* ── CARD 4: Emergency & Hospital Helplines ────────────────────── */}
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="w-13 h-13 rounded-2xl bg-rose-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <PhoneCall className="w-6 h-6" strokeWidth={2} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                    {lang === "hi" ? "अस्पताल सहायता व एम्बुलेंस" : "Emergency & Hospital Support"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-0.5 font-normal leading-relaxed">
+                    {lang === "hi"
+                      ? "24 घंटे मुफ्त सरकारी 108 एम्बुलेंस और अस्पताल के डॉक्टरों का समय।"
+                      : "Direct 24x7 emergency medical hotline, hospital roster, and casualty assistance."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Emergency Hotline Preview */}
+              <div className="bg-rose-50/70 rounded-2xl p-4 sm:p-5 border border-rose-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Ambulance className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-950">
+                        108 National Ambulance
+                      </h4>
+                      <p className="text-[11px] text-slate-600 font-medium">
+                        {lang === "hi" ? "24x7 टोल-फ्री आपातकालीन सेवा" : "Toll-free 24x7 Emergency Dispatch"}
+                      </p>
+                    </div>
                   </div>
-                  <h3>{lang === "hi" ? "अस्पताल पूछताछ एवं आपातकालीन" : "Hospital Enquiry & Emergency"}</h3>
+                  <a
+                    href="tel:108"
+                    className="px-3 py-1.5 text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white rounded-xl shadow-xs transition-colors"
+                  >
+                    Call 108
+                  </a>
                 </div>
-                <Badge variant="outline" className="text-[10px] text-rose-700 border-rose-200 bg-rose-50 font-semibold">
-                  24x7 Helpline
-                </Badge>
-              </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                {lang === "hi"
-                  ? "आज की सक्रिय ओपीडी विशेषज्ञताएं, इमरजेंसी सहायता, और राष्ट्रीय स्वास्थ्य हेल्पलाइन नंबर।"
-                  : "Today's active clinical OPD specialities roster and 24x7 national emergency emergency helplines."}
-              </p>
-
-              {/* Speciality Roster Snippet */}
-              <div className="space-y-1.5 text-xs text-slate-700">
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="font-semibold">🌿 {lang === "hi" ? "कायाचिकित्सा (आयुर्वेद ओपीडी)" : "Kayachikitsa (Ayurveda)"}</span>
-                  <span className="text-emerald-700 font-semibold text-[11px]">Room 104 · Active</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="font-semibold">🩺 {lang === "hi" ? "सामान्य चिकित्सा (एलोपैथी)" : "General Medicine"}</span>
-                  <span className="text-emerald-700 font-semibold text-[11px]">Room 102 · Active</span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="font-semibold">🧘 {lang === "hi" ? "पंचकर्म चिकित्सा इकाई" : "Panchakarma Unit"}</span>
-                  <span className="text-emerald-700 font-semibold text-[11px]">Room 108 · Active</span>
+                <div className="pt-2.5 border-t border-rose-200/80 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                  <span>102 Maternal Helpline & Tele-MANAS</span>
+                  <span className="font-semibold text-rose-900">3 OPD Rooms Active</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row gap-2">
-              <a href="tel:108" className="flex-1">
-                <Button className="w-full h-10 text-xs font-semibold bg-rose-700 hover:bg-rose-800 text-white shadow-xs inline-flex items-center justify-center gap-1.5">
-                  <PhoneCall className="w-3.5 h-3.5" />
-                  <span>{lang === "hi" ? "108 एम्बुलेंस" : "108 Ambulance"}</span>
-                </Button>
-              </a>
-              <a href="tel:14416" className="sm:w-auto">
-                <Button variant="outline" className="w-full sm:w-auto h-10 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50">
-                  <span>{lang === "hi" ? "Tele-MANAS" : "Tele-MANAS"}</span>
-                </Button>
-              </a>
-            </div>
+            {/* Bottom Button Action */}
+            <Button
+              variant="outline"
+              onClick={() => setShowHelpModal(true)}
+              className="w-full h-12 rounded-2xl border-rose-200 text-rose-950 hover:bg-rose-50 hover:border-rose-300 font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{lang === "hi" ? "हेल्पलाइन व डॉक्टर समय देखें" : "View Helplines & Room Timings"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </div>
 
         </div>
 
       </main>
 
-      {/* ── MODAL 1: Digital ABHA Health Card ────────────────────────────── */}
+      {/* ── MODAL 1: Digital ABHA Health Card (rounded-3xl) ──────────────── */}
       {showAbhaModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-linear-to-r from-emerald-800 to-teal-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="bg-emerald-800 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-emerald-300" />
-                <h3 className="font-bold text-sm">Ayushman Bharat Digital Mission (ABDM)</h3>
+                <h3 className="font-bold text-base">Ayushman Bharat Health Account (ABDM)</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAbhaModal(false)}
-                className="text-emerald-200 hover:text-white p-1 rounded-md"
+                className="text-emerald-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Official Card Body */}
-            <div className="p-6 space-y-5">
-              <div className="border-2 border-emerald-700 rounded-xl p-5 bg-linear-to-b from-white to-emerald-50/40 space-y-4 shadow-sm">
+            <div className="p-6 sm:p-7 space-y-6">
+              <div className="border border-emerald-200 rounded-2xl p-5 bg-gradient-to-b from-white to-emerald-50/30 space-y-4 shadow-xs">
                 <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-800 block">
                       National Health Authority
                     </span>
-                    <span className="text-xs font-semibold text-slate-600">Ministry of Health & Family Welfare</span>
+                    <span className="text-xs font-medium text-slate-600">Ministry of Health & Family Welfare</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-bold border-emerald-300 text-emerald-800 bg-white">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300 text-emerald-800 bg-white">
                     ABHA CARD
-                  </Badge>
+                  </span>
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <h4 className="text-lg font-bold text-slate-900">{paramName}</h4>
-                    <p className="text-xs text-slate-500 font-medium">ABHA Number: <strong className="text-slate-800">{paramAbha}</strong></p>
-                    <p className="text-xs text-slate-500 font-medium">ABHA Address: <strong className="text-emerald-800 font-semibold">{paramName.toLowerCase().replace(/\s+/g, ".")}@abdm</strong></p>
+                    <h4 className="text-xl font-bold text-slate-950">{paramName}</h4>
+                    <p className="text-xs text-slate-600 font-medium">ABHA Number: <strong className="text-slate-900 font-bold">{paramAbha}</strong></p>
+                    <p className="text-xs text-slate-600 font-medium">ABHA Address: <strong className="text-emerald-800 font-semibold">{paramName.toLowerCase().replace(/\s+/g, ".")}@abdm</strong></p>
                     <div className="text-xs text-slate-600 pt-1 flex gap-3 font-medium">
                       <span>Gender: <strong>{paramGender}</strong></span>
                       <span>·</span>
                       <span>YOB: <strong>{new Date().getFullYear() - Number(paramAge)}</strong></span>
                     </div>
                   </div>
-                  <div className="w-16 h-16 rounded-lg bg-white border border-slate-300 p-1 flex items-center justify-center shrink-0 shadow-2xs">
-                    <QrCode className="w-14 h-14 text-slate-800" />
+                  <div className="w-18 h-18 rounded-xl bg-white border border-slate-300 p-1.5 flex items-center justify-center shrink-0 shadow-2xs">
+                    <QrCode className="w-15 h-15 text-slate-900" />
                   </div>
                 </div>
 
-                <div className="text-[11px] text-slate-500 border-t border-emerald-100 pt-2 flex items-center justify-between">
+                <div className="text-[11px] text-slate-500 border-t border-emerald-100 pt-2 flex items-center justify-between font-medium">
                   <span>CRN: 229152300039896</span>
-                  <span className="text-emerald-700 font-semibold">Status: ACTIVE</span>
+                  <span className="text-emerald-700 font-bold inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> ACTIVE & VERIFIED
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Button
                   onClick={() => setShowAbhaModal(false)}
-                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold h-10"
+                  className="flex-1 bg-emerald-800 hover:bg-emerald-900 text-white text-xs sm:text-sm font-bold h-12 rounded-2xl cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  <Download className="w-4 h-4 mr-2" />
                   {lang === "hi" ? "कार्ड डाउनलोड करें" : "Download Card"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowAbhaModal(false)}
-                  className="h-10 px-4 text-xs font-semibold border-slate-200"
+                  className="h-12 px-5 text-xs sm:text-sm font-semibold border-slate-300 rounded-2xl cursor-pointer"
                 >
                   {lang === "hi" ? "बंद करें" : "Close"}
                 </Button>
@@ -586,147 +667,394 @@ function PatientPortalContent() {
         </div>
       )}
 
-      {/* ── MODAL 2: Prescriptions Modal ─────────────────────────────────── */}
+      {/* ── MODAL 2: Active Medicines & Lab Reports Modal (rounded-3xl) ───── */}
       {showRxModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-emerald-800 text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <Pill className="w-4 h-4 text-emerald-300" />
-                <h3 className="font-bold text-sm">Digitized Prescriptions & Active Medications</h3>
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <Pill className="w-5 h-5 text-teal-400" />
+                <h3 className="font-bold text-base">
+                  {lang === "hi" ? "मेरी दवाइयां और जांच रिपोर्ट" : "My Medicines & Lab Reports"}
+                </h3>
               </div>
-              <button onClick={() => setShowRxModal(false)} className="text-emerald-200 hover:text-white p-1">
+              <button
+                type="button"
+                onClick={() => setShowRxModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-3 flex-1">
-              <p className="text-xs text-slate-500 font-medium">
-                Prescriptions extracted by MediKiosk Document OCR and linked to ABHA profile:
-              </p>
+            {/* Tab Switcher */}
+            <div className="flex border-b border-slate-200 bg-slate-50 p-2 gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setRxActiveTab("rx")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
+                  rxActiveTab === "rx"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Pill className="w-3.5 h-3.5 text-teal-700" />
+                <span>{lang === "hi" ? `दवाइयां (${prescriptions.length})` : `Medicines (${prescriptions.length})`}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRxActiveTab("labs")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
+                  rxActiveTab === "labs"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5 text-teal-700" />
+                <span>{lang === "hi" ? `जांच रिपोर्ट (${labReports.length})` : `Lab Reports (${labReports.length})`}</span>
+              </button>
+            </div>
 
-              {MOCK_PRESCRIPTIONS.map((rx) => (
-                <div key={rx.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 text-xs">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{rx.name}</h4>
-                      <p className="text-slate-600 font-medium">Dosage: <strong>{rx.dosage}</strong> · {rx.frequency}</p>
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-slate-800">
+              {rxActiveTab === "rx" ? (
+                <div className="space-y-3">
+                  {prescriptions.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-slate-100">
+                      <Pill className="w-8 h-8 mx-auto text-slate-400" />
+                      <p className="text-xs font-bold text-slate-700">
+                        {lang === "hi" ? "कोई सक्रिय पर्चा उपलब्ध नहीं है" : "No Active Prescriptions On File"}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {lang === "hi"
+                          ? "परामर्श के दौरान डॉक्टर द्वारा लिखे गए पर्चे यहां स्वतः डिजिटाइज़ होकर जुड़ेंगे।"
+                          : "Prescriptions generated during clinical consultations will appear here."}
+                      </p>
                     </div>
-                    <Badge variant={rx.category === "ayurveda" ? "success" : "default"} className="text-[10px] uppercase font-bold">
-                      {rx.category}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                    <span>{rx.prescribedBy}</span>
-                    <span>{rx.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {lang === "hi"
+                          ? "डॉक्टर द्वारा लिखी गई दवाइयां और उन्हें लेने का सही समय:"
+                          : "Medicines prescribed by your doctor with recommended schedule:"}
+                      </p>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <Button onClick={() => setShowRxModal(false)} className="bg-emerald-700 text-white text-xs font-semibold h-9 px-4">
-                Close
+                      {prescriptions.map((rx) => (
+                        <div key={rx.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-bold text-slate-950 text-sm sm:text-base">{rx.name}</h4>
+                              <p className="text-slate-700 font-semibold pt-0.5">
+                                {lang === "hi" ? "मात्रा" : "Dosage"}: <span className="text-slate-950 font-extrabold">{rx.dosage}</span> · {rx.frequency}
+                              </p>
+                            </div>
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800">
+                              {rx.category === "ayurveda" ? "Ayurveda" : "Allopathy"}
+                            </span>
+                          </div>
+
+                          {/* Visual Schedule Helper */}
+                          <div className="flex items-center gap-3 pt-2 border-t border-slate-200 text-[11px] font-semibold text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Sunrise className="w-3.5 h-3.5 text-amber-600" /> {lang === "hi" ? "सुबह" : "Morning"}
+                            </span>
+                            <span>·</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Sun className="w-3.5 h-3.5 text-amber-700" /> {lang === "hi" ? "दोपहर" : "Noon"}
+                            </span>
+                            <span>·</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Moon className="w-3.5 h-3.5 text-indigo-600" /> {lang === "hi" ? "रात" : "Night"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 font-medium">
+                            <span>{rx.prescribedBy}</span>
+                            <span>{rx.duration}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {labReports.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-slate-100">
+                      <Activity className="w-8 h-8 mx-auto text-slate-400" />
+                      <p className="text-xs font-bold text-slate-700">
+                        {lang === "hi" ? "कोई लैब रिपोर्ट उपलब्ध नहीं है" : "No Laboratory Reports On File"}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {lang === "hi"
+                          ? "अस्पताल की पैथोलॉजी लैब से सीधे लिंक की गई जांच रिपोर्टें यहां दिखाई देंगी।"
+                          : "Diagnostic and laboratory test results linked via ABDM will appear here."}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {lang === "hi"
+                          ? "आपकी हालिया पैथोलॉजी व लैब जांच रिपोर्ट:"
+                          : "Your recent laboratory investigation results:"}
+                      </p>
+
+                      {labReports.map((lab, i) => (
+                    <div key={i} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+                      <div className="space-y-0.5">
+                        <h4 className="font-bold text-slate-950 text-sm">{lab.test}</h4>
+                        <p className="text-slate-500 text-[11px] font-medium">
+                          {lang === "hi" ? "सामान्य सीमा" : "Standard Range"}: {lab.normalRange} {lab.unit}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-base sm:text-lg font-black text-slate-950 font-mono">
+                          {lab.value} <span className="text-xs font-normal text-slate-500">{lab.unit}</span>
+                        </span>
+                        <span className={`text-[11px] font-bold block mt-1 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                          lab.status === "high"
+                            ? "bg-amber-100 text-amber-900"
+                            : "bg-emerald-100 text-emerald-900"
+                        }`}>
+                          {lab.status === "high" ? (
+                            <>
+                              <AlertCircle className="w-3 h-3 text-amber-700" />
+                              {lang === "hi" ? "जांच आवश्यक" : "Elevated"}
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-700" />
+                              {lang === "hi" ? "सामान्य" : "Normal"}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <Button
+                onClick={() => setShowRxModal(false)}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold h-11 px-6 rounded-2xl cursor-pointer"
+              >
+                {lang === "hi" ? "बंद करें" : "Close"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL 3: Labs Modal ─────────────────────────────────────────── */}
-      {showLabsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-teal-800 text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-teal-300" />
-                <h3 className="font-bold text-sm">Laboratory Investigations & Vitals</h3>
+      {/* ── MODAL 3: Digital OPD Token Slip (rounded-3xl) ────────────────── */}
+      {showTokenModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-5 h-5 text-blue-400" />
+                <h3 className="font-bold text-base">
+                  {lang === "hi" ? "ओपीडी परामर्श टोकन पर्ची" : "Digital OPD Consultation Pass"}
+                </h3>
               </div>
-              <button onClick={() => setShowLabsModal(false)} className="text-teal-200 hover:text-white p-1">
+              <button
+                type="button"
+                onClick={() => setShowTokenModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-3 flex-1">
+            {/* Ticket Slip Body */}
+            <div className="p-6 sm:p-7 space-y-6">
+              <div className="border border-slate-200 bg-slate-50 rounded-2xl p-6 space-y-5 text-center shadow-xs">
+                <div className="border-b border-slate-200 pb-3">
+                  <p className="text-xs font-bold uppercase text-slate-900 tracking-wider">
+                    {lang === "hi" ? "अखिल भारतीय आयुर्वेद संस्थान (AIIA)" : "All India Institute of Ayurveda"}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium">New Delhi · Ayush HMIS Outpatient Desk</p>
+                </div>
+
+                <div className="py-2">
+                  <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider block">
+                    {lang === "hi" ? "आपका टोकन नंबर" : "YOUR APPOINTMENT TOKEN"}
+                  </span>
+                  <span className="text-5xl font-black text-slate-950 block my-1 font-mono tracking-tight">
+                    #42
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-950 font-bold text-xs px-3.5 py-1 rounded-full mt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                    {lang === "hi" ? "कमरा 104 (डॉ. अनन्या शर्मा)" : "Room 104 (Dr. Ananya Sharma)"}
+                  </span>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs text-left">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">{lang === "hi" ? "मरीज का नाम" : "Patient Name"}:</span>
+                    <span className="font-bold text-slate-900">{paramName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">ABHA ID:</span>
+                    <span className="font-bold text-slate-900">{paramAbha}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">{lang === "hi" ? "विभाग" : "Department"}:</span>
+                    <span className="font-bold text-slate-900">Kayachikitsa (Ayurveda OPD)</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-slate-100 font-semibold">
+                    <span className="text-slate-600">{lang === "hi" ? "वर्तमान नंबर" : "Now Serving"}:</span>
+                    <span className="text-emerald-700 font-bold">#{liveQueueServing} (~8 mins)</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 p-3 rounded-xl text-left">
+                  <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-950 font-medium leading-relaxed">
+                    {lang === "hi"
+                      ? "कृपया कमरा 104 के बाहर प्रतीक्षालय में बैठें। टोकन 42 पुकारे जाने पर अंदर जाएं।"
+                      : "Please wait in the seating area outside Room 104. Enter when Token #42 is called."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowTokenModal(false)}
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold h-12 rounded-2xl cursor-pointer"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  {lang === "hi" ? "पर्ची डाउनलोड करें" : "Save / Download Slip"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTokenModal(false)}
+                  className="h-12 px-5 text-xs sm:text-sm font-semibold border-slate-300 rounded-2xl cursor-pointer"
+                >
+                  {lang === "hi" ? "बंद करें" : "Close"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 4: Hospital Help & Helplines (rounded-3xl) ─────────────── */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-rose-800 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <PhoneCall className="w-5 h-5 text-rose-200" />
+                <h3 className="font-bold text-base">
+                  {lang === "hi" ? "अस्पताल सहायता व जरूरी फोन नंबर" : "Hospital Helplines & Emergency"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                className="text-rose-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 sm:p-7 space-y-5">
               <p className="text-xs text-slate-500 font-medium">
-                Structured laboratory results with automated normal/abnormal severity detection:
+                {lang === "hi"
+                  ? "किसी भी आपातकाल में इन नंबरों पर सीधे कॉल करें:"
+                  : "Emergency helplines with direct 24x7 operator connection:"}
               </p>
 
-              {MOCK_LABS.map((lab, i) => (
-                <div key={i} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{lab.test}</h4>
-                    <p className="text-slate-500 text-[11px]">Normal Range: {lab.normalRange} {lab.unit}</p>
+              {/* Verified Hotline Cards with vector icons */}
+              <div className="space-y-3">
+                <a
+                  href="tel:108"
+                  className="p-4 bg-rose-50/70 hover:bg-rose-100 rounded-2xl border border-rose-200 flex items-center justify-between text-rose-950 font-bold transition-all block cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Ambulance className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-sm block font-bold">108 Emergency Ambulance</span>
+                      <span className="text-xs text-slate-500 font-medium">National 24x7 Toll-Free</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-base font-extrabold text-slate-900">{lab.value} {lab.unit}</span>
-                    <Badge variant={lab.status === "high" ? "danger" : "success"} className="text-[10px] block mt-0.5 font-bold">
-                      {lab.status === "high" ? "ELEVATED ⚠️" : "NORMAL ✓"}
-                    </Badge>
+                  <span className="text-xs bg-rose-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                    Call 108
+                  </span>
+                </a>
+
+                <a
+                  href="tel:102"
+                  className="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-between text-slate-900 font-bold transition-all block cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-sm block font-bold">102 Mother & Child Helpline</span>
+                      <span className="text-xs text-slate-500 font-medium">Maternal Health Service</span>
+                    </div>
                   </div>
+                  <span className="text-xs bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                    Call 102
+                  </span>
+                </a>
+
+                <a
+                  href="tel:14416"
+                  className="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-between text-slate-900 font-bold transition-all block cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <HeartPulse className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-sm block font-bold">Tele-MANAS (14416)</span>
+                      <span className="text-xs text-slate-500 font-medium">Mental Health Support</span>
+                    </div>
+                  </div>
+                  <span className="text-xs bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                    Call 14416
+                  </span>
+                </a>
+              </div>
+
+              {/* Department Roster */}
+              <div className="pt-3 border-t border-slate-200">
+                <span className="text-xs font-bold text-slate-900 block mb-2.5">
+                  {lang === "hi" ? "आज के सक्रिय ओपीडी कमरे:" : "Today's Active OPD Roster:"}
+                </span>
+                <div className="space-y-2 text-xs text-slate-700">
+                  {departments.map((d) => (
+                    <div key={d.id} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="font-semibold text-slate-900">{d.departmentName}</span>
+                      <span className="text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        {d.roomNumber}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <Button onClick={() => setShowLabsModal(false)} className="bg-teal-700 text-white text-xs font-semibold h-9 px-4">
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 4: FHIR Bundle Status ─────────────────────────────────── */}
-      {showFhirModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-indigo-900 text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-300" />
-                <h3 className="font-bold text-sm">HL7 FHIR R4 Bundle Validation (ABDM)</h3>
-              </div>
-              <button onClick={() => setShowFhirModal(false)} className="text-indigo-200 hover:text-white p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-3 flex-1 text-xs">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 flex items-center gap-2 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                <span>FHIR Bundle Structure: 100% Valid HL7 R4 Clinical Document</span>
               </div>
 
-              <div className="space-y-2">
-                <span className="font-bold text-slate-700 block">Generated Resources:</span>
-                <ul className="list-disc list-inside space-y-1 text-slate-600">
-                  <li><strong>Bundle.type:</strong> document</li>
-                  <li><strong>Composition:</strong> Clinical Intake & Case Summary (LOINC 11506-3)</li>
-                  <li><strong>Patient:</strong> {paramName} ({paramAbha})</li>
-                  <li><strong>Condition:</strong> Primary Diagnosis & Chief Complaints</li>
-                  <li><strong>MedicationStatement:</strong> 4 Structured Entities</li>
-                  <li><strong>Observation:</strong> SOCRATES & Pariksha Vitals</li>
-                </ul>
+              <div className="pt-2 flex justify-end">
+                <Button
+                  onClick={() => setShowHelpModal(false)}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold h-12 rounded-2xl cursor-pointer"
+                >
+                  {lang === "hi" ? "बंद करें" : "Close"}
+                </Button>
               </div>
-
-              <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl font-mono text-[10px] overflow-x-auto">
-{`{
-  "resourceType": "Bundle",
-  "id": "medikiosk-bundle-2026",
-  "type": "document",
-  "timestamp": "${new Date().toISOString()}",
-  "entry": [
-    { "resource": { "resourceType": "Patient", "id": "${paramAbha}" } },
-    { "resource": { "resourceType": "Condition", "code": "Pyrexia / Fever" } }
-  ]
-}`}
-              </pre>
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <Button onClick={() => setShowFhirModal(false)} className="bg-indigo-700 text-white text-xs font-semibold h-9 px-4">
-                Close
-              </Button>
             </div>
           </div>
         </div>
@@ -740,7 +1068,7 @@ export default function PatientPortalPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="min-h-screen bg-[#F6FAF7] flex items-center justify-center text-xs text-slate-500 font-semibold">
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center text-xs text-slate-500 font-semibold">
           Loading Patient Portal...
         </div>
       }

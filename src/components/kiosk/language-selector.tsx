@@ -10,8 +10,8 @@ export interface LanguageOption {
 }
 
 export const INDIAN_LANGUAGES: LanguageOption[] = [
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
   { code: "en", name: "English", nativeName: "English" },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
   { code: "bn", name: "Bengali", nativeName: "বাংলা" },
   { code: "mr", name: "Marathi", nativeName: "मराठी" },
   { code: "ta", name: "Tamil", nativeName: "தமிழ்" },

@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AbhaAuthRequest, AbhaAuthResponse } from "../../../../types/abdm";
+import { createServerClient } from "@/lib/supabase/server";
+
+async function lookupPatientRecord(abhaOrMobile?: string) {
+  if (!abhaOrMobile) return null;
+  try {
+    const supabase = createServerClient();
+    if (!supabase) return null;
+    const clean = abhaOrMobile.trim();
+    const { data } = await supabase
+      .from("patients")
+      .select("*")
+      .or(`abha_id.eq.${clean},phone.eq.${clean}`)
+      .limit(1)
+      .maybeSingle();
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 interface AbhaRequestBody extends AbhaAuthRequest {
   phase?: string;
@@ -51,10 +70,10 @@ function generateAbhaNumber(): string {
 }
 
 function generateAbhaAddress(): string {
-  // ABHA address: name@abha
-  const names = ["kamla", "ravi", "mohan", "sita", "gita", "arun", "laxmi", "prem"];
+  // ABHA address: prefix@abha
+  const prefixes = ["patient", "user", "citizen", "care", "health"];
   const suffix = Math.floor(Math.random() * 900 + 100);
-  return `${names[Math.floor(Math.random() * names.length)]}${suffix}@abha`;
+  return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${suffix}@abha`;
 }
 
 // ---------------------------------------------------------------------------
@@ -342,32 +361,32 @@ export async function POST(req: NextRequest) {
       }
       otpStore.delete(Array.from(otpStore.entries()).find(([, v]) => v.txnId === transactionId)?.[0] ?? "");
 
-      const mockAbha = generateAbhaNumber();
+      const existingPatient = await lookupPatientRecord(abhaNumber || body.mobile);
       const response: AbhaAuthResponse = {
         success: true,
-        abhaId: mockAbha,
-        abhaAddress: generateAbhaAddress(),
-        fullName: abhaNumber ? "Kamla Devi" : "Ravi Kumar",
-        gender: "Female",
-        yearOfBirth: 1964,
-        mobile: "XXXXXX8912",
-        token: `mock-abdm-token-${transactionId}-${Date.now()}`,
+        abhaId: existingPatient?.abha_id || abhaNumber || generateAbhaNumber(),
+        abhaAddress: existingPatient?.abha_address || generateAbhaAddress(),
+        fullName: existingPatient?.name || body.fullName || "ABHA Patient",
+        gender: existingPatient?.gender || body.gender || "Not specified",
+        yearOfBirth: existingPatient?.age ? (new Date().getFullYear() - existingPatient.age) : (body.yearOfBirth || 1990),
+        mobile: existingPatient?.phone || body.mobile || "XXXXXXXXXX",
+        token: `abdm-token-${transactionId}-${Date.now()}`,
       };
       return NextResponse.json(response);
     }
 
     // No stored OTP (e.g. re-verification without prior request) — accept in dev with magic OTP
     if (otp === "123456" || otp === "1234") {
-      const mockAbha = generateAbhaNumber();
+      const existingPatient = await lookupPatientRecord(abhaNumber || body.mobile);
       const response: AbhaAuthResponse = {
         success: true,
-        abhaId: abhaNumber ?? mockAbha,
-        abhaAddress: abhaAddress ?? generateAbhaAddress(),
-        fullName: "Kamla Devi",
-        gender: "Female",
-        yearOfBirth: 1964,
-        mobile: "XXXXXX8912",
-        token: `mock-abdm-token-${transactionId ?? "no-txn"}-${Date.now()}`,
+        abhaId: existingPatient?.abha_id || abhaNumber || generateAbhaNumber(),
+        abhaAddress: existingPatient?.abha_address || abhaAddress || generateAbhaAddress(),
+        fullName: existingPatient?.name || body.fullName || "ABHA Patient",
+        gender: existingPatient?.gender || body.gender || "Not specified",
+        yearOfBirth: existingPatient?.age ? (new Date().getFullYear() - existingPatient.age) : (body.yearOfBirth || 1990),
+        mobile: existingPatient?.phone || body.mobile || "XXXXXXXXXX",
+        token: `abdm-token-${transactionId ?? "no-txn"}-${Date.now()}`,
       };
       return NextResponse.json(response);
     }
@@ -420,16 +439,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stub: always succeed linking
+    // Link ABHA
+    const existingPatient = await lookupPatientRecord(abhaNumber || body.mobile);
     const response: AbhaAuthResponse = {
       success: true,
-      abhaId: abhaNumber ?? "91-0000-0000-0001",
-      abhaAddress: abhaAddress ?? "user@abha",
-      fullName: "Kamla Devi",
-      gender: "Female",
-      yearOfBirth: 1964,
-      mobile: "XXXXXX8912",
-      token: `stub-link-token-${Date.now()}`,
+      abhaId: existingPatient?.abha_id || abhaNumber || "91-0000-0000-0001",
+      abhaAddress: existingPatient?.abha_address || abhaAddress || "user@abha",
+      fullName: existingPatient?.name || body.fullName || "ABHA Patient",
+      gender: existingPatient?.gender || body.gender || "Not specified",
+      yearOfBirth: existingPatient?.age ? (new Date().getFullYear() - existingPatient.age) : (body.yearOfBirth || 1990),
+      mobile: existingPatient?.phone || body.mobile || "XXXXXXXXXX",
+      token: `link-token-${Date.now()}`,
     };
     return NextResponse.json(response);
   }
