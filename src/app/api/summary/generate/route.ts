@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }));
 
     const prompt = `You are a senior physician and clinical documentation specialist for an Indian Hospital OPD.
-Synthesize the following patient intake into a structured clinical draft following the Classical 8-Part Case-Taking Standard (SIH26047).
+Synthesize the following patient intake into a structured clinical draft following the Classical 8-Part Case-Taking Standard (AIIA/ABDM).
 
 Patient: ${JSON.stringify(patientDetails)}
 Clinical Mode: ${clinicalMode}

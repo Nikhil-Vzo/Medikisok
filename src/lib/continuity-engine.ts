@@ -1,6 +1,6 @@
 // ============================================================================
 // MEDIKIOSK — THE CONTINUITY ENGINE (Gap-Adaptive History)
-// SIH26047 Key Innovation Hook #1:
+// Key Clinical Protocol:
 //   gap_days < 30   → delta triage only (symptom evolution + med adherence)
 //   30–90 days      → delta triage + review of systems
 //   >90 days / new  → full clinical history

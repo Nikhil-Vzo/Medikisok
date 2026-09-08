@@ -59,7 +59,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-xl sm:text-2xl font-bold text-slate-900">Clinical Intake Summary</h3>
-            <Badge variant="ayush">SIH26047 Classical Standard</Badge>
+            <Badge variant="ayush">AIIA Classical Standard</Badge>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Human-in-the-loop: Verify, amend, and confirm before saving into hospital HIS/EMR

@@ -54,7 +54,7 @@ export interface ClinicalSuggestion {
 }
 
 /**
- * Standard 8-Part Clinical History format specified by SIH26047
+ * Standard 8-Part Clinical History format specified by AIIA / ABDM
  * (Chief Complaint -> HPI -> Past Medical/Surgical -> Drug & Allergy -> Family -> Personal -> ROS -> Investigations)
  */
 export interface ClassicalEightPartHistory {

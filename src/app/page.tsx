@@ -8,6 +8,7 @@ import {
   Mic, ScanLine, FileText,
 } from "lucide-react";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
+import { Footer } from "@/components/shared/footer";
 
 export default function HomePage() {
   return (
@@ -32,7 +33,7 @@ export default function HomePage() {
             </div>
             <span className="text-base font-bold tracking-tight text-slate-900">MediKiosk</span>
             <span className="hidden sm:inline-block ml-1.5 text-[11px] font-semibold text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50/90">
-              SIH 2026
+              ABDM Integrated
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
@@ -89,7 +90,7 @@ export default function HomePage() {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              All India Institute of Ayurveda · Ministry of Ayush · SIH 2026
+              All India Institute of Ayurveda · Ministry of Ayush
             </motion.div>
 
             <motion.h1
@@ -366,6 +367,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Official Government & ABDM Style Footer */}
+      <Footer />
     </div>
   );
 }
