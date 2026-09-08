@@ -7,6 +7,7 @@ import {
   ArrowRight, ShieldCheck,
   Mic, ScanLine, FileText,
 } from "lucide-react";
+import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 
 export default function HomePage() {
   return (
@@ -48,6 +49,7 @@ export default function HomePage() {
             <a href="#trust" className="hover:text-emerald-800 transition-colors">Trust</a>
           </nav>
           <div className="flex items-center gap-2.5">
+            <HighContrastToggle />
             <Link
               href="/login"
               className="inline-flex items-center gap-1 px-3.5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-emerald-300 hover:text-emerald-900 transition-all shadow-2xs"

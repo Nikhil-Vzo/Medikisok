@@ -193,7 +193,8 @@
 .kiosk-high-contrast,
 .kiosk-high-contrast body,
 .kiosk-high-contrast .min-h-screen,
-.kiosk-high-contrast [class*="bg-[#F7FAF8]"] {
+.kiosk-high-contrast [class*="bg-[#F7FAF8]"],
+.kiosk-high-contrast [class*="bg-[#F8FAF9]"] {
   background-color: var(--hc-bg) !important;
   color: var(--hc-text-primary) !important;
 }
@@ -212,6 +213,38 @@
 }
 .kiosk-high-contrast header span.text-slate-300 {
   color: #475569 !important;
+}
+.kiosk-high-contrast header nav a {
+  color: var(--hc-text-secondary) !important;
+}
+.kiosk-high-contrast header nav a:hover {
+  color: #34d399 !important;
+}
+
+/* Landing Page Hero, Sections & Cards */
+.kiosk-high-contrast section {
+  background-color: var(--hc-bg) !important;
+  border-color: var(--hc-border) !important;
+}
+.kiosk-high-contrast section [class*="bg-[#F8FAF9]"] {
+  background-color: var(--hc-card-elevated) !important;
+  border-color: var(--hc-border) !important;
+}
+.kiosk-high-contrast [style*="bg.png"] {
+  opacity: 0.08 !important;
+  mix-blend-mode: screen !important;
+}
+.kiosk-high-contrast [class*="bg-gradient-to-b from-[#F8FAF9]"] {
+  background: linear-gradient(to bottom, rgba(7, 12, 24, 0.82), rgba(7, 12, 24, 0.4), rgba(7, 12, 24, 0.92)) !important;
+}
+.kiosk-high-contrast a[href="/login"] {
+  background-color: var(--hc-card-elevated) !important;
+  border-color: var(--hc-border) !important;
+  color: var(--hc-text-primary) !important;
+}
+.kiosk-high-contrast a[href="/login"]:hover {
+  border-color: var(--hc-accent) !important;
+  color: #34d399 !important;
 }
 
 /* Cards & Surfaces */
