@@ -458,6 +458,173 @@
   color: #6ee7b7 !important;
 }
 
+/* ============================================================
+   CLINICIAN WORKSPACE & DECISION SUPPORT (DARK / HIGH-CONTRAST)
+   ============================================================ */
+
+/* Critical Red Flag Alerts */
+.kiosk-high-contrast [class*="bg-red-50"] {
+  background-color: #2e0d0d !important;
+  border-color: #ef4444 !important;
+  color: #fee2e2 !important;
+}
+.kiosk-high-contrast [class*="bg-red-50"] h4,
+.kiosk-high-contrast [class*="bg-red-50"] h5,
+.kiosk-high-contrast [class*="bg-red-50"] strong {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.kiosk-high-contrast [class*="bg-red-50"] p,
+.kiosk-high-contrast [class*="bg-red-50"] span,
+.kiosk-high-contrast [class*="bg-red-50"] div {
+  color: #fecaca !important;
+}
+.kiosk-high-contrast [class*="bg-red-50"] .text-red-600,
+.kiosk-high-contrast [class*="bg-red-50"] svg {
+  color: #f87171 !important;
+}
+.kiosk-high-contrast [class*="bg-red-50"] span[class*="border"] {
+  background-color: #5c1414 !important;
+  border-color: #ef4444 !important;
+  color: #fee2e2 !important;
+}
+
+/* Warning & Medication Review Alerts */
+.kiosk-high-contrast [class*="bg-amber-50"] {
+  background-color: #2a1805 !important;
+  border-color: #f59e0b !important;
+  color: #fef3c7 !important;
+}
+.kiosk-high-contrast [class*="bg-amber-50"] h4,
+.kiosk-high-contrast [class*="bg-amber-50"] h5,
+.kiosk-high-contrast [class*="bg-amber-50"] strong {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.kiosk-high-contrast [class*="bg-amber-50"] p,
+.kiosk-high-contrast [class*="bg-amber-50"] span,
+.kiosk-high-contrast [class*="bg-amber-50"] div {
+  color: #fef08a !important;
+}
+.kiosk-high-contrast [class*="bg-amber-50"] .text-amber-600,
+.kiosk-high-contrast [class*="bg-amber-50"] svg {
+  color: #fbbf24 !important;
+}
+.kiosk-high-contrast [class*="bg-amber-50"] span[class*="border"] {
+  background-color: #572a06 !important;
+  border-color: #f59e0b !important;
+  color: #fef3c7 !important;
+}
+
+/* OPD Tab Switcher (Doctor Workspace) */
+.kiosk-high-contrast div[class*="bg-slate-100"],
+.kiosk-high-contrast [class*="bg-slate-100/"] {
+  background-color: #0b1322 !important;
+  border-color: #334155 !important;
+}
+/* Active Tab: Bright Emerald Button */
+.kiosk-high-contrast [class*="grid-cols"] button.bg-white,
+.kiosk-high-contrast [class*="grid-cols"] button[class*="bg-white text-slate-900"],
+.kiosk-high-contrast [class*="grid-cols"] button[class*="shadow-xs"]:not([class*="text-slate-600"]):not([class*="bg-emerald"]) {
+  background-color: #059669 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 0 1px #10b981 !important;
+}
+/* Inactive Tabs */
+.kiosk-high-contrast [class*="grid-cols"] button.text-slate-600 {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+.kiosk-high-contrast [class*="grid-cols"] button.text-slate-600:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* Patient Header Banner & Demographics */
+.kiosk-high-contrast .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+.kiosk-high-contrast strong.text-slate-700 {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast span.text-emerald-700 {
+  color: #34d399 !important;
+}
+
+/* Vitals Telemetry Strip */
+.kiosk-high-contrast [class*="bg-slate-50/75"] {
+  background-color: #090e1a !important;
+  border-color: #1e293b !important;
+}
+.kiosk-high-contrast [class*="bg-slate-50/75"] .bg-white {
+  background-color: #141f32 !important;
+  border-color: #334155 !important;
+}
+.kiosk-high-contrast [class*="bg-slate-50/75"] span.text-slate-900 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.kiosk-high-contrast [class*="bg-slate-50/75"] span.text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Queue List Rows (Left Sidebar) */
+.kiosk-high-contrast [class*="divide-y"] button {
+  border-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+.kiosk-high-contrast [class*="divide-y"] button:hover {
+  background-color: #141f32 !important;
+}
+.kiosk-high-contrast [class*="divide-y"] button[class*="bg-emerald-50"] {
+  background-color: #0d2a20 !important;
+  border-left-color: #10b981 !important;
+}
+.kiosk-high-contrast [class*="divide-y"] button[class*="bg-emerald-50"] .text-slate-900,
+.kiosk-high-contrast [class*="divide-y"] button[class*="bg-emerald-50"] p,
+.kiosk-high-contrast [class*="divide-y"] button[class*="bg-emerald-50"] span {
+  color: #ffffff !important;
+}
+.kiosk-high-contrast [class*="divide-y"] button[class*="bg-red-50"] {
+  background-color: #280d0d !important;
+  border-left-color: #ef4444 !important;
+}
+
+/* Soap Summary 8 Classical History Boxes */
+.kiosk-high-contrast [class*="bg-emerald-50/30"] {
+  background-color: #0c1c1a !important;
+  border-color: #134e48 !important;
+}
+.kiosk-high-contrast [class*="bg-emerald-50/30"] div[class*="text-emerald-800"] {
+  color: #34d399 !important;
+}
+.kiosk-high-contrast [class*="bg-emerald-50/30"] span[class*="bg-emerald-100"] {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+.kiosk-high-contrast [class*="bg-emerald-50/30"] p,
+.kiosk-high-contrast [class*="bg-emerald-50/30"] li {
+  color: #f1f5f9 !important;
+}
+.kiosk-high-contrast [class*="bg-emerald-50/30"] span.bg-white {
+  background-color: #142234 !important;
+  border-color: #334155 !important;
+  color: #a7f3d0 !important;
+}
+
+/* OCR Zoom Prescription Mock Paper */
+.kiosk-high-contrast div[class*="bg-amber-50/95"] {
+  background-color: #fffbeb !important;
+  border-color: #fcd34d !important;
+}
+.kiosk-high-contrast div[class*="bg-amber-50/95"] h5,
+.kiosk-high-contrast div[class*="bg-amber-50/95"] p,
+.kiosk-high-contrast div[class*="bg-amber-50/95"] span {
+  color: #1c1917 !important;
+}
+
 /* High-contrast focus rings */
 .kiosk-high-contrast :focus-visible {
   outline: 3px solid #10b981 !important;

@@ -20,6 +20,7 @@ import { generateAndPrintClinicalReport } from "@/lib/utils/pdf-generator";
 import { RedFlagAlertBanner } from "@/components/doctor/red-flag-alert-banner";
 import { evaluateRedFlagsFromText } from "@/lib/ontologies/red-flags";
 import { ClinicalSuggestion, ClinicalSummaryDraft } from "@/types/clinical";
+import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 
 const FALLBACK_PATIENTS: QueuePatient[] = [
   {
@@ -281,6 +282,8 @@ export default function DoctorPage() {
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
+
+            <HighContrastToggle />
 
             <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
