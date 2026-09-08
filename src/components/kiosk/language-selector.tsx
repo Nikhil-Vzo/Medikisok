@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Languages, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { stopAllAudio } from "@/lib/voice/bhashini";
 
 export interface LanguageOption {
   code: string;
@@ -37,7 +38,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         return (
           <button
             key={lang.code}
-            onClick={() => onSelect(lang.code)}
+            onClick={() => {
+              stopAllAudio();
+              onSelect(lang.code);
+            }}
             className={cn(
               "flex items-center justify-between p-4 rounded-xl border font-medium transition-all text-left select-none active:scale-[0.98] min-h-[64px] focus:outline-none focus:ring-4 focus:ring-emerald-500/20",
               isSelected

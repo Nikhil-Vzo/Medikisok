@@ -67,13 +67,18 @@ function isBhashiniConfigured(): boolean {
 // ---------------------------------------------------------------------------
 
 let activeAudioElement: HTMLAudioElement | null = null;
+let currentSpeechToken = 0;
 
 /**
  * Halts all speech synthesis and HTML5 audio playback across the entire app.
  * Guarantees that at any given moment, only one voice can be speaking.
+ * Invalidates any ongoing or pending speech tokens so aborted streams never fallback.
  */
 export function stopAllAudio(): void {
   if (typeof window === "undefined") return;
+
+  // Invalidate any ongoing speech request or pending fallback
+  currentSpeechToken++;
 
   try {
     if (window.speechSynthesis) {
@@ -83,6 +88,9 @@ export function stopAllAudio(): void {
 
   if (activeAudioElement) {
     try {
+      activeAudioElement.onended = null;
+      activeAudioElement.onerror = null;
+      activeAudioElement.onplay = null;
       activeAudioElement.pause();
       activeAudioElement.currentTime = 0;
       activeAudioElement.src = "";
@@ -97,12 +105,20 @@ export function stopAllAudio(): void {
 export function setActiveAudio(audio: HTMLAudioElement | null): void {
   if (activeAudioElement && activeAudioElement !== audio) {
     try {
+      activeAudioElement.onended = null;
+      activeAudioElement.onerror = null;
+      activeAudioElement.onplay = null;
       activeAudioElement.pause();
       activeAudioElement.currentTime = 0;
       activeAudioElement.src = "";
     } catch {}
   }
   activeAudioElement = audio;
+}
+
+/** Check if a specific speech token is still the active one */
+export function isCurrentSpeechToken(token: number): boolean {
+  return token === currentSpeechToken;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +141,7 @@ export async function speakWithBrowserTTS(
   lang: string = "hi",
   options: SpeakOptions = {}
 ): Promise<void> {
-  const { rate = 0.85, pitch = 1.0, volume = 1.0 } = options;
+  const { pitch = 1.0, volume = 1.0 } = options;
 
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -134,9 +150,10 @@ export async function speakWithBrowserTTS(
     }
 
     stopAllAudio();
+    const token = currentSpeechToken;
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = rate;
+    utterance.rate = 1.0; // Voice must ALWAYS be strictly 1x
     utterance.pitch = pitch;
     utterance.volume = volume;
 
@@ -187,12 +204,19 @@ export async function speakWithBrowserTTS(
       }
     }
 
-    utterance.onend = () => resolve();
+    utterance.onend = () => {
+      resolve();
+    };
     utterance.onerror = (e) => {
       console.warn("[bhashini.ts] SpeechSynthesis error:", e);
       resolve();
     };
-    window.speechSynthesis.speak(utterance);
+
+    if (currentSpeechToken === token) {
+      window.speechSynthesis.speak(utterance);
+    } else {
+      resolve();
+    }
   });
 }
 
@@ -346,10 +370,11 @@ export async function speak(
   lang: string = "hi",
   options: SpeakOptions = {}
 ): Promise<void> {
-  const { rate = 0.85, pitch = 1.0, volume = 1.0 } = options;
+  const { pitch = 1.0, volume = 1.0 } = options;
 
   // Stop any active audio playback across the entire app first
   stopAllAudio();
+  const token = currentSpeechToken;
 
   // 1. If running in browser, play high-fidelity audio stream from /api/voice/tts
   if (typeof window !== "undefined") {
@@ -359,29 +384,46 @@ export async function speak(
         const audioUrl = `/api/voice/tts?text=${encodeURIComponent(cleanText)}&lang=${encodeURIComponent(lang)}`;
         const audio = new Audio(audioUrl);
         setActiveAudio(audio);
-        audio.playbackRate = rate;
+        audio.playbackRate = 1.0; // Voice must ALWAYS be strictly 1x
         audio.volume = volume;
 
         await new Promise<void>((resolve, reject) => {
           audio.onended = () => {
-            setActiveAudio(null);
+            if (currentSpeechToken === token) {
+              setActiveAudio(null);
+            }
             resolve();
           };
           audio.onerror = (e) => {
-            setActiveAudio(null);
-            reject(e);
+            if (currentSpeechToken === token) {
+              setActiveAudio(null);
+              reject(e);
+            } else {
+              resolve();
+            }
           };
           audio.play().catch((err) => {
-            setActiveAudio(null);
-            reject(err);
+            if (currentSpeechToken === token) {
+              setActiveAudio(null);
+              reject(err);
+            } else {
+              resolve();
+            }
           });
         });
         return;
       }
     } catch (err) {
+      // If this speech was cancelled/superseded by another language or stopAllAudio, DO NOT fall back!
+      if (currentSpeechToken !== token) {
+        return;
+      }
       console.warn("[bhashini.ts] Local TTS audio stream failed, falling back to browser TTS:", err);
     }
   }
+
+  // Abort if token changed
+  if (currentSpeechToken !== token) return;
 
   // 2. If Bhashini credentials configured on server side
   if (isBhashiniConfigured()) {
@@ -410,7 +452,7 @@ export async function speak(
           const audioBlob = await fetch(`data:audio/wav;base64,${base64Audio}`).then((r) => r.blob());
           const audioUrl = URL.createObjectURL(audioBlob);
           const audio = new Audio(audioUrl);
-          audio.playbackRate = rate;
+          audio.playbackRate = 1.0; // Voice must ALWAYS be strictly 1x
           audio.volume = volume;
 
           await new Promise<void>((resolve, reject) => {
@@ -420,20 +462,33 @@ export async function speak(
             };
             audio.onerror = () => {
               URL.revokeObjectURL(audioUrl);
-              reject(new Error("TTS audio playback failed"));
+              if (currentSpeechToken === token) {
+                reject(new Error("TTS audio playback failed"));
+              } else {
+                resolve();
+              }
             };
-            audio.play().catch(reject);
+            audio.play().catch((err) => {
+              if (currentSpeechToken === token) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
           });
           return;
         }
       }
     } catch (err) {
+      if (currentSpeechToken !== token) return;
       console.warn("[bhashini.ts] Bhashini TTS failed, falling back to browser TTS:", err);
     }
   }
 
-  // 3. Fallback to Browser Speech Synthesis
-  return speakWithBrowserTTS(text, lang, options);
+  // 3. Fallback to Browser Speech Synthesis only if this speech token is still valid
+  if (currentSpeechToken === token) {
+    return speakWithBrowserTTS(text, lang, { pitch, volume, rate: 1.0 });
+  }
 }
 
 // ---------------------------------------------------------------------------

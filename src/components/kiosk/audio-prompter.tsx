@@ -75,7 +75,7 @@ export function speakConfirmation(
   const text = msg[language] || msg.hi || msg.en;
   // Cancel any ongoing speech or audio across the entire kiosk
   stopAllAudio();
-  speak(text, language, { rate: 0.9 }).catch(() => {
+  speak(text, language, { rate: 1.0 }).catch(() => {
     // Swallow errors — TTS confirmation is non-critical
   });
 }
@@ -111,7 +111,7 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isMuted, setIsMuted] = React.useState(false);
-  const [speechRate, setSpeechRate] = React.useState(0.85); // 0.85x clear pacing
+  const promptTokenRef = React.useRef(0);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const speakText = React.useCallback(
@@ -119,10 +119,15 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
       if (typeof window === "undefined") return;
       if (isMuted || !text) return;
 
-      // Cancel any ongoing browser speech synthesis or audio streams
+      // Unique token for this speech invocation
+      const currentToken = ++promptTokenRef.current;
+
+      // Cancel any ongoing browser speech synthesis or audio streams immediately
       stopAllAudio();
 
       if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
         audioRef.current = null;
@@ -136,33 +141,41 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
         if (cleanText) {
           const audioUrl = `/api/voice/tts?text=${encodeURIComponent(cleanText)}&lang=${encodeURIComponent(language)}`;
           const audio = new Audio(audioUrl);
-          audio.playbackRate = speechRate;
+          audio.playbackRate = 1.0; // Voice must ALWAYS be strictly 1x
           audioRef.current = audio;
           setActiveAudio(audio);
 
           audio.onended = () => {
-            setIsPlaying(false);
-            audioRef.current = null;
-            setActiveAudio(null);
+            if (promptTokenRef.current === currentToken) {
+              setIsPlaying(false);
+              audioRef.current = null;
+              setActiveAudio(null);
+            }
           };
           audio.onerror = () => {
+            // ONLY fallback if this token has NOT been superseded by another language/click
+            if (promptTokenRef.current !== currentToken) return;
             setActiveAudio(null);
-            // If audio stream fails, fallback to browser TTS safely
-            speakWithBrowserTTS(text, language, { rate: speechRate })
-              .finally(() => setIsPlaying(false));
+            speakWithBrowserTTS(text, language, { rate: 1.0 })
+              .finally(() => {
+                if (promptTokenRef.current === currentToken) setIsPlaying(false);
+              });
           };
 
           await audio.play();
           return;
         }
       } catch (err) {
+        if (promptTokenRef.current !== currentToken) return;
         setActiveAudio(null);
-        // Fallback to browser TTS safely
-        speakWithBrowserTTS(text, language, { rate: speechRate })
-          .finally(() => setIsPlaying(false));
+        // Fallback to browser TTS safely only if still the active prompt
+        speakWithBrowserTTS(text, language, { rate: 1.0 })
+          .finally(() => {
+            if (promptTokenRef.current === currentToken) setIsPlaying(false);
+          });
       }
     },
-    [isMuted, language, speechRate]
+    [isMuted, language]
   );
 
   React.useEffect(() => {
@@ -172,6 +185,7 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
       }, 250);
       return () => {
         clearTimeout(timer);
+        promptTokenRef.current++;
         stopAllAudio();
       };
     }
@@ -180,11 +194,13 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
   // Stop any lingering audio on component unmount
   React.useEffect(() => {
     return () => {
+      promptTokenRef.current++;
       stopAllAudio();
     };
   }, []);
 
   const toggleMute = () => {
+    promptTokenRef.current++;
     if (isPlaying) {
       stopAllAudio();
       audioRef.current = null;
@@ -213,7 +229,7 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
         type="button"
         onClick={handleReplay}
         className="flex items-center gap-2 text-emerald-950 font-semibold text-xs hover:text-emerald-800 transition-colors"
-        title="Tap to listen to this question aloud"
+        title="Tap to listen to this question aloud (1.0x Natural Speed)"
       >
         <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
           <Volume2 className={cn("w-4 h-4", isPlaying && "")} />
@@ -230,25 +246,19 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
           </div>
         ) : (
           <span className="text-xs font-semibold text-emerald-950 font-sans">
-            बोलकर सुनें ({currentLangLabel} Audio)
+            बोलकर सुनें ({currentLangLabel} · 1x)
           </span>
         )}
       </button>
 
-      {/* Speed Rate Toggle & Mute */}
+      {/* Speed Rate Fixed Badge (Always 1x) & Mute */}
       <div className="flex items-center gap-1.5 border-l border-emerald-200 pl-2">
-        <button
-          type="button"
-          onClick={() => {
-            const nextRate = speechRate === 0.85 ? 0.7 : 0.85;
-            setSpeechRate(nextRate);
-            speakText(textToSpeak);
-          }}
-          className="px-2 py-0.5 rounded-md bg-white text-[11px] font-semibold text-emerald-900 border border-emerald-200 hover:bg-emerald-50"
-          title="Speech Speed Rate"
+        <span
+          className="px-2 py-0.5 rounded-md bg-white text-[11px] font-semibold text-emerald-900 border border-emerald-200"
+          title="Voice Speed: 1.0x Natural Speed"
         >
-          {speechRate === 0.85 ? "0.85x" : "0.7x"}
-        </button>
+          1.0x
+        </span>
 
         <button
           type="button"

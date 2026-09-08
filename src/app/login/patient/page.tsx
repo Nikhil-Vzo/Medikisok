@@ -145,7 +145,8 @@ export default function PatientLoginPage() {
         changeId: "विवरण बदलें",
         verifiedTitle: "ABHA खाता सत्यापित हो गया!",
         verifiedSub: "आपकी राष्ट्रीय स्वास्थ्य पहचान सफलतापूर्वक लिंक हो गई है।",
-        proceed: "क्लिनिकल इन्टेक शुरू करें",
+        proceed: "मरीज पोर्टल व सेवाओं पर जाएं",
+        directKiosk: "सीधे कियोस्क इनटेक पर जाएं (त्वरित)",
         skipDirect: "सीधे कियोस्क पर जाएं (त्वरित डेमो)",
         abhaTab: "ABHA ID",
         mobileTab: "मोबाइल नंबर",
@@ -166,7 +167,8 @@ export default function PatientLoginPage() {
       changeId: "Change Details",
       verifiedTitle: "ABHA Health Profile Verified!",
       verifiedSub: "Your national health identifier is confirmed and ready for clinical intake.",
-      proceed: "Start Clinical Intake",
+      proceed: "Access Patient Portal & Services",
+      directKiosk: "Direct Kiosk Intake (Quick Start)",
       skipDirect: "Direct Intake (Quick Demo)",
       abhaTab: "ABHA ID",
       mobileTab: "Mobile",
@@ -222,6 +224,21 @@ export default function PatientLoginPage() {
   }
 
   function handleProceed() {
+    if (profile) {
+      const age = new Date().getFullYear() - profile.yearOfBirth;
+      const params = new URLSearchParams({
+        abha: profile.abhaId,
+        name: profile.fullName,
+        gender: profile.gender,
+        age: String(age),
+      });
+      router.push(`/patient?${params.toString()}`);
+    } else {
+      router.push("/patient");
+    }
+  }
+
+  function handleDirectKiosk() {
     if (profile) {
       const age = new Date().getFullYear() - profile.yearOfBirth;
       const params = new URLSearchParams({
@@ -587,15 +604,28 @@ export default function PatientLoginPage() {
               </div>
 
               {/* Actions */}
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={handleProceed}
-                className="w-full h-12 rounded-lg text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm inline-flex items-center justify-center gap-2"
-              >
-                <span>{t.proceed}</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <div className="space-y-2.5">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleProceed}
+                  className="w-full h-12 rounded-lg text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm inline-flex items-center justify-center gap-2"
+                >
+                  <span>{t.proceed}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleDirectKiosk}
+                  className="w-full h-11 rounded-lg text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-50 shadow-xs inline-flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{t.directKiosk}</span>
+                </Button>
+              </div>
 
               <button
                 type="button"

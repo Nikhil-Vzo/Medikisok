@@ -196,11 +196,11 @@ export default function HospitalDeskPage() {
       window.speechSynthesis.cancel();
       const utteranceHi = new SpeechSynthesisUtterance(textHi);
       utteranceHi.lang = "hi-IN";
-      utteranceHi.rate = 0.95;
+      utteranceHi.rate = 1.0;
 
       const utteranceEn = new SpeechSynthesisUtterance(textEn);
       utteranceEn.lang = "en-IN";
-      utteranceEn.rate = 0.95;
+      utteranceEn.rate = 1.0;
 
       utteranceHi.onend = () => {
         window.speechSynthesis.speak(utteranceEn);

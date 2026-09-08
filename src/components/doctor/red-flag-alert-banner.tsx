@@ -50,7 +50,7 @@ export const RedFlagAlertBanner: React.FC<RedFlagAlertBannerProps> = ({
 
     const message = lang === "hi" ? messageHi : messageEn;
 
-    speak(message, lang, { rate: 0.9 })
+    speak(message, lang, { rate: 1.0 })
       .then(() => setTtsDone(true))
       .catch((err) => {
         console.warn("[RedFlagAlertBanner] TTS failed:", err);

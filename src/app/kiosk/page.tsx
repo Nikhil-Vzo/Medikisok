@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   UserCheck, ShieldCheck, Stethoscope, Mic, Volume2,
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
@@ -295,6 +296,13 @@ export default function KioskPage() {
             </a>
             <span className="text-slate-300">/</span>
             <span className="text-[13px] font-medium text-slate-600">Patient Intake Terminal</span>
+            <span className="text-slate-300 hidden md:inline">/</span>
+            <Link
+              href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender)}&age=${patientAge}`}
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline hidden md:inline-flex items-center gap-1"
+            >
+              <span>Patient Portal</span>
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
