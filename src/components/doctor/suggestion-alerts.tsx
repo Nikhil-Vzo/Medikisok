@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertTriangle, AlertCircle, CheckCircle2, BookOpen, ExternalLink, Sparkles } from "lucide-react";
+import { AlertTriangle, AlertCircle, CheckCircle2, BookOpen, ExternalLink, Activity } from "lucide-react";
 import { ClinicalSuggestion } from "@/types/clinical";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
@@ -27,7 +27,7 @@ export const SuggestionAlerts: React.FC<SuggestionAlertsProps> = ({
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-slate-700" />
+          <Activity className="w-4 h-4 text-slate-700" />
           <h4 className="text-[14px] font-semibold text-slate-900">Clinical Decision Support</h4>
         </div>
         <span className="text-[11px] font-medium text-slate-400">

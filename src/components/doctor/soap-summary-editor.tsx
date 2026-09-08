@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, FileDown, Code2, Sparkles, Stethoscope, FileText, Heart, Activity, User, ShieldAlert } from "lucide-react";
+import { Check, FileDown, Code2, Send, Stethoscope, FileText, Heart, Activity, User, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
@@ -83,7 +83,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
               disabled={isSendingToHis}
               className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+              <Send className="w-3.5 h-3.5 text-emerald-700" />
               {isSendingToHis ? "Sending…" : "Push to HIS"}
             </Button>
           )}

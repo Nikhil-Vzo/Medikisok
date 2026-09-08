@@ -6,7 +6,7 @@ import {
   UserCheck, ShieldCheck, Stethoscope, Mic, Volume2,
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
   FileText, Camera, QrCode, HeartPulse, RefreshCw, Flame, Wind,
-  Thermometer, Activity, Sparkles, AlertTriangle, UserPlus, RotateCcw,
+  Thermometer, Activity, AlertTriangle, UserPlus, RotateCcw,
   History, Shuffle, Clock, Printer, MapPin, Calendar, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -424,7 +424,7 @@ export default function KioskPage() {
                 {/* Preset Notification Banner */}
                 {presetNotice && (
                   <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2 animate-in fade-in duration-200">
-                    <Sparkles className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                     <span>{presetNotice}</span>
                   </div>
                 )}

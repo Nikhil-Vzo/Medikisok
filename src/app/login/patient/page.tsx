@@ -16,7 +16,7 @@ import {
   User,
   Zap,
   Shuffle,
-  Sparkles
+  UserCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -370,7 +370,7 @@ export default function PatientLoginPage() {
               <div className="space-y-2.5 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-emerald-950 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
                     {lang === "hi" ? "विशिष्ट मरीज़ पहचान चुनें" : "Select Patient Identity"}
                   </span>
                   <button
@@ -622,7 +622,7 @@ export default function PatientLoginPage() {
                   onClick={handleDirectKiosk}
                   className="w-full h-11 rounded-lg text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-50 shadow-xs inline-flex items-center justify-center gap-2"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{t.directKiosk}</span>
                 </Button>
               </div>

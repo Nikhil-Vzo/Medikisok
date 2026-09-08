@@ -105,7 +105,7 @@ export const DASHAVIDHA_PARIKSHA_STEPS: DashavidhaStep[] = [
         labelHi: 'प्रवर सार (उत्तम धातु बल)',
         descriptionEn: 'Lustrous skin, strong bones, high resistance to disease',
         descriptionHi: 'मजबूत अस्थियां, तेजस्विता, उच्च रोग प्रतिरोधक क्षमता',
-        icon: 'Sparkles'
+        icon: 'ShieldCheck'
       },
       {
         id: 'madhyama_sara',
@@ -213,7 +213,7 @@ export const DASHAVIDHA_PARIKSHA_STEPS: DashavidhaStep[] = [
         labelHi: 'सर्वरस सात्म्य (सभी रस अनुकूल)',
         descriptionEn: 'Can digest sweet, sour, salty, bitter, pungent, astringent foods',
         descriptionHi: 'सभी प्रकार के भोजन बिना किसी एलर्जी के पचते हैं',
-        icon: 'Sparkles'
+        icon: 'CheckCircle2'
       },
       {
         id: 'eka_rasa_satmya',
@@ -277,7 +277,7 @@ export const DASHAVIDHA_PARIKSHA_STEPS: DashavidhaStep[] = [
         labelHi: 'सम अग्नि (संतुलित पाचन)',
         descriptionEn: 'Healthy timely hunger, effortless digestion',
         descriptionHi: 'समय पर सही भूख व बिना तकलीफ के पाचन',
-        icon: 'Sparkles'
+        icon: 'Activity'
       },
       {
         id: 'tikshna_agni',

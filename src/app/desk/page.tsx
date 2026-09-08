@@ -6,7 +6,7 @@ import {
   UserCheck, Stethoscope, ArrowRight, ShieldCheck,
   RefreshCw, Activity, Users, Clock, AlertTriangle,
   Volume2, VolumeX, CheckCircle2, QrCode, FileText,
-  HeartPulse, Thermometer, Flame, Wind, Sparkles,
+  HeartPulse, Thermometer, Flame, Wind,
   PhoneCall, Check, UserPlus, Search, Building2, MapPin
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

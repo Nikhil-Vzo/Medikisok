@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   User, ShieldCheck, QrCode, FileText, Activity, Clock,
-  ArrowRight, PhoneCall, Stethoscope, Sparkles, Download,
+  ArrowRight, PhoneCall, Stethoscope, Mic, Download,
   CheckCircle2, AlertTriangle, Pill, ChevronRight, X,
   ExternalLink, Calendar, MapPin, RefreshCw, Eye, HeartPulse,
   Share2, Shield, Layers, HelpCircle
@@ -312,7 +312,7 @@ function PatientPortalContent() {
             <div className="pt-2 flex flex-col sm:flex-row gap-2">
               <Link href={`/kiosk?${kioskParams}`} className="flex-1">
                 <Button className="w-full h-10 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs inline-flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Mic className="w-3.5 h-3.5" />
                   <span>{lang === "hi" ? "आवाज से इनटेक शुरू करें" : "Start Voice Intake"}</span>
                 </Button>
               </Link>
