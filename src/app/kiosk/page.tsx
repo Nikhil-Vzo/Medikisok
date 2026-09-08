@@ -82,15 +82,20 @@ export default function KioskPage() {
         // If authenticated via patient portal, bypass redundant authentication step completely!
         if (urlAuth || (urlAbha && urlName)) {
           setIsPortalSession(true);
-          setIsReturningPatient(true);
           setConsentGranted(true);
 
-          // Configure continuity engine with prior clinical history
+          // By default, start with a fresh clinical intake for their new inquiry.
+          // Only trigger delta triage if explicitly flagged (e.g. ?revisit=true).
+          const urlIsReturning = params.get("revisit") === "true";
+          setIsReturningPatient(urlIsReturning);
+
           const decision = computeContinuity({
-            isReturning: true,
-            lastVisitDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            lastChiefComplaint: "Generalized fatigue & chronic knee pain",
-            lastMedications: ["Tab Paracetamol 650mg TDS", "Sudarshan Vati BD"],
+            isReturning: urlIsReturning,
+            ...(urlIsReturning ? {
+              lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+              lastChiefComplaint: "Prior consultation follow-up",
+              lastMedications: []
+            } : {})
           });
           setContinuity(decision);
 
@@ -527,7 +532,7 @@ export default function KioskPage() {
               </div>
 
               {/* Intelligent Prior Record Detection Banner */}
-              {(isReturningPatient || isPortalSession) && patientName && abhaId && (
+              {isReturningPatient && patientName && abhaId && (
                 <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in duration-200">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -771,11 +776,31 @@ export default function KioskPage() {
               {/* Question Card & Dynamic Language Content */}
               {(() => {
                 const qContent = getQuestionContent(language, currentQ.dimension || currentQ.id);
-                const displayTitle = qContent.title && qContent.title !== "Please select an option"
+
+                // Clinical question from the question definition in the active language
+                const ontologyQuestion = currentQ.question?.[language]
+                  || (language === "en" ? currentQ.question?.en : (currentQ.question?.hi || currentQ.question?.en))
+                  || currentQ.title
+                  || "";
+
+                // For complaints other than chest pain (e.g. fever, abdomen, breathlessness, Ayush),
+                // use the exact clinical ontology question so fever doesn't ask about chest pain!
+                const isChestComplaint = !selectedComplaint || selectedComplaint === "cc_chest";
+
+                // Display Title: Use translated title for chest pain in regional languages, otherwise ontology question
+                const displayTitle = (isChestComplaint && qContent.title && qContent.title.trim() && qContent.title !== "Please select an option")
                   ? qContent.title
-                  : (currentQ.question?.[language] || currentQ.question?.hi || currentQ.question?.en);
-                const displaySub = qContent.subtitle || (language === "en" ? currentQ.question?.hi : currentQ.question?.en);
-                const textToSpeak = qContent.ttsAudioText || displayTitle;
+                  : (ontologyQuestion || qContent.title || "");
+
+                // Subtitle: Show alternate language for bilingual reassurance
+                const displaySub = (isChestComplaint && qContent.subtitle && qContent.subtitle.trim() && qContent.subtitle !== "Select the answer that applies to you")
+                  ? qContent.subtitle
+                  : (language === "en" ? currentQ.question?.hi : currentQ.question?.en) || "";
+
+                // TTS Audio: MUST ALWAYS speak the actual clinical question itself!
+                const textToSpeak = (isChestComplaint && qContent.ttsAudioText && qContent.ttsAudioText.trim() && !qContent.ttsAudioText.toLowerCase().includes("please select an option"))
+                  ? qContent.ttsAudioText
+                  : displayTitle;
 
                 return (
                   <>

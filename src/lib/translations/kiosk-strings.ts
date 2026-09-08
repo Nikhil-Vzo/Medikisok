@@ -184,7 +184,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "दर्द या तकलीफ किस जगह पर हो रही है?",
       subtitle: "छाती के किस हिस्से में दर्द है? नीचे दिए गए विकल्पों में से चुनें या बोलकर बताएं।",
-      ttsAudioText: "दर्द या तकलीफ किस जगह पर हो रही है? कृपया छाती का हिस्सा चुनें या बोलकर बताएं।",
+      ttsAudioText: "दर्द या तकलीफ किस जगह पर हो रही है?",
       choices: {
         substernal: "छाती के ठीक बीच में (Center of Chest)",
         left_sided: "बाईं तरफ (Left side of chest)",
@@ -252,7 +252,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "Where exactly is the pain or discomfort located?",
       subtitle: "Select the primary area of discomfort or speak aloud.",
-      ttsAudioText: "Where exactly is the pain or discomfort located? Please select an option or speak aloud.",
+      ttsAudioText: "Where exactly is the pain or discomfort located?",
       choices: {
         substernal: "Center of the chest (Substernal / Retrosternal)",
         left_sided: "Left side of the chest (Precordial)",
@@ -320,7 +320,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "ব্যথা বা অস্বস্তি ঠিক কোন জায়গায় হচ্ছে?",
       subtitle: "বুকের কোন অংশে ব্যথা হচ্ছে? বিকল্প নির্বাচন করুন অথবা মুখে বলুন।",
-      ttsAudioText: "ব্যথা বা অস্বস্তি ঠিক কোন জায়গায় হচ্ছে? অনুগ্রহ করে বুকের অংশ নির্বাচন করুন।",
+      ttsAudioText: "ব্যথা বা অস্বস্তি ঠিক কোন জায়গায় হচ্ছে?",
       choices: {
         substernal: "বুকের ঠিক মাঝখানে (Center of Chest)",
         left_sided: "বাঁ দিকে (Left side of chest)",
@@ -372,7 +372,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "வலி அல்லது அசௌகரியம் எங்கு ஏற்படுகிறது?",
       subtitle: "மார்பின் எந்தப் பகுதியில் வலி உள்ளது? தேர்ந்தெடுக்கவும்.",
-      ttsAudioText: "வலி அல்லது அசௌகரியம் எங்கு ஏற்படுகிறது? தயவுசெய்து தேர்ந்தெடுக்கவும்.",
+      ttsAudioText: "வலி அல்லது அசௌகரியம் எங்கு ஏற்படுகிறது?",
       choices: {
         substernal: "மார்பின் நடுப்பகுதியில் (Center of Chest)",
         left_sided: "இடது பக்கத்தில் (Left side)",
@@ -424,7 +424,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "నొప్పి లేదా అసౌకర్యం ఎక్కడ ఉంది?",
       subtitle: "ఛాతీలో ఏ భాగంలో నొప్పి ఉంది? ఎంచుకోండి.",
-      ttsAudioText: "నొప్పి లేదా అసౌకర్యం ఎక్కడ ఉంది? దయచేసి ఎంచుకోండి.",
+      ttsAudioText: "నొప్పి లేదా అసౌకర్యం ఎక్కడ ఉంది?",
       choices: {
         substernal: "ఛాతీ మధ్యలో (Center of Chest)",
         left_sided: "ఎడమ వైపున (Left side)",
@@ -476,7 +476,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "वेदना किंवा त्रास नेमका कुठे होत आहे?",
       subtitle: "छातीच्या कोणत्या भागात दुखत आहे? पर्याय निवडा किंवा बोला.",
-      ttsAudioText: "वेदना किंवा त्रास नेमका कुठे होत आहे? कृपया पर्याय निवडा.",
+      ttsAudioText: "वेदना किंवा त्रास नेमका कुठे होत आहे?",
       choices: {
         substernal: "छातीच्या मध्यभागी (Center of Chest)",
         left_sided: "डाव्या बाजूला (Left side)",
@@ -528,7 +528,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "छातीमे दर्द बिल्कुल कोन् ठाँम भऽ रहल अछि?",
       subtitle: "छातीक कोन् भागमे कष्ट अछि? नीचाँ देल विकल्पमे सँ चुनू अथवा मुँह सँ बाजू।",
-      ttsAudioText: "दर्द वा तकलीफ कोन् ठाँम भऽ रहल अछि? कृपा कऽ छातीक हिस्सा चुनू अथवा बोलू।",
+      ttsAudioText: "दर्द वा तकलीफ कोन् ठाँम भऽ रहल अछि?",
       choices: {
         substernal: "छातीक ठीक बीचमे (Center of Chest)",
         left_sided: "बामा कात (Left side of chest)",
@@ -580,7 +580,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "દુખાવો અથવા તકલીફ કઈ જગ્યાએ થાય છે?",
       subtitle: "છાતીના કયા ભાગમાં દુખાવો છે? વિકલ્પ પસંદ કરો.",
-      ttsAudioText: "દુખાવો અથવા તકલીફ કઈ જગ્યાએ થાય છે? કૃપા કરીને પસંદ કરો.",
+      ttsAudioText: "દુખાવો અથવા તકલીફ કઈ જગ્યાએ થાય છે?",
       choices: {
         substernal: "છાતીની બરાબર વચ્ચે (Center of Chest)",
         left_sided: "ડાબી બાજુ (Left side)",
@@ -593,7 +593,7 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     site: {
       title: "ನೋವು ಅಥವಾ ಅಸ್ವಸ್ಥತೆ ಎಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತಿದೆ?",
       subtitle: "ಎದೆಯ ಯಾವ ಭಾಗದಲ್ಲಿ ನೋವಿದೆ? ಆಯ್ಕೆಮಾಡಿ.",
-      ttsAudioText: "ನೋವು ಅಥವಾ ಅಸ್ವಸ್ಥತೆ ಎಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತಿದೆ? ದಯವಿಟ್ಟು ಆಯ್ಕೆಮಾಡಿ.",
+      ttsAudioText: "ನೋವು ಅಥವಾ ಅಸ್ವಸ್ಥತೆ ಎಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತಿದೆ?",
       choices: {
         substernal: "ಎದೆಯ ಮಧ್ಯಭಾಗದಲ್ಲಿ (Center of Chest)",
         left_sided: "ಎಡಭಾಗದಲ್ಲಿ (Left side)",
@@ -613,14 +613,20 @@ export function getQuestionContent(
   questionId: string
 ): QuestionTranslation {
   const langGroup = KIOSK_TRANSLATIONS[lang] || KIOSK_TRANSLATIONS.en || KIOSK_TRANSLATIONS.hi;
-  if (langGroup[questionId]) {
+  if (langGroup && langGroup[questionId]) {
     return langGroup[questionId];
   }
   // Fallback to English or Hindi
-  return KIOSK_TRANSLATIONS.en[questionId] || KIOSK_TRANSLATIONS.hi[questionId] || {
-    title: "Please select an option",
-    subtitle: "Select the answer that applies to you",
-    ttsAudioText: "Please select an option.",
+  if (KIOSK_TRANSLATIONS.en?.[questionId]) {
+    return KIOSK_TRANSLATIONS.en[questionId];
+  }
+  if (KIOSK_TRANSLATIONS.hi?.[questionId]) {
+    return KIOSK_TRANSLATIONS.hi[questionId];
+  }
+  return {
+    title: "",
+    subtitle: "",
+    ttsAudioText: "",
     choices: {}
   };
 }
