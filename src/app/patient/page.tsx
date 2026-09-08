@@ -442,7 +442,7 @@ function PatientPortalContent() {
               {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-13 h-13 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-13 h-13 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-xs">
                     <Clock className="w-6 h-6" strokeWidth={2} />
                   </div>
                   <div>
@@ -464,47 +464,47 @@ function PatientPortalContent() {
                   className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
                   title="Refresh Queue"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshingQueue ? "animate-spin text-emerald-700" : ""}`} />
+                  <RefreshCw className={`w-4 h-4 ${isRefreshingQueue ? "animate-spin text-blue-700" : ""}`} />
                 </button>
               </div>
 
-              {/* High Contrast Hospital Ticket Container */}
-              <div className="p-4 sm:p-5 bg-slate-950 text-white rounded-2xl space-y-3 shadow-xs">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-[11px] text-slate-400 font-medium">
+              {/* Light Aesthetic Hospital Ticket Container */}
+              <div className="p-5 bg-gradient-to-br from-blue-50/70 via-white to-sky-50/40 text-slate-900 rounded-2xl border-2 border-blue-200/90 space-y-3.5 shadow-xs">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <span className="text-[11px] text-slate-500 font-semibold">
                     AIIA New Delhi · Ayush HMIS
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
                     Live OPD Desk
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
                       {lang === "hi" ? "आपका टोकन" : "Your Token"}
                     </span>
-                    <span className="text-3xl font-black text-white font-mono tracking-tight">
+                    <span className="text-4xl font-black text-blue-950 font-mono tracking-tight">
                       #42
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
                       {lang === "hi" ? "परामर्श कक्ष" : "Room Assignment"}
                     </span>
-                    <span className="text-xs sm:text-sm font-bold text-emerald-400">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs inline-block">
                       Room 104 (Dr. Ananya)
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-xs">
-                  <span className="text-slate-300 font-medium">
+                <div className="flex items-center justify-between pt-2.5 border-t border-blue-100 text-xs">
+                  <span className="text-slate-600 font-medium">
                     {lang === "hi" ? "वर्तमान नंबर:" : "Now Serving:"}{" "}
-                    <strong className="text-white font-bold font-mono">#{liveQueueServing}</strong>
+                    <strong className="text-blue-900 font-bold font-mono text-sm">#{liveQueueServing}</strong>
                   </span>
-                  <span className="font-semibold text-emerald-400">
+                  <span className="font-semibold text-blue-800 bg-blue-100/70 px-2.5 py-0.5 rounded-md">
                     ~{Math.max(0, (42 - liveQueueServing) * 2)} {lang === "hi" ? "मिनट शेष" : "mins wait"}
                   </span>
                 </div>
@@ -855,17 +855,19 @@ function PatientPortalContent() {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+            <div className="bg-white border-b border-slate-200 p-5 flex items-center justify-between text-slate-900">
               <div className="flex items-center gap-2.5">
-                <Clock className="w-5 h-5 text-blue-400" />
-                <h3 className="font-bold text-base">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-base text-slate-950">
                   {lang === "hi" ? "ओपीडी परामर्श टोकन पर्ची" : "Digital OPD Consultation Pass"}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowTokenModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -926,7 +928,7 @@ function PatientPortalContent() {
               <div className="flex gap-3">
                 <Button
                   onClick={() => setShowTokenModal(false)}
-                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold h-12 rounded-2xl cursor-pointer"
+                  className="flex-1 bg-blue-700 hover:bg-blue-800 text-white text-xs sm:text-sm font-bold h-12 rounded-2xl cursor-pointer"
                 >
                   <Printer className="w-4 h-4 mr-2" />
                   {lang === "hi" ? "पर्ची डाउनलोड करें" : "Save / Download Slip"}

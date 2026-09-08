@@ -63,6 +63,16 @@ export default function KioskPage() {
         setLanguage(urlLang);
       }
 
+      if (requestedStep) {
+        const validSteps: KioskStep[] = [
+          "identify", "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm", "completed"
+        ];
+        if (validSteps.includes(requestedStep)) {
+          setStep(requestedStep);
+          setConsentGranted(true);
+        }
+      }
+
       if (urlAbha || urlName) {
         if (urlAbha) setAbhaId(urlAbha);
         if (urlName) setPatientName(urlName);
@@ -556,7 +566,7 @@ export default function KioskPage() {
 
               {/* Two High-Contrast 3xl Touch Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
-                {/* ── CARD A: Returning Patient (Fast-Track Delta) ── */}
+                {/* ── CARD A: Returning Patient ── */}
                 <div
                   onClick={() => {
                     const decision = computeContinuity({
@@ -569,53 +579,37 @@ export default function KioskPage() {
                     setIsReturningPatient(true);
                     setStep("complaint_select");
                   }}
-                  className="group p-7 sm:p-8 rounded-3xl bg-gradient-to-b from-emerald-50/40 via-white to-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 text-left hover:-translate-y-1 shadow-sm"
+                  className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                        <History className="w-7 h-7" strokeWidth={2} />
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                        <History className="w-7 h-7" strokeWidth={2.2} />
                       </div>
-                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        {language === "hi" ? "3 मिनट त्वरित जांच" : "3-Min Fast Track"}
+                      <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        {language === "hi" ? "त्वरित जांच · 3 मिनट" : "Fast-Track · 3 Mins"}
                       </span>
                     </div>
 
-                    <div>
-                      <h4 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                    <div className="space-y-2">
+                      <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
                         {language === "hi" ? "हाँ, पहले आ चुका हूँ" : "Yes, Returning Patient"}
                       </h4>
-                      <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal leading-relaxed">
+                      <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
                         {language === "hi"
-                          ? "पुराने पर्चे और दवाइयों का इतिहास पहले से दर्ज है। केवल नए या बदले हुए लक्षणों का उत्तर दें।"
-                          : "Your prior records & medications are linked. Answer only what has evolved since your last visit."}
+                          ? "आपकी पुरानी फाइल व दवाइयों का रिकॉर्ड सीधे लिंक होगा। दोबारा लंबी जानकारी नहीं भरनी होगी।"
+                          : "Fast-track your consultation using linked prior prescriptions and medical history."}
                       </p>
-                    </div>
-
-                    {/* Features checklist */}
-                    <div className="space-y-2.5 pt-3.5 border-t border-slate-100 text-xs font-medium text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{language === "hi" ? "दवाइयों के असर की जांच (Medication Review)" : "Medication adherence & tolerance review"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{language === "hi" ? "पुराने सवालों की पुनरावृत्ति नहीं (Skip Baseline)" : "Skips redundant demographic & history questions"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{language === "hi" ? "डॉक्टर के लिए तुलनात्मक सारांश (Delta Clinical Note)" : "Direct delta summary for OPD doctor"}</span>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="w-full h-12 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors">
+                  <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                     <span>{language === "hi" ? "पुराने मरीज़ के रूप में आगे बढ़ें" : "Continue as Returning Patient"}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-5 h-5" />
                   </div>
                 </div>
 
-                {/* ── CARD B: First-Time Patient (Comprehensive Baseline) ── */}
+                {/* ── CARD B: First-Time Patient ── */}
                 <div
                   onClick={() => {
                     const decision = computeContinuity({ isReturning: false });
@@ -623,49 +617,33 @@ export default function KioskPage() {
                     setIsReturningPatient(false);
                     setStep("complaint_select");
                   }}
-                  className="group p-7 sm:p-8 rounded-3xl bg-gradient-to-b from-slate-50/40 via-white to-white border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 text-left hover:-translate-y-1 shadow-sm"
+                  className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                        <UserPlus className="w-7 h-7" strokeWidth={2} />
+                      <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                        <UserPlus className="w-7 h-7" strokeWidth={2.2} />
                       </div>
-                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
-                        {language === "hi" ? "नया पंजीकरण" : "New Baseline"}
+                      <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                        {language === "hi" ? "नया पंजीकरण" : "New Registration"}
                       </span>
                     </div>
 
-                    <div>
-                      <h4 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight group-hover:text-slate-900 transition-colors">
+                    <div className="space-y-2">
+                      <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
                         {language === "hi" ? "नहीं, पहली बार आया हूँ" : "No, First-Time Visit"}
                       </h4>
-                      <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal leading-relaxed">
+                      <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
                         {language === "hi"
-                          ? "इस अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी व्यापक प्राथमिक मेडिकल फाइल तैयार होगी।"
-                          : "First visit to this hospital. A comprehensive baseline clinical intake and profile will be created."}
+                          ? "अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी नई ओपीडी फाइल व जांच रिकॉर्ड तैयार होगा।"
+                          : "First visit to this hospital. A complete clinical case sheet will be prepared for your doctor."}
                       </p>
-                    </div>
-
-                    {/* Features checklist */}
-                    <div className="space-y-2.5 pt-3.5 border-t border-slate-100 text-xs font-medium text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
-                        <span>{language === "hi" ? "संपूर्ण मुख्य लक्षण व अवधि दर्ज करें" : "Comprehensive chief complaints & duration"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
-                        <span>{language === "hi" ? "एलर्जी व वर्तमान दवाइयों की जांच" : "Known allergies & current medication screening"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-slate-700 shrink-0" />
-                        <span>{language === "hi" ? "नई ओपीडी फ़ाइल व विभाग आवंटन" : "Department allotment & new OPD case sheet"}</span>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="w-full h-12 rounded-2xl bg-slate-900 group-hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors">
+                  <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                     <span>{language === "hi" ? "नए मरीज़ के रूप में शुरू करें" : "Begin First-Time Intake"}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-5 h-5" />
                   </div>
                 </div>
               </div>
