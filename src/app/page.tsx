@@ -4,33 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  UserCheck, Stethoscope, ArrowRight, ShieldCheck,
-  Mic, ScanLine, FileText, Languages, Zap, Lock,
-  CheckCircle2, Activity, ChevronRight, Building2, Landmark,
-  Sparkles, Clock, Layers, ArrowUpRight
+  ArrowRight, ShieldCheck,
+  Mic, ScanLine, FileText,
 } from "lucide-react";
 
 export default function HomePage() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.09,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 18 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 25 },
-    },
-  };
-
   return (
     <div className="flex-1 flex flex-col bg-[#F8FAF9] text-slate-900 antialiased overflow-hidden selection:bg-emerald-100 selection:text-emerald-900">
 
@@ -88,16 +66,17 @@ export default function HomePage() {
       </motion.header>
 
       {/* ============================= HERO (DECLUTTERED & ANIMATED) ============================= */}
-      <section className="border-b border-emerald-100/60 relative overflow-hidden">
+      <section className="relative overflow-hidden min-h-[100vh] w-full flex flex-col">
         {/* Ayurvedic Botanical Motif Background */}
         <div
-          className="absolute inset-0 pointer-events-none select-none bg-cover bg-bottom opacity-65 mix-blend-multiply"
+          className="absolute inset-0 pointer-events-none select-none bg-cover bg-center opacity-65 mix-blend-multiply"
           style={{ backgroundImage: "url('/bg.png')" }}
         />
         {/* Soft atmospheric gradient to maintain optimal text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/60 via-transparent to-[#F8FAF9]/80 pointer-events-none select-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/55 via-[#F8FAF9]/20 to-[#F8FAF9]/70 pointer-events-none select-none" />
 
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-20 lg:pb-24 text-center relative z-10">
+        {/* Centered headline block */}
+        <div className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full px-6 lg:px-8 text-center relative z-10 -translate-y-48">
 
           {/* Institutional Badge */}
           <motion.div
@@ -122,145 +101,29 @@ export default function HomePage() {
             <br />
             <span className="text-emerald-700">MediKiosk returns them.</span>
           </motion.h1>
-
-          {/* 4 Interactive Portal Entry Cards (Staggered Animation) */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left"
-          >
-            {/* 1. Patient Kiosk */}
-            <motion.div variants={itemVariants}>
-              <Link
-                href="/login/patient"
-                className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-emerald-500 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between h-full relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-                <div>
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 flex items-center justify-center mb-3.5 group-hover:bg-emerald-700 group-hover:text-white transition-colors shadow-2xs">
-                    <UserCheck className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors flex items-center gap-1.5">
-                    Patient Kiosk
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-700" />
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    Multimodal voice & touch intake in 8 Indian languages with prescription OCR.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-emerald-700">
-                  <span>Launch Intake</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            </motion.div>
-
-            {/* 2. Hospital Desk */}
-            <motion.div variants={itemVariants}>
-              <Link
-                href="/desk"
-                className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-teal-500 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between h-full relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-teal-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-                <div>
-                  <div className="w-10 h-10 rounded-lg bg-teal-50 border border-teal-200/80 text-teal-800 flex items-center justify-center mb-3.5 group-hover:bg-teal-700 group-hover:text-white transition-colors shadow-2xs">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-teal-800 transition-colors flex items-center gap-1.5">
-                    Hospital Desk
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-teal-700" />
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    Nurse lobby triage station, doctor & room allotment, and physical vitals logger.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-teal-700">
-                  <span>Open Lobby Desk</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            </motion.div>
-
-            {/* 3. Doctor OPD */}
-            <motion.div variants={itemVariants}>
-              <Link
-                href="/doctor"
-                className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-emerald-500 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between h-full relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-                <div>
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 flex items-center justify-center mb-3.5 group-hover:bg-emerald-700 group-hover:text-white transition-colors shadow-2xs">
-                    <Stethoscope className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors flex items-center gap-1.5">
-                    Doctor OPD
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-700" />
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    Live queue, pre-consultation SOAP & Ayush Pariksha, and Rx order sets.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-emerald-700">
-                  <span>Consultation Room</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            </motion.div>
-
-            {/* 4. Ministry Admin */}
-            <motion.div variants={itemVariants}>
-              <Link
-                href="/admin"
-                className="group p-5 bg-white rounded-xl border border-slate-200/90 hover:border-indigo-500 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between h-full relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-                <div>
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-200/80 text-indigo-800 flex items-center justify-center mb-3.5 group-hover:bg-indigo-700 group-hover:text-white transition-colors shadow-2xs">
-                    <Landmark className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-800 transition-colors flex items-center gap-1.5">
-                    Ministry Admin
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-700" />
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    National disease surveillance, tri-dosha analytics, and ABDM FHIR exports.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-700">
-                  <span>Access Command</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          {/* Compliance & Standards Strip */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="mt-12 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs font-medium text-slate-600"
-          >
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-              <Languages className="w-3.5 h-3.5 text-emerald-600" />
-              Hindi + 7 Indic languages
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-              <Lock className="w-3.5 h-3.5 text-emerald-600" />
-              DPDP Act 2023 Compliant
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-              <Zap className="w-3.5 h-3.5 text-emerald-600" />
-              Realtime HIS Sync
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              100% ABDM M1/M2/M3 Ready
-            </span>
-          </motion.div>
         </div>
+
+        {/* Launch Kiosk — pinned to bottom center */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.3 }}
+          className="absolute bottom-32 left-0 right-0 flex flex-col items-center gap-2 z-10"
+        >
+          <Link
+            href="/login/patient"
+            className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-emerald-700 text-white text-sm font-bold shadow-md hover:bg-emerald-800 hover:shadow-lg active:scale-[0.98] transition-all duration-150"
+          >
+            Launch Kiosk
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+          <span className="text-xs text-slate-500 font-medium">
+            Patient self-service · 8 Indic languages · Voice &amp; Touch
+          </span>
+        </motion.div>
+
       </section>
+
 
       {/* ============================= CLINICAL SPEED & ROI ============================= */}
       <section id="problem" className="border-b border-emerald-100/60 bg-white">
