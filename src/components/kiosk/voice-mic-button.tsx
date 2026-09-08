@@ -19,6 +19,7 @@ const LANG_SPEECH_TAGS: Record<string, { tag: string; listeningText: string; tap
   ta: { tag: "ta-IN", listeningText: "பேசுங்கள், AI கேட்கிறது...", tapText: "பேச மைக் தட்டவும் (Tap to Speak)" },
   te: { tag: "te-IN", listeningText: "మాట్లాడండి, AI వింటోంది...", tapText: "మాట్లాడటానికి మైక్ నొక్కండి" },
   mr: { tag: "mr-IN", listeningText: "बोला, AI ऐकत आहे...", tapText: "माईक दाबून बोला" },
+  mai: { tag: "hi-IN", listeningText: "बजइत रहू, AI सुनि रहल अछि...", tapText: "माइक दबाकऽ बाजू (Tap to Speak)" },
   gu: { tag: "gu-IN", listeningText: "બોલો, AI સાંભળી રહ્યું છે...", tapText: "માઇક દબાવીને બોલો" },
   kn: { tag: "kn-IN", listeningText: "ಮಾತನಾಡಿ, AI ಕೇಳುತ್ತಿದೆ...", tapText: "ಮಾತನಾಡಲು ಮೈಕ್ ಒತ್ತಿರಿ" },
 };
@@ -33,6 +34,7 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
   const [internalListening, setInternalListening] = React.useState(false);
   const [liveTranscript, setLiveTranscript] = React.useState("");
   const recognitionRef = React.useRef<any>(null);
+  const transcriptRef = React.useRef<string>("");
 
   const langConfig = LANG_SPEECH_TAGS[language] || LANG_SPEECH_TAGS.hi;
   const isListening = externalListening !== undefined ? externalListening : internalListening;
@@ -45,6 +47,8 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
   const startListening = () => {
     if (typeof window === "undefined") return;
 
+    transcriptRef.current = "";
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -53,7 +57,17 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
       setListening(true);
       setLiveTranscript(langConfig.listeningText);
       setTimeout(() => {
-        const mockResponse = language === "hi" ? "छाती के ठीक बीच में" : "Center of the chest";
+        const mockResponses: Record<string, string> = {
+          hi: "छाती के ठीक बीच में",
+          en: "Center of the chest",
+          bn: "বুকের ঠিক মাঝখানে",
+          ta: "மார்பின் நடுப்பகுதியில்",
+          te: "ఛాతీ మధ్యలో",
+          mr: "छातीच्या मध्यभागी",
+          gu: "છાતીની બરાબર વચ્ચે",
+          mai: "छातीक ठीक बीचमे",
+        };
+        const mockResponse = mockResponses[language] || mockResponses.hi;
         setLiveTranscript(`पहचाना: "${mockResponse}"`);
         onTranscriptReceived?.(mockResponse);
         setListening(false);
@@ -69,6 +83,7 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
 
       recognition.onstart = () => {
         setListening(true);
+        transcriptRef.current = "";
         setLiveTranscript(langConfig.listeningText);
       };
 
@@ -76,19 +91,26 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
         const transcript = Array.from(event.results)
           .map((result: any) => result[0].transcript)
           .join("");
+        transcriptRef.current = transcript;
         setLiveTranscript(transcript);
+        onTranscriptReceived?.(transcript);
       };
 
       recognition.onend = () => {
         setListening(false);
-        if (liveTranscript) {
-          onTranscriptReceived?.(liveTranscript);
+        if (transcriptRef.current) {
+          onTranscriptReceived?.(transcriptRef.current);
         }
       };
 
       recognition.onerror = (event: any) => {
         console.warn("Speech recognition error:", event.error);
         setListening(false);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setLiveTranscript("कृपया माइक की अनुमति दें (Allow microphone)");
+        } else if (event.error === "no-speech") {
+          setLiveTranscript("आवाज़ नहीं सुनी जा सकी (No speech detected)");
+        }
       };
 
       recognitionRef.current = recognition;

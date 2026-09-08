@@ -3,28 +3,52 @@
 import * as React from "react";
 import { Volume2, VolumeX, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { speak } from "@/lib/voice/bhashini";
+import { speak, speakWithBrowserTTS, stopAllAudio, setActiveAudio } from "@/lib/voice/bhashini";
 
 // -----------------------------------------------------------------------
-// Confirmation message map (Hindi + English)
+// Confirmation message map (Hindi, English, Bengali, Marathi, Tamil, Telugu, Maithili, Gujarati)
 // -----------------------------------------------------------------------
 
-const CONFIRMATION_MESSAGES: Record<string, { hi: string; en: string }> = {
+const CONFIRMATION_MESSAGES: Record<string, Record<string, string>> = {
   session_start: {
     hi: "आपका सत्र शुरू हो गया। अब हम कुछ सवाल पूछेंगे।",
     en: "Your session has started. We will now ask you a few questions.",
+    bn: "আপনার সেশন শুরু হয়েছে। এবার আমরা কিছু প্রশ্ন জিজ্ঞাসা করব।",
+    mr: "तुमचे सत्र सुरू झाले आहे. आता आम्ही काही प्रश्न विचारू.",
+    ta: "உங்கள் அமர்வு தொடங்கியது. இப்போது சில கேள்விகளைக் கேட்போம்.",
+    te: "మీ సెషన్ ప్రారంభమైంది. ఇప్పుడు మేము కొన్ని ప్రశ్నలు అడుగుతాము.",
+    mai: "अहाँक सत्र शुरू भऽ गेल। आब हम किछु प्रश्न पुछब.",
+    gu: "તમારું સત્ર શરૂ થઈ ગયું છે. હવે અમે કેટલાક પ્રશ્નો પૂછીશું.",
   },
   language_selected: {
     hi: "भाषा चुन ली गई। आपकी पसंदीदा भाषा में बात करें।",
     en: "Language selected. Please speak in your preferred language.",
+    bn: "ভাষা নির্বাচন করা হয়েছে। আপনার পছন্দের ভাষায় কথা বলুন।",
+    mr: "भाषा निवडली गेली. आपल्या पसंतीच्या भाषेत बोला.",
+    ta: "மொழி தேர்ந்தெடுக்கப்பட்டது. உங்கள் விருப்பமான மொழியில் பேசவும்.",
+    te: "భాష ఎంచుకోబడింది. మీకు నచ్చిన భాషలో మాట్లాడండి.",
+    mai: "भाषा चुन लेल गेल। अपन पसंदीदा भाषामे बाजू।",
+    gu: "ભાષા પસંદ કરવામાં આવી છે. તમારી પસંદગીની ભાષામાં બોલો.",
   },
   consent_submitted: {
     hi: "आपकी सहमति दर्ज हो गई। धन्यवाद।",
     en: "Your consent has been recorded. Thank you.",
+    bn: "আপনার সম্মতি রেকর্ড করা হয়েছে। ধন্যবাদ।",
+    mr: "तुमची संमती नोंदवली गेली आहे. धन्यवाद.",
+    ta: "உங்கள் ஒப்புதல் பதிவு செய்யப்பட்டது. நன்றி.",
+    te: "మీ సమ్మతి నమోదు చేయబడింది. ధన్యవాదాలు.",
+    mai: "अहाँक सहमति दर्ज भऽ गेल। धन्यवाद।",
+    gu: "તમારી સંમતિ નોંધાઈ ગઈ છે. આભાર.",
   },
   vitals_confirmed: {
     hi: "आपके सभी जीवन-चिह्न दर्ज हो गए। बहुत अच्छे।",
     en: "All your vitals have been recorded. Very good.",
+    bn: "আপনার সমস্ত ভাইটাল রেকর্ড করা হয়েছে। খুব ভালো।",
+    mr: "तुमची सर्व लक्षणे नोंदवली गेली आहेत. खूप छान.",
+    ta: "உங்கள் அனைத்து முக்கிய அளவீடுகளும் பதிவு செய்யப்பட்டன. மிக நன்று.",
+    te: "మీ అన్ని ముఖ్య లక్షణాలు నమోదు చేయబడ్డాయి. చాలా మంచిది.",
+    mai: "अहाँक सबहि जीवन-चिह्न दर्ज भऽ गेल। बहुत नीक।",
+    gu: "તમારા તમામ વાઇટલ્સ નોંધાઈ ગયા છે. ખૂબ સરસ.",
   },
 };
 
@@ -48,9 +72,9 @@ export function speakConfirmation(
   const msg = CONFIRMATION_MESSAGES[action];
   if (!msg) return;
 
-  const text = language === "en" ? msg.en : msg.hi;
-  // Cancel any ongoing speech — ensures interruption on rapid successive actions
-  window.speechSynthesis?.cancel();
+  const text = msg[language] || msg.hi || msg.en;
+  // Cancel any ongoing speech or audio across the entire kiosk
+  stopAllAudio();
   speak(text, language, { rate: 0.9 }).catch(() => {
     // Swallow errors — TTS confirmation is non-critical
   });
@@ -74,6 +98,7 @@ const LANG_BCP47_MAP: Record<string, { tag: string; label: string; voiceKeywords
   ta: { tag: "ta-IN", label: "தமிழ்", voiceKeywords: ["tamil", "ta-in", "ta_in", "valluvar"] },
   te: { tag: "te-IN", label: "తెలుగు", voiceKeywords: ["telugu", "te-in", "te_in", "chitra"] },
   mr: { tag: "mr-IN", label: "मराठी", voiceKeywords: ["marathi", "mr-in", "mr_in", "aarohi"] },
+  mai: { tag: "hi-IN", label: "मैथिली", voiceKeywords: ["maithili", "मैथिली", "hindi", "हिन्दी", "kalpana", "hemant", "swara"] },
   gu: { tag: "gu-IN", label: "ગુજરાતી", voiceKeywords: ["gujarati", "gu-in", "gu_in", "dhwani"] },
   kn: { tag: "kn-IN", label: "ಕನ್ನಡ", voiceKeywords: ["kannada", "kn-in", "kn_in", "gagan"] },
 };
@@ -87,42 +112,55 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isMuted, setIsMuted] = React.useState(false);
   const [speechRate, setSpeechRate] = React.useState(0.85); // 0.85x clear pacing
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const speakText = React.useCallback(
-    (text: string) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    async (text: string) => {
+      if (typeof window === "undefined") return;
       if (isMuted || !text) return;
 
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
+      // Cancel any ongoing browser speech synthesis or audio streams
+      stopAllAudio();
 
-      const langConfig = LANG_BCP47_MAP[language] || LANG_BCP47_MAP.hi;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = speechRate;
-      utterance.pitch = 1.0;
-      utterance.lang = langConfig.tag;
-
-      // Match system voices for this Indian language
-      const voices = window.speechSynthesis.getVoices();
-      if (voices && voices.length > 0) {
-        const matchedVoice = voices.find((v) => {
-          const vLang = v.lang.toLowerCase();
-          const vName = v.name.toLowerCase();
-          const matchesTag = vLang.startsWith(language) || vLang.replace("_", "-") === langConfig.tag.toLowerCase();
-          const matchesKeyword = langConfig.voiceKeywords.some((kw) => vName.includes(kw));
-          return matchesTag || matchesKeyword;
-        });
-
-        if (matchedVoice) {
-          utterance.voice = matchedVoice;
-        }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
 
-      utterance.onstart = () => setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
+      setIsPlaying(true);
 
-      window.speechSynthesis.speak(utterance);
+      try {
+        // 1. High-fidelity Indic audio stream from /api/voice/tts
+        const cleanText = text.replace(/[#*_`]/g, "").replace(/\s+/g, " ").trim().slice(0, 200);
+        if (cleanText) {
+          const audioUrl = `/api/voice/tts?text=${encodeURIComponent(cleanText)}&lang=${encodeURIComponent(language)}`;
+          const audio = new Audio(audioUrl);
+          audio.playbackRate = speechRate;
+          audioRef.current = audio;
+          setActiveAudio(audio);
+
+          audio.onended = () => {
+            setIsPlaying(false);
+            audioRef.current = null;
+            setActiveAudio(null);
+          };
+          audio.onerror = () => {
+            setActiveAudio(null);
+            // If audio stream fails, fallback to browser TTS safely
+            speakWithBrowserTTS(text, language, { rate: speechRate })
+              .finally(() => setIsPlaying(false));
+          };
+
+          await audio.play();
+          return;
+        }
+      } catch (err) {
+        setActiveAudio(null);
+        // Fallback to browser TTS safely
+        speakWithBrowserTTS(text, language, { rate: speechRate })
+          .finally(() => setIsPlaying(false));
+      }
     },
     [isMuted, language, speechRate]
   );
@@ -132,13 +170,24 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
       const timer = setTimeout(() => {
         speakText(textToSpeak);
       }, 250);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        stopAllAudio();
+      };
     }
   }, [textToSpeak, autoPlay, speakText]);
 
+  // Stop any lingering audio on component unmount
+  React.useEffect(() => {
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
+
   const toggleMute = () => {
     if (isPlaying) {
-      window.speechSynthesis.cancel();
+      stopAllAudio();
+      audioRef.current = null;
       setIsPlaying(false);
     }
     setIsMuted(!isMuted);

@@ -78,7 +78,7 @@ export const KIOSK_STEP_TRANSLATIONS: Record<string, KioskStepStrings> = {
   ta: {
     identifyTitle: "உங்கள் ஆபா ஐடி (ABHA ID) அல்லது அடையாளத்தை உள்ளிடவும்",
     identifySub: "14 இலக்க ஆயுஷ்மான் பாரத் சுகாதார கணக்கு எண்ணை உள்ளிடவும் அல்லது QR ஸ்கேன் செய்யவும்.",
-    identifyTts: "தயவுசெய்து உங்கள் 14 இலக்க ஆபா எண்ணை உள்ளிடவும் அல்லது கார்டை ஸ்கேன் செய்யவும்.",
+    identifyTts: "தயவுசெய்து உங்கள் பதினான்கு இலக்க ஆபா எண்ணை உள்ளிடவும் அல்லது கார்டை ஸ்கேன் செய்யவும்.",
     consentTitle: "தரவு பாதுகாப்பு மற்றும் டிஜிட்டல் ஒப்புதல் (DPDP சட்டம் 2023)",
     consentSub: "உங்கள் மருத்துவ விவரங்கள் பாதுகாப்பாக மருத்துவருக்கு மாற்றப்படும்.",
     consentTts: "உங்கள் மருத்துவ விவரங்களை மருத்துவருக்கு காட்ட ஒப்புதல் அளிக்கவும்.",
@@ -95,7 +95,7 @@ export const KIOSK_STEP_TRANSLATIONS: Record<string, KioskStepStrings> = {
   te: {
     identifyTitle: "మీ ఆభా ఐడీ (ABHA ID) లేదా గుర్తింపును నమోదు చేయండి",
     identifySub: "14 అంకెల ఆయుష్మాన్ భారత్ హెల్త్ ఖాతా నంబర్‌ను నమోదు చేయండి లేదా స్కాన్ చేయండి.",
-    identifyTts: "దయచేసి మీ 14 అంకెల ఆభా నంబర్‌ను నమోదు చేయండి లేదా కార్డును స్కాన్ చేయండి.",
+    identifyTts: "దయచేసి మీ పద్నాలుగు అంకెల ఆభా నంబర్‌ను నమోదు చేయండి లేదా కార్డును స్కాన్ చేయండి.",
     consentTitle: "డేటా భద్రత మరియు డిజిటల్ సమ్మతి (DPDP Act 2023)",
     consentSub: "మీ వైద్య వివరాలు సురక్షితంగా డాక్టర్‌కు చేరవేయబడతాయి.",
     consentTts: "మీ ఆరోగ్య వివరాలను డాక్టర్‌తో పంచుకోవడానికి సమ్మతి తెలపండి.",
@@ -126,10 +126,27 @@ export const KIOSK_STEP_TRANSLATIONS: Record<string, KioskStepStrings> = {
     confirmSub: "सर्व माहिती डॉक्टरांच्या संगणकावर पाठवली गेली आहे.",
     confirmTts: "तुमची माहिती डॉक्टरांकडे पाठवली आहे. कृपया ओपीडी रूम नंबर तीनमध्ये जा."
   },
+  mai: {
+    identifyTitle: "अपन आभा आईडी (ABHA ID) या पहचान दर्ज करू",
+    identifySub: "14 अंकक आयुष्मान भारत स्वास्थ्य खाता नंबर दर्ज करू अथवा कार्ड क्यूआर स्कैन करू।",
+    identifyTts: "कृपा कऽ अपन चौदह अंकक आभा नंबर दर्ज करू अथवा कार्ड स्कैन करू।",
+    consentTitle: "डेटा सुरक्षा आ डिजिटल सहमति (DPDP Act 2023)",
+    consentSub: "अहाँक स्वास्थ्य जानकारी आ पुरान पुर्जा सुरक्षित रूप सँ ओपीडी डॉक्टर लग पठाओल जाएत।",
+    consentTts: "अहाँक स्वास्थ्य जानकारी डॉक्टर लग पठेबाक लेल सहमति दिअ। ई जानकारी पूर्णतः सुरक्षित रहत।",
+    modeTitle: "कृपा कऽ ओपीडी विभाग चुनू",
+    modeSub: "अपन जरूरतक अनुसार एलोपैथी अथवा आयुर्वेदिक ओपीडीक चयन करू।",
+    modeTts: "कृपा कऽ बताउ जे अहाँ एलोपैथी डॉक्टर लग जा रहल छी या आयुर्वेदिक ओपीडी विभागमे?",
+    scanTitle: "पुरान पुर्जा आ लैब रिपोर्ट स्कैन करू",
+    scanSub: "अपन पुरान डॉक्टरी पुर्जा कैमराक सोझाँ राखू अथवा फाइल अपलोड करू।",
+    scanTts: "कृपा कऽ अपन दवाईक पुर्जा या लैब रिपोर्ट कैमराक सोझाँ देखाउ अथवा अपलोड करू।",
+    confirmTitle: "अहाँक केस समरी तैयार अछि",
+    confirmSub: "मरीजक सम्पूर्ण जानकारी डिजिटल रूप सँ डॉक्टरक लग पठा देल गेल अछि।",
+    confirmTts: "अहाँक केस समरी तैयार अछि आ डॉक्टरक कंप्यूटर पर पठा देल गेल अछि। कृपा कऽ ओपीडी कमरा नंबर तीनमे जाउ।"
+  },
   gu: {
     identifyTitle: "તમારો આભા આઈડી (ABHA ID) દાખલ કરો",
     identifySub: "૧૪ અંકનો આયુષ્માન ભારત હેલ્થ એકાઉન્ટ નંબર દાખલ કરો અથવા સ્કેન કરો.",
-    identifyTts: "કૃપા કરીને તમારો ૧૪ અંકનો આભા નંબર દાખલ કરો અથવા કાર્ડ સ્કેન કરો.",
+    identifyTts: "કૃપા કરીને તમારો ચૌદ અંકનો આભા નંબર દાખલ કરો અથવા કાર્ડ સ્કેન કરો.",
     consentTitle: "ડેટા સુરક્ષા અને સંમતિ (DPDP Act 2023)",
     consentSub: "તમારી મેડિકલ વિગતો ડૉક્ટરને સુરક્ષિત રીતે મોકલવામાં આવશે.",
     consentTts: "તમારી સ્વાસ્થ્ય વિગતો ડૉક્ટર સાથે શેર કરવા માટે સંમતિ આપો.",
@@ -307,6 +324,8 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
       choices: {
         substernal: "বুকের ঠিক মাঝখানে (Center of Chest)",
         left_sided: "বাঁ দিকে (Left side of chest)",
+        left_chest: "বাঁ দিকে (Left side)",
+        right_chest: "ডান দিকে (Right side)",
         epigastric: "পেটের ওপরের অংশে (Upper abdomen)",
         diffuse: "পুরো বুকে ছড়ানো (Whole chest)",
       }
@@ -314,12 +333,38 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
     onset: {
       title: "এই ব্যথা কখন এবং কীভাবে শুরু হয়েছিল?",
       subtitle: "শুরুটা কি হঠাৎ হয়েছিল নাকি ধীরে ধীরে?",
-      ttsAudioText: "এই ব্যথা কখন এবং কীভাবে শুরু হয়েছিল?",
+      ttsAudioText: "এই ব্যথা কখন এবং কীভাবে শুরু হয়েছিল? হঠাৎ নাকি ধীরে ধীরে?",
       choices: {
         acute_sudden: "হঠাৎ তীব্র শুরু হয়েছিল (< ১ ঘণ্টা)",
+        sudden_acute: "হঠাৎ তীব্র শুরু হয়েছিল (< ১ ঘণ্টা)",
         gradual_today: "আজ ধীরে ধীরে বেড়েছে",
+        gradual_days: "২-৩ দিন ধরে ধীরে ধীরে বেড়েছে",
         intermittent_days: "গত ২-৩ দিন ধরে মাঝে মাঝে হচ্ছে",
+        post_exertion: "হাঁটাহাঁটি বা পরিশ্রমের পর",
         chronic_weeks: "অনেক সপ্তাহ ধরে চলছে",
+      }
+    },
+    character: {
+      title: "ব্যথাটি কেমন ধরনের অনুভূত হচ্ছে?",
+      subtitle: "ভারী চাপ, সূঁচ ফোটার মতো তীব্র নাকি জ্বালা?",
+      ttsAudioText: "ব্যথাটি কেমন ধরনের অনুভূত হচ্ছে? ভারী চাপ নাকি জ্বালা?",
+      choices: {
+        crushing: "ভারী চাপ বা আঁটসাঁট ভাব (Heavy pressure)",
+        crushing_pressure: "ভারী চাপ বা আঁটসাঁট ভাব (Crushing pressure)",
+        burning: "জ্বালা বা বুকজ্বালা (Burning sensation)",
+        sharp_stabbing: "তীব্র ছুরির মতো খোঁচা (Sharp stabbing)",
+        dull_ache: "হালকা একটানা ব্যথা (Dull continuous ache)",
+      }
+    },
+    radiation: {
+      title: "ব্যথা কি অন্য কোথাও ছড়িয়ে পড়ছে?",
+      subtitle: "ব্যথা কোন কোন অংশে ছড়াচ্ছে?",
+      ttsAudioText: "ব্যথা কি শরীরের অন্য কোনও অংশে ছড়িয়ে পড়ছে?",
+      choices: {
+        left_arm_jaw: "বাঁ হাত, গলা ও চোয়ালে (Left arm, jaw, neck)",
+        back_scapula: "পিঠ বা দুই কাঁধের মাঝে (Back / Shoulder)",
+        both_arms: "দুই হাতে (Both arms)",
+        no_radiation: "কোথাও ছড়াচ্ছে না (No radiation)",
       }
     }
   },
@@ -331,8 +376,47 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
       choices: {
         substernal: "மார்பின் நடுப்பகுதியில் (Center of Chest)",
         left_sided: "இடது பக்கத்தில் (Left side)",
+        left_chest: "இடது பக்கத்தில் (Left side)",
+        right_chest: "வலது பக்கத்தில் (Right side)",
         epigastric: "வயிற்றின் மேல் பகுதியில் (Upper abdomen)",
         diffuse: "முழு மார்பிலும் பரவியுள்ளது (Whole chest)",
+      }
+    },
+    onset: {
+      title: "இந்த வலி எப்போது, எப்படி தொடங்கியது?",
+      subtitle: "திடீரெனவா அல்லது படிப்படியாகவா?",
+      ttsAudioText: "இந்த வலி எப்போது மற்றும் எவ்வாறு தொடங்கியது?",
+      choices: {
+        acute_sudden: "திடீரென கடுமையான வலி (< 1 மணிநேரம்)",
+        sudden_acute: "திடீரென கடுமையான வலி (< 1 மணிநேரம்)",
+        gradual_today: "இன்று படிப்படியாக அதிகரித்தது",
+        gradual_days: "2-3 நாட்களாக படிப்படியாக அதிகரித்தது",
+        intermittent_days: "கடந்த 2-3 நாட்களாக விட்டு விட்டு",
+        post_exertion: "நடந்த பின் அல்லது உழைப்பிற்குப் பின்",
+        chronic_weeks: "பல வாரங்களாக",
+      }
+    },
+    character: {
+      title: "வலி எவ்வாறு உணரப்படுகிறது?",
+      subtitle: "கனமான அழுத்தம், குத்தல் அல்லது எரிச்சலா?",
+      ttsAudioText: "வலி எவ்வாறு உணரப்படுகிறது? கடுமையான அழுத்தமா அல்லது எரிச்சலா?",
+      choices: {
+        crushing: "கனமான அழுத்தம் அல்லது இறுக்கம் (Heavy pressure)",
+        crushing_pressure: "கனமான அழுத்தம் அல்லது இறுக்கம் (Crushing pressure)",
+        burning: "நெஞ்செரிச்சல் போன்ற உணர்வு (Burning sensation)",
+        sharp_stabbing: "கூர்மையான குத்தும் வலி (Sharp stabbing)",
+        dull_ache: "லேசான தொடர் வலி (Dull continuous ache)",
+      }
+    },
+    radiation: {
+      title: "வலி வேறு எங்காவது பரவுகிறதா?",
+      subtitle: "வலி எங்கு பரவுகிறது?",
+      ttsAudioText: "வலி இடது கை, தாடை அல்லது முதுகுக்கு பரவுகிறதா?",
+      choices: {
+        left_arm_jaw: "இடது கை, கழுத்து மற்றும் தாடைக்கு (Left arm, jaw, neck)",
+        back_scapula: "முதுகு அல்லது தோள்களுக்கு இடையே (Back / Shoulders)",
+        both_arms: "இரு கைகளுக்கும் (Both arms)",
+        no_radiation: "எங்கும் பரவவில்லை (No radiation)",
       }
     }
   },
@@ -344,8 +428,47 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
       choices: {
         substernal: "ఛాతీ మధ్యలో (Center of Chest)",
         left_sided: "ఎడమ వైపున (Left side)",
+        left_chest: "ఎడమ వైపున (Left side)",
+        right_chest: "కుడి వైపున (Right side)",
         epigastric: "కడుపు ఎగువ భాగంలో (Upper abdomen)",
         diffuse: "ఛాతీ అంతటా వ్యాపించింది (Whole chest)",
+      }
+    },
+    onset: {
+      title: "ఈ నొప్పి ఎప్పుడు మరియు ఎలా మొదలైంది?",
+      subtitle: "హఠాత్తుగానా లేదా క్రమంగానా?",
+      ttsAudioText: "ఈ నొప్పి ఎప్పుడు మరియు ఎలా మొదలైంది?",
+      choices: {
+        acute_sudden: "అకస్మాత్తుగా తీవ్రమైన నొప్పి (< 1 గంట)",
+        sudden_acute: "అకస్మాత్తుగా తీవ్రమైన నొప్పి (< 1 గంట)",
+        gradual_today: "ఈ రోజు క్రమంగా పెరిగింది",
+        gradual_days: "2-3 రోజులుగా క్రమంగా పెరిగింది",
+        intermittent_days: "గత 2-3 రోజులుగా అప్పుడప్పుడు",
+        post_exertion: "నడిచిన తర్వాత లేదా శ్రమ తర్వాత",
+        chronic_weeks: "కొన్ని వారాలుగా",
+      }
+    },
+    character: {
+      title: "నొప్పి ఎలా అనిపిస్తోంది?",
+      subtitle: "భారీ ఒత్తిడి, సూది గుచ్చినట్టా లేక మంటగా ఉందా?",
+      ttsAudioText: "నొప్పి ఎలా అనిపిస్తోంది? భారీ ఒత్తిడా లేదా మంటగా ఉందా?",
+      choices: {
+        crushing: "భారీ ఒత్తిడి లేదా బిగుతుగా (Heavy pressure)",
+        crushing_pressure: "భారీ ఒత్తిడి లేదా బిగుతుగా (Crushing pressure)",
+        burning: "గుండెల్లో మంట లేదా ఎసిడిటీ (Burning sensation)",
+        sharp_stabbing: "సూది గుచ్చినట్లుగా పదునైన నొప్పి (Sharp stabbing)",
+        dull_ache: "తేలికపాటి నిరంతర నొప్పి (Dull ache)",
+      }
+    },
+    radiation: {
+      title: "నొప్పి వేరే ఎక్కడికైనా వ్యాపిస్తోందా?",
+      subtitle: "నొప్పి ఎక్కడికి వ్యాపిస్తోంది?",
+      ttsAudioText: "నొప్పి ఎడమ చేయి, దవడ లేదా వెనుక భాగానికి వ్యాపిస్తోందా?",
+      choices: {
+        left_arm_jaw: "ఎడమ చేయి, మెడ మరియు దవడకు (Left arm, jaw, neck)",
+        back_scapula: "వీపు లేదా భుజాల మధ్యకు (Back / Shoulders)",
+        both_arms: "రెండు చేతుల్లోకి (Both arms)",
+        no_radiation: "ఎక్కడికీ వ్యాపించడం లేదు (No radiation)",
       }
     }
   },
@@ -357,8 +480,99 @@ export const KIOSK_TRANSLATIONS: Record<string, Record<string, QuestionTranslati
       choices: {
         substernal: "छातीच्या मध्यभागी (Center of Chest)",
         left_sided: "डाव्या बाजूला (Left side)",
+        left_chest: "डाव्या बाजूला (Left side)",
+        right_chest: "उजव्या बाजूला (Right side)",
         epigastric: "पोटाच्या वरच्या भागात (Upper abdomen)",
         diffuse: "पूर्ण छातीत पसरलेली (Whole chest)",
+      }
+    },
+    onset: {
+      title: "ही वेदना कधी आणि कशी सुरू झाली?",
+      subtitle: "सुरुवात अचानक झाली की हळूहळू?",
+      ttsAudioText: "ही वेदना कधी आणि कशी सुरू झाली? अचानक की हळूहळू?",
+      choices: {
+        acute_sudden: "अचानक तीव्र सुरू झाली (< १ तास)",
+        sudden_acute: "अचानक तीव्र सुरू झाली (< १ तास)",
+        gradual_today: "आज हळूहळू वाढली",
+        gradual_days: "२-३ दिवसांपासून हळूहळू वाढली",
+        intermittent_days: "गेल्या २-३ दिवसांपासून वारंवार",
+        post_exertion: "चालल्यानंतर किंवा जड कामांनंतर",
+        chronic_weeks: "काही आठवड्यांपासून",
+      }
+    },
+    character: {
+      title: "वेदनांचे स्वरूप कसे आहे?",
+      subtitle: "छातीत दाब, टोचल्यासारखे की जळजळ?",
+      ttsAudioText: "वेदनांचे स्वरूप कसे आहे? जड दाब की जळजळ?",
+      choices: {
+        crushing: "जड दाब किंवा आवळल्यासारखे (Heavy pressure)",
+        crushing_pressure: "जड दाब किंवा आवळल्यासारखे (Crushing pressure)",
+        burning: "जळजळ किंवा ॲसिडिटीसारखे (Burning sensation)",
+        sharp_stabbing: "तीक्ष्ण सुईसारखे टोचणे (Sharp stabbing)",
+        dull_ache: "मंद सतत होणारी वेदना (Dull ache)",
+      }
+    },
+    radiation: {
+      title: "वेदना इतर कोठे पसरत आहे का?",
+      subtitle: "वेदना कोणत्या भागात पसरते आहे?",
+      ttsAudioText: "वेदना शरीराच्या इतर भागात पसरत आहे का?",
+      choices: {
+        left_arm_jaw: "डावा हात, मान आणि जबडा (Left arm, neck, jaw)",
+        back_scapula: "पाठीत किंवा खांद्यांमध्ये (Back / Shoulders)",
+        both_arms: "दोन्ही हातांमध्ये (Both arms)",
+        no_radiation: "कुठेही नाही, फक्त एकाच जागी (No radiation)",
+      }
+    }
+  },
+  mai: {
+    site: {
+      title: "छातीमे दर्द बिल्कुल कोन् ठाँम भऽ रहल अछि?",
+      subtitle: "छातीक कोन् भागमे कष्ट अछि? नीचाँ देल विकल्पमे सँ चुनू अथवा मुँह सँ बाजू।",
+      ttsAudioText: "दर्द वा तकलीफ कोन् ठाँम भऽ रहल अछि? कृपा कऽ छातीक हिस्सा चुनू अथवा बोलू।",
+      choices: {
+        substernal: "छातीक ठीक बीचमे (Center of Chest)",
+        left_sided: "बामा कात (Left side of chest)",
+        left_chest: "बामा कात (Left side)",
+        right_chest: "दहिना कात (Right side)",
+        epigastric: "पेटक ऊपरी भागमे (Upper abdomen)",
+        diffuse: "सम्पूर्ण छातीमे फईलल (Whole chest)",
+      }
+    },
+    onset: {
+      title: "ई दर्द कहिया आ कोना शुरू भेल?",
+      subtitle: "शुरुआत अचानक भेल वा धीरे-धीरे?",
+      ttsAudioText: "ई दर्द कहिया आ कोना शुरू भेल? शुरुआत अचानक भेल वा धीरे-धीरे?",
+      choices: {
+        acute_sudden: "अचानक बहुत तेज शुरू भेल (< 1 घंटा)",
+        sudden_acute: "अचानक बहुत तेज शुरू भेल (< 1 घंटा)",
+        gradual_today: "आई धीरे-धीरे बढ़ल",
+        gradual_days: "2-3 दिन सँ धीरे-धीरे बढ़ल",
+        intermittent_days: "पिछला 2-3 दिन सँ बार-बार भऽ रहल अछि",
+        post_exertion: "टहला वा भारी काजक बाद",
+        chronic_weeks: "कतेको सप्ताह सँ चलि रहल अछि",
+      }
+    },
+    character: {
+      title: "दर्द कोन् तरहक महसूस भऽ रहल अछि?",
+      subtitle: "दर्दक प्रकृति कोना अछि — भारी दबाव, चुभन, वा जलन?",
+      ttsAudioText: "दर्द कोन् तरहक महसूस भऽ रहल अछि? भारी दबाव अछि वा जलन?",
+      choices: {
+        crushing: "भारी दबाव वा जकड़न (Heavy pressure)",
+        crushing_pressure: "भारी दबाव वा जकड़न (Crushing pressure)",
+        burning: "तेज जलन वा एसिडिटी (Burning sensation)",
+        sharp_stabbing: "तीखे चुभन जकाँ दर्द (Sharp stabbing)",
+        dull_ache: "हलुक लगातार दर्द (Dull ache)",
+      }
+    },
+    radiation: {
+      title: "की ई दर्द शरीरक कोनो आन अंगमे फइलि रहल अछि?",
+      subtitle: "दर्द कतय-कतय फइलि रहल अछि?",
+      ttsAudioText: "की दर्द शरीरक कोनो आन हिस्सा मे फइलि रहल अछि?",
+      choices: {
+        left_arm_jaw: "बामा हाथ, गर्दन आ गलगच्चामे (Left arm, jaw, neck)",
+        back_scapula: "पीठ वा काँधमे (Back / Shoulders)",
+        both_arms: "दुन्नू हाथमे (Both arms)",
+        no_radiation: "कतहु नहि, मात्र छातीमे (No radiation)",
       }
     }
   },

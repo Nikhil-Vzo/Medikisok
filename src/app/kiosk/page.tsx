@@ -16,6 +16,7 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { VoiceMicButton } from "@/components/kiosk/voice-mic-button";
 import { ChoiceCard } from "@/components/kiosk/choice-card";
 import { AudioPrompter, speakConfirmation } from "@/components/kiosk/audio-prompter";
+import { stopAllAudio } from "@/lib/voice/bhashini";
 import { LanguageSelector } from "@/components/kiosk/language-selector";
 import { CameraScanner, ExtractedDocResult } from "@/components/kiosk/camera-scanner";
 import { ConsentPad } from "@/components/kiosk/consent-pad";
@@ -103,7 +104,6 @@ export default function KioskPage() {
     setIsReturningPatient(false);
     setContinuity(null);
     setPresetNotice("Random ABHA & Patient generated for fresh OPD intake");
-    speakConfirmation("language_selected", language);
   };
 
   // Select returning patient profile for testing continuity engine
@@ -256,6 +256,7 @@ export default function KioskPage() {
   const currentQ: any = activeQuestions[currentQuestionIndex] || activeQuestions[0];
 
   const handleOptionSelect = (optionId: string) => {
+    stopAllAudio();
     const updated = { ...selectedAnswers, [currentQ.dimension || currentQ.id]: optionId };
     setSelectedAnswers(updated);
 
@@ -341,7 +342,7 @@ export default function KioskPage() {
                 <label className="block text-xs font-semibold text-slate-700">
                   Apni Bhasha Chunein (Select Preferred Language):
                 </label>
-                <LanguageSelector currentLang={language} onSelect={(lang) => { speakConfirmation("language_selected", lang); setLanguage(lang); }} />
+                <LanguageSelector currentLang={language} onSelect={(lang) => { setLanguage(lang); }} />
               </div>
 
               {/* ABHA Input Card */}
@@ -490,7 +491,7 @@ export default function KioskPage() {
                   variant="primary"
                   size="lg"
                   onClick={() => {
-                    speakConfirmation("session_start", language);
+                    stopAllAudio();
                     setStep("consent");
                   }}
                   className="w-full h-14 rounded-lg text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
@@ -525,13 +526,15 @@ export default function KioskPage() {
               <ConsentPad
                 patientName={patientName}
                 abhaId={abhaId}
-                language={language as "hi" | "en"}
+                language={language}
                 onConsentComplete={(payload) => {
+                  stopAllAudio();
                   speakConfirmation("consent_submitted", language);
                   setConsentGranted(true);
                   setStep("continuity");
                 }}
                 onAudioConsentGranted={() => {
+                  stopAllAudio();
                   speakConfirmation("consent_submitted", language);
                   setConsentGranted(true);
                   setStep("continuity");
@@ -729,42 +732,63 @@ export default function KioskPage() {
           {/* ================= STEP 4: CONVERSE (DUAL MODE VOICE + TOUCH) ================= */}
           {step === "converse" && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Question Card */}
-              <div className="p-6 sm:p-8 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-3 text-center">
-                <div className="flex items-center justify-between text-xs font-semibold text-emerald-800">
-                  <span>Prashna {currentQuestionIndex + 1} / {activeQuestions.length}</span>
-                  <span>{clinicalMode.toUpperCase()} CLINICAL PROTOCOL</span>
-                </div>
+              {/* Question Card & Dynamic Language Content */}
+              {(() => {
+                const qContent = getQuestionContent(language, currentQ.dimension || currentQ.id);
+                const displayTitle = qContent.title && qContent.title !== "Please select an option"
+                  ? qContent.title
+                  : (currentQ.question?.[language] || currentQ.question?.hi || currentQ.question?.en);
+                const displaySub = qContent.subtitle || (language === "en" ? currentQ.question?.hi : currentQ.question?.en);
+                const textToSpeak = qContent.ttsAudioText || displayTitle;
 
-                <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 leading-snug">
-                  {currentQ.question?.hi}
-                </h3>
-                <p className="text-sm font-medium text-slate-600">
-                  {currentQ.question?.en}
-                </p>
+                return (
+                  <>
+                    <div className="p-6 sm:p-8 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-3 text-center">
+                      <div className="flex items-center justify-between text-xs font-semibold text-emerald-800">
+                        <span>Prashna {currentQuestionIndex + 1} / {activeQuestions.length}</span>
+                        <span>{clinicalMode.toUpperCase()} CLINICAL PROTOCOL</span>
+                      </div>
 
-                <div className="pt-2 flex justify-center">
-                  <AudioPrompter autoPlay language={language} textToSpeak={currentQ.question?.hi} />
-                </div>
-              </div>
+                      <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 leading-snug">
+                        {displayTitle}
+                      </h3>
+                      <p className="text-sm font-medium text-slate-600">
+                        {displaySub}
+                      </p>
 
-              {/* Touch Choice Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {currentQ.options?.map((opt: any) => (
-                  <ChoiceCard
-                    key={opt.id}
-                    id={opt.id}
-                    labelHi={opt.labelHi}
-                    labelEn={opt.labelEn}
-                    descriptionHi={opt.descriptionHi}
-                    descriptionEn={opt.descriptionEn}
-                    iconName={opt.icon}
-                    isRedFlag={opt.isRedFlag}
-                    isSelected={selectedAnswers[currentQ.dimension || currentQ.id] === opt.id}
-                    onClick={() => handleOptionSelect(opt.id)}
-                  />
-                ))}
-              </div>
+                      <div className="pt-2 flex justify-center">
+                        <AudioPrompter
+                          key={`${currentQ.dimension || currentQ.id}-${language}`}
+                          autoPlay
+                          language={language}
+                          textToSpeak={textToSpeak}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Touch Choice Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {currentQ.options?.map((opt: any) => {
+                        const translatedChoice = qContent.choices?.[opt.id];
+                        return (
+                          <ChoiceCard
+                            key={opt.id}
+                            id={opt.id}
+                            labelHi={translatedChoice || opt.labelHi}
+                            labelEn={opt.labelEn}
+                            descriptionHi={opt.descriptionHi}
+                            descriptionEn={opt.descriptionEn}
+                            iconName={opt.icon}
+                            isRedFlag={opt.isRedFlag}
+                            isSelected={selectedAnswers[currentQ.dimension || currentQ.id] === opt.id}
+                            onClick={() => handleOptionSelect(opt.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
 
               {/* Voice Input Station */}
               <div className="p-6 bg-white rounded-xl border border-slate-200/80 shadow-sm flex flex-col items-center justify-center">

@@ -40,6 +40,7 @@ export const BHASHINI_LANG_CODE: Record<string, string> = {
   ta: "ta",
   te: "te",
   mr: "mr",
+  mai: "mai",
   gu: "gu",
   kn: "kn",
   ml: "ml",
@@ -62,6 +63,49 @@ function isBhashiniConfigured(): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Global Audio Coordinator — Prevents overlapping speech across the kiosk
+// ---------------------------------------------------------------------------
+
+let activeAudioElement: HTMLAudioElement | null = null;
+
+/**
+ * Halts all speech synthesis and HTML5 audio playback across the entire app.
+ * Guarantees that at any given moment, only one voice can be speaking.
+ */
+export function stopAllAudio(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {}
+
+  if (activeAudioElement) {
+    try {
+      activeAudioElement.pause();
+      activeAudioElement.currentTime = 0;
+      activeAudioElement.src = "";
+    } catch {}
+    activeAudioElement = null;
+  }
+}
+
+/**
+ * Register a newly started HTMLAudioElement so any subsequent audio call can stop it.
+ */
+export function setActiveAudio(audio: HTMLAudioElement | null): void {
+  if (activeAudioElement && activeAudioElement !== audio) {
+    try {
+      activeAudioElement.pause();
+      activeAudioElement.currentTime = 0;
+      activeAudioElement.src = "";
+    } catch {}
+  }
+  activeAudioElement = audio;
+}
+
+// ---------------------------------------------------------------------------
 // Browser Web Speech API fallbacks
 // ---------------------------------------------------------------------------
 
@@ -69,7 +113,7 @@ function isBhashiniConfigured(): boolean {
 function bcp47Tag(lang: string): string {
   const map: Record<string, string> = {
     hi: "hi-IN", en: "en-IN", bn: "bn-IN", ta: "ta-IN",
-    te: "te-IN", mr: "mr-IN", gu: "gu-IN", kn: "kn-IN",
+    te: "te-IN", mr: "mr-IN", mai: "hi-IN", gu: "gu-IN", kn: "kn-IN",
     ml: "ml-IN", pa: "pa-IN",
   };
   return map[lang] ?? "hi-IN";
@@ -83,16 +127,15 @@ export async function speakWithBrowserTTS(
 ): Promise<void> {
   const { rate = 0.85, pitch = 1.0, volume = 1.0 } = options;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      reject(new Error("Browser Web Speech API not available"));
+      resolve();
       return;
     }
 
-    window.speechSynthesis.cancel();
+    stopAllAudio();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = bcp47Tag(lang);
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
@@ -108,6 +151,7 @@ export async function speakWithBrowserTTS(
         ta: ["tamil", "ta-in"],
         te: ["telugu", "te-in"],
         mr: ["marathi", "mr-in"],
+        mai: ["maithili", "मैथिली", "hindi", "हिन्दी", "kalpana", "hemant"],
         gu: ["gujarati", "gu-in"],
         kn: ["kannada", "kn-in"],
       };
@@ -125,11 +169,29 @@ export async function speakWithBrowserTTS(
 
       if (matchedVoice) {
         utterance.voice = matchedVoice;
+        utterance.lang = matchedVoice.lang;
+      } else {
+        // If NO native voice for this Indian language on this device:
+        // Use an Indian voice (Hindi / Indian English) rather than default US English
+        const indicVoice = voices.find((v) =>
+          v.lang.toLowerCase().startsWith("hi") ||
+          v.name.toLowerCase().includes("hindi") ||
+          v.lang.toLowerCase().includes("in")
+        );
+        if (indicVoice) {
+          utterance.voice = indicVoice;
+          utterance.lang = indicVoice.lang;
+        } else {
+          utterance.lang = "en-IN";
+        }
       }
     }
 
     utterance.onend = () => resolve();
-    utterance.onerror = (e) => reject(e);
+    utterance.onerror = (e) => {
+      console.warn("[bhashini.ts] SpeechSynthesis error:", e);
+      resolve();
+    };
     window.speechSynthesis.speak(utterance);
   });
 }
@@ -286,67 +348,92 @@ export async function speak(
 ): Promise<void> {
   const { rate = 0.85, pitch = 1.0, volume = 1.0 } = options;
 
-  if (!isBhashiniConfigured()) {
-    return speakWithBrowserTTS(text, lang, options);
+  // Stop any active audio playback across the entire app first
+  stopAllAudio();
+
+  // 1. If running in browser, play high-fidelity audio stream from /api/voice/tts
+  if (typeof window !== "undefined") {
+    try {
+      const cleanText = text.replace(/[#*_`]/g, "").replace(/\s+/g, " ").trim().slice(0, 200);
+      if (cleanText) {
+        const audioUrl = `/api/voice/tts?text=${encodeURIComponent(cleanText)}&lang=${encodeURIComponent(lang)}`;
+        const audio = new Audio(audioUrl);
+        setActiveAudio(audio);
+        audio.playbackRate = rate;
+        audio.volume = volume;
+
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => {
+            setActiveAudio(null);
+            resolve();
+          };
+          audio.onerror = (e) => {
+            setActiveAudio(null);
+            reject(e);
+          };
+          audio.play().catch((err) => {
+            setActiveAudio(null);
+            reject(err);
+          });
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn("[bhashini.ts] Local TTS audio stream failed, falling back to browser TTS:", err);
+    }
   }
 
-  const { apiKey, endpoint } = getBhashiniConfig();
-  const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "hi";
+  // 2. If Bhashini credentials configured on server side
+  if (isBhashiniConfigured()) {
+    const { apiKey, endpoint } = getBhashiniConfig();
+    const bhashiniLang = BHASHINI_LANG_CODE[lang] ?? "hi";
 
-  try {
-    const response = await fetch(`${endpoint}/tts/v1/convert`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        input: { text },
-        language: { source: bhashiniLang },
-        audioFormat: "wav",
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Bhashini TTS API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Bhashini TTS returns base64-encoded audio
-    // Shape: { audioContent?: string, output?: string }
-    const base64Audio =
-      data.audioContent ?? data.output ?? data.audio ?? null;
-
-    if (base64Audio) {
-      const audioBlob = await fetch(
-        `data:audio/wav;base64,${base64Audio}`
-      ).then((r) => r.blob());
-
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.playbackRate = rate;
-      audio.volume = volume;
-
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          reject(new Error("TTS audio playback failed"));
-        };
-        audio.play().catch(reject);
+    try {
+      const response = await fetch(`${endpoint}/tts/v1/convert`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: { text },
+          language: { source: bhashiniLang },
+          audioFormat: "wav",
+        }),
       });
-    } else {
-      // No audio in response — fall back to browser TTS
-      await speakWithBrowserTTS(text, lang, { rate, pitch, volume });
+
+      if (response.ok) {
+        const data = await response.json();
+        const base64Audio = data.audioContent ?? data.output ?? data.audio ?? null;
+
+        if (base64Audio) {
+          const audioBlob = await fetch(`data:audio/wav;base64,${base64Audio}`).then((r) => r.blob());
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audio.playbackRate = rate;
+          audio.volume = volume;
+
+          await new Promise<void>((resolve, reject) => {
+            audio.onended = () => {
+              URL.revokeObjectURL(audioUrl);
+              resolve();
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(audioUrl);
+              reject(new Error("TTS audio playback failed"));
+            };
+            audio.play().catch(reject);
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("[bhashini.ts] Bhashini TTS failed, falling back to browser TTS:", err);
     }
-  } catch (err) {
-    console.warn("[bhashini.ts] Bhashini TTS failed, falling back to browser TTS:", err);
-    await speakWithBrowserTTS(text, lang, { rate, pitch, volume });
   }
+
+  // 3. Fallback to Browser Speech Synthesis
+  return speakWithBrowserTTS(text, lang, options);
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +442,7 @@ export async function speak(
 
 /** Supported kiosk language codes */
 export const SUPPORTED_VOICE_LANGS = [
-  "hi", "en", "bn", "ta", "te", "mr", "gu", "kn",
+  "hi", "en", "bn", "ta", "te", "mr", "mai", "gu", "kn",
 ] as const;
 export type SupportedVoiceLang = (typeof SUPPORTED_VOICE_LANGS)[number];
 

@@ -29,7 +29,7 @@ import { saveAbdmConsentAudit } from "@/lib/supabase/db";
 export interface ConsentPadProps {
   patientName: string;
   abhaId?: string;
-  language?: "hi" | "en";
+  language?: string;
   /** Called after all steps complete + signature captured */
   onConsentComplete: (payload: ConsentPayload) => void;
   /** Audio-only consent (accessibility fallback) */
@@ -128,7 +128,7 @@ function generateAbdmConsentResource(
   abhaId: string | undefined,
   consentStep: number,
   signatureDataUrl: string | null,
-  language: "hi" | "en"
+  language: string = "hi"
 ): AbdmConsentResource {
   const now = new Date().toISOString();
   const validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h

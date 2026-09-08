@@ -84,24 +84,24 @@ export function matchOptionFromTranscript(
 function buildKeywords(opt: MatchableOption): string[] {
   // Curated synonyms keyed by common option ids, plus salient words from labels.
   const curated: Record<string, string[]> = {
-    substernal: ["बीचों", "beech", "center", "centre", "केंद्र"],
-    left_chest: ["बाईं", "left", "bayen"],
-    right_chest: ["दाईं", "right", "dayen"],
-    diffuse: ["पूरे", "pure", "all over"],
-    sudden_acute: ["अचानक", "achanak", "suddenly", "sudden"],
-    gradual_days: ["धीरे", "dhere", "gradual", "2-3 दिन"],
-    post_exertion: ["चलने", "chalne", "exertion", "walking"],
-    crushing_pressure: ["दबाव", "dabav", "crushing", "pressure", "जकड़न", "jakdan"],
-    sharp_stabbing: ["चुभन", "chubhan", "sharp", "stabbing"],
-    burning: ["जलन", "jalan", "burning", "एसिडिटी", "acidity"],
-    dull_ache: ["हल्का", "halka", "dull"],
-    left_arm_jaw: ["बाएं हाथ", "bayen hath", "jab", "जबड़ा", "गर्दन", "gardan", "left arm", "jaw"],
-    back_scapula: ["पीठ", "peeth", "back", "कंधा", "kandha"],
-    no_radiation: ["नहीं", "nahin", "nahi", "no radiation", "सिर्फ सीने"],
-    shortness_of_breath: ["सांस", "saans", "breath", "पसीना", "paseena", "sweat"],
-    dizziness_nausea: ["चक्कर", "chakkar", "dizzy", "nausea", "उलटी", "ulti"],
-    cough_fever: ["खांसी", "khansi", "cough", "बुखार", "bukhar", "fever"],
-    none: ["कुछ नहीं", "kuch nahi", "none"]
+    substernal: ["बीचों", "beech", "center", "centre", "केंद्र", "माझ्यात", "মাজখানে", "মাঝখানে", "నడుమ", "మధ్య", "நடுவில்", "मझिला", "बीचमे"],
+    left_chest: ["बाईं", "left", "bayen", "डावीकडे", "বাঁ দিকে", "বাঁ", "ఎడమ", "இடது", "बामा"],
+    right_chest: ["दाईं", "right", "dayen", "उजवीकडे", "ডান দিকে", "ডান", "కుడి", "வலது", "दहिना"],
+    diffuse: ["पूरे", "pure", "all over", "पूर्ण", "পুরো", "మొత్తం", "முழு", "सम्पूर्ण", "सबहि"],
+    sudden_acute: ["अचानक", "achanak", "suddenly", "sudden", "हঠাৎ", "திடீரென", "అకస్మాత్తుగా", "झटक्यात"],
+    gradual_days: ["धीरे", "dhere", "gradual", "2-3 दिन", "हळूहळू", "ধীরে ধীরে", "క్రమంగా", "படிப்படியாக"],
+    post_exertion: ["चलने", "chalne", "exertion", "walking", "चालल्यानंतर", "হাঁটার পর", "నడిచిన తర్వాత", "நடந்த பின்", "टहला बाद"],
+    crushing_pressure: ["दबाव", "dabav", "crushing", "pressure", "जकड़न", "jakdan", "दाब", "চাপ", "ఒత్తిడి", "அழுத்தம்"],
+    sharp_stabbing: ["चुभन", "chubhan", "sharp", "stabbing", "टोचणे", "খোঁচা", "குத்தல்", "సూది"],
+    burning: ["जलन", "jalan", "burning", "एसिडिटी", "acidity", "जळजळ", "জ্বালা", "మంట", "எரிச்சல்"],
+    dull_ache: ["हल्का", "halka", "dull", "मंद", "হালকা", "తేలికపాటి", "லேசான", "हलुक"],
+    left_arm_jaw: ["बाएं हाथ", "bayen hath", "jab", "जबड़ा", "गर्दन", "gardan", "left arm", "jaw", "डावा हात", "বাঁ হাত", "ఎడమ చేయి", "இடது கை", "बामा हाथ"],
+    back_scapula: ["पीठ", "peeth", "back", "कंधा", "kandha", "पाठ", "পিঠ", "వీపు", "முதுகு", "काँध"],
+    no_radiation: ["नहीं", "nahin", "nahi", "no radiation", "सिर्फ सीने", "नाही", "না", "లేదు", "இல்லை", "नहि"],
+    shortness_of_breath: ["सांस", "saans", "breath", "पसीना", "paseena", "sweat", "श्वास", "শ্বাস", "శ్వాస", "மூச்சு"],
+    dizziness_nausea: ["चक्कर", "chakkar", "dizzy", "nausea", "उलटी", "ulti", "चक्कर", "বমি", "వాంతి", "வாந்தி"],
+    cough_fever: ["खांसी", "khansi", "cough", "बुखार", "bukhar", "fever", "खोकला", "काশি", "దగ్గు", "இருமல்", "ताप"],
+    none: ["कुछ नहीं", "kuch nahi", "none", "काही नाही", "কিছু না", "ఏమీ లేదు", "எதுவுமில்லை", "किछु नहि"]
   };
 
   const kws = [...(curated[opt.id] || [])];

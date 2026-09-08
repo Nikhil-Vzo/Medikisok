@@ -11,12 +11,12 @@ export interface LanguageOption {
 export const INDIAN_LANGUAGES: LanguageOption[] = [
   { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
   { code: "en", name: "English", nativeName: "English" },
-  { code: "mr", name: "Marathi", nativeName: "मराठी" },
   { code: "bn", name: "Bengali", nativeName: "বাংলা" },
+  { code: "mr", name: "Marathi", nativeName: "मराठी" },
   { code: "ta", name: "Tamil", nativeName: "தமிழ்" },
   { code: "te", name: "Telugu", nativeName: "తెలుగు" },
+  { code: "mai", name: "Maithili", nativeName: "मैथिली" },
   { code: "gu", name: "Gujarati", nativeName: "ગુજરાતી" },
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ" },
 ];
 
 export interface LanguageSelectorProps {
