@@ -952,7 +952,7 @@ export default function KioskPage() {
                         <FileText className="w-8 h-8 mx-auto text-emerald-600/50" />
                         <p className="text-xs font-semibold text-slate-700">No documents scanned yet</p>
                         <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                          Hold physical prescription in front of camera, upload a photo, or click &quot;Demo: Load Sample Rx&quot; above to see real-time Vision AI extraction.
+                          Hold physical prescription in front of camera or upload a photo to see real-time Vision AI extraction.
                         </p>
                       </div>
                     ) : (

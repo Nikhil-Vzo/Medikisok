@@ -145,22 +145,27 @@ Output strictly valid JSON with this exact schema:
 
     const meds = (scannedEntities?.medications && scannedEntities.medications.length > 0)
       ? scannedEntities.medications
-      : [
-          { name: "Tab Metformin", dosage: "500mg", frequency: "BD (Twice Daily)", duration: "1 Month" },
-          { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD (Once Daily)", duration: "1 Month" }
-        ];
+      : [];
 
     const labs = (scannedEntities?.labValues && scannedEntities.labValues.length > 0)
       ? scannedEntities.labValues.map((l: any) => `${l.test}: ${l.value} (${l.range})`).join("; ")
-      : "Scanned records reveal stable baseline profile.";
+      : "No prior abnormal laboratory values detected.";
+
+    const diagnosesList = (scannedEntities?.diagnoses && scannedEntities.diagnoses.length > 0)
+      ? scannedEntities.diagnoses
+      : [];
+
+    const allergiesList = (scannedEntities?.allergies && scannedEntities.allergies.length > 0)
+      ? scannedEntities.allergies
+      : ["No Known Drug Allergies (NKDA)"];
 
     const classicalHistoryData = {
       chiefComplaint: dynamicComplaint,
       historyOfPresentIllness: continuityNote ? `${dynamicHpi} Note: ${continuityNote}` : dynamicHpi,
-      pastMedicalSurgical: ["Essential Hypertension (5 years)", "Type 2 Diabetes Mellitus (3 years)", "No major surgical history"],
+      pastMedicalSurgical: diagnosesList.length > 0 ? diagnosesList : ["No prior chronic conditions recorded."],
       drugAndAllergies: {
         medications: meds,
-        allergies: ["No Known Drug Allergies (NKDA)"]
+        allergies: allergiesList
       },
       familyHistory: "Positive for Type 2 Diabetes (Mother) and Hypertension (Father). No premature CAD history.",
       personalHistory: {

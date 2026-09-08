@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const paddleOcrApiKey = process.env.PADDLEOCR_API_KEY;
-    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
     const geminiConfigured = Boolean(genAI);
     const paddleConfigured = Boolean(paddleOcrApiKey);
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // ── PaddleOCR path ────────────────────────────────────────────────────────
     if (paddleConfigured) {
       try {
-        // PaddleOCR Cloud API — replace with your actual endpoint if different
+        // PaddleOCR Cloud API
         const paddleRes = await fetch("https://paddlepaddle.org.cn/paddleocr/ocr/api/recognize", {
           method: "POST",
           headers: {
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
 
         if (paddleRes.ok) {
           const paddleData = await paddleRes.json();
-          // Normalize PaddleOCR response into our ExtractedDocResult shape
           const rawText = (paddleData.result?.records?.[0]?.text ?? []) as string[];
           const fullText = rawText.join("\n");
           return NextResponse.json({
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
         }
       } catch (paddleErr) {
         console.warn("PaddleOCR call failed, falling back to Gemini:", paddleErr);
-        // fall through to Gemini
       }
     }
 
@@ -73,8 +71,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── Gemini path ────────────────────────────────────────────────────────────
-    const model = genAI!.getGenerativeModel({ model: modelName });
+    // ── Gemini path with multi-model resilience ──────────────────────────────
+    const candidateModels = Array.from(new Set([
+      modelName,
+      "gemini-3.5-flash-lite",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash"
+    ]));
 
     const prompt = `You are a medical OCR specialist for Indian hospital OPDs.
 Analyze this medical document (handwritten prescription, printed discharge summary, or laboratory report).
@@ -108,26 +111,50 @@ Extract all clinical entities accurately and output strictly a JSON object with 
 }
 Output only valid JSON without markdown wrapping.`;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: cleanBase64,
-          mimeType: mimeType
-        }
-      }
-    ]);
+    let lastError: any = null;
+    let responseText = "";
+    let usedModel = "";
 
-    const responseText = result.response.text().trim();
-    // Clean potential markdown fences
-    const jsonString = responseText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+    for (const cand of candidateModels) {
+      try {
+        const model = genAI!.getGenerativeModel({ model: cand });
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: cleanBase64,
+              mimeType: mimeType
+            }
+          }
+        ]);
+        responseText = result.response.text().trim();
+        usedModel = cand;
+        if (responseText) break;
+      } catch (err: any) {
+        console.warn(`Vision model ${cand} attempt failed:`, err?.status || err?.message || err);
+        lastError = err;
+      }
+    }
+
+    if (!responseText) {
+      throw lastError || new Error("Failed to process document across vision models.");
+    }
+    // Extract JSON block
+    let jsonString = responseText.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim();
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    }
 
     try {
       const parsedData = JSON.parse(jsonString);
       return NextResponse.json({
         success: true,
         engine: "gemini",
-        extracted: parsedData
+        extracted: {
+          ...parsedData,
+          rawOcrText: responseText
+        }
       });
     } catch (pErr) {
       return NextResponse.json({
@@ -135,39 +162,23 @@ Output only valid JSON without markdown wrapping.`;
         engine: "gemini",
         extracted: {
           docType: "prescription",
-          medications: [
-            { name: "Tab Metformin", dosage: "500mg", frequency: "BD", duration: "1 month", confidence: 0.95 },
-            { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD", duration: "1 month", confidence: 0.92 }
-          ],
-          labValues: [
-            { test: "Fasting Blood Sugar", value: "168 mg/dL", range: "70-100 mg/dL", abnormal: true },
-            { test: "HbA1c", value: "8.4%", range: "< 5.7%", abnormal: true }
-          ],
-          diagnoses: ["Type 2 Diabetes Mellitus", "Hypertension"],
-          summaryText: responseText
+          medications: [],
+          labValues: [],
+          diagnoses: [],
+          summaryText: responseText,
+          rawOcrText: responseText
         }
       });
     }
   } catch (error: any) {
     console.error("OCR Extraction Error:", error);
-    // Graceful fallback for demo resiliency
-    return NextResponse.json({
-      success: true,
-      engine: "gemini",
-      extracted: {
-        docType: "prescription",
-        documentDate: "2026-06-15",
-        medications: [
-          { name: "Tab Metformin", dosage: "500mg", frequency: "BD (Twice Daily)", confidence: 0.95 },
-          { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD (Once Daily)", confidence: 0.92 }
-        ],
-        labValues: [
-          { test: "Fasting Blood Sugar", value: "168 mg/dL", range: "70-100 mg/dL", abnormal: true },
-          { test: "HbA1c", value: "8.4%", range: "< 5.7%", abnormal: true }
-        ],
-        diagnoses: ["Type 2 Diabetes Mellitus", "Essential Hypertension"],
-        summaryText: "Processed prescription from Dr. Verma. Patient is on active anti-diabetic and anti-hypertensive therapy."
-      }
-    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "extraction_failed",
+        message: error?.message || "Document scanning failed. Please ensure the image is clear and try again."
+      },
+      { status: 500 }
+    );
   }
 }

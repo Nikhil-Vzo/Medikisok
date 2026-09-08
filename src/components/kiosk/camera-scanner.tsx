@@ -257,57 +257,6 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               Upload File
             </button>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                resetState();
-                onDocumentExtracted({
-                  docType: "prescription",
-                  documentDate: "2026-06-15",
-                  fileName: "Sample_Rx_DrVerma.jpg",
-                  previewUrl: "",
-                  medications: [
-                    { name: "Tab Metformin", dosage: "500mg", frequency: "BD (Twice Daily)", duration: "30 Days", confidence: 0.96 },
-                    { name: "Tab Telmisartan", dosage: "40mg", frequency: "OD (Once Daily)", duration: "30 Days", confidence: 0.94 }
-                  ],
-                  labValues: [],
-                  diagnoses: ["Type 2 Diabetes Mellitus", "Essential Hypertension"],
-                  proceduresSurgeries: ["Appendectomy (2018)"],
-                  allergies: ["No Known Drug Allergies"],
-                  summaryText: "Sample Prescription Dr. Verma: Metformin 500mg BD + Telmisartan 40mg OD."
-                });
-              }}
-              className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1"
-            >
-              <FileText className="w-3 h-3 text-emerald-700" />
-              Demo: Load Sample Rx
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                resetState();
-                onDocumentExtracted({
-                  docType: "lab_report",
-                  documentDate: "2026-07-02",
-                  fileName: "Sample_BloodReport_Thyrocare.pdf",
-                  previewUrl: "",
-                  medications: [],
-                  labValues: [
-                    { test: "Fasting Blood Sugar", value: "168 mg/dL", range: "70-100 mg/dL", abnormal: true },
-                    { test: "HbA1c", value: "8.4%", range: "< 5.7%", abnormal: true }
-                  ],
-                  diagnoses: ["Uncontrolled Hyperglycemia"],
-                  summaryText: "Sample Blood Profile: Elevated FBS (168 mg/dL) and HbA1c (8.4%)."
-                });
-              }}
-              className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1"
-            >
-              <ScanLine className="w-3 h-3 text-emerald-700" />
-              Demo: Load Sample Lab
-            </button>
-          </div>
         </div>
       )}
 
