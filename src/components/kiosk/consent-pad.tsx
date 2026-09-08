@@ -219,7 +219,7 @@ function generateAbdmConsentResource(
 
 interface SignatureCanvasProps {
   patientName: string;
-  language: "hi" | "en";
+  language: string;
   hasSignature: boolean;
   onSignature: (dataUrl: string) => void;
   onClear: () => void;

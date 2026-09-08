@@ -65,62 +65,111 @@ export default function HomePage() {
         </div>
       </motion.header>
 
-      {/* ============================= HERO (DECLUTTERED & ANIMATED) ============================= */}
-      <section className="relative overflow-hidden min-h-[100vh] w-full flex flex-col">
+      {/* ============================= HERO (PATIENT & DOCTOR VIDEO DUALITY) ============================= */}
+      <section className="relative overflow-hidden h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] w-full flex flex-col justify-between items-center py-3 sm:py-5">
         {/* Ayurvedic Botanical Motif Background */}
         <div
-          className="absolute inset-0 pointer-events-none select-none bg-cover bg-center opacity-65 mix-blend-multiply"
+          className="absolute inset-0 pointer-events-none select-none bg-cover bg-center opacity-60 mix-blend-multiply"
           style={{ backgroundImage: "url('/bg.png')" }}
         />
         {/* Soft atmospheric gradient to maintain optimal text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/55 via-[#F8FAF9]/20 to-[#F8FAF9]/70 pointer-events-none select-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/60 via-[#F8FAF9]/25 to-[#F8FAF9]/75 pointer-events-none select-none" />
 
-        {/* Centered headline block */}
-        <div className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full px-6 lg:px-8 text-center relative z-10 -translate-y-48">
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col justify-evenly items-center text-center">
 
-          {/* Institutional Badge */}
+          {/* TOP: Institutional Badge & Headline */}
+          <div className="flex flex-col items-center">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold text-emerald-900 bg-emerald-50/90 border border-emerald-200/90 mb-2 sm:mb-3 shadow-2xs"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+              All India Institute of Ayurveda · Ministry of Ayush · SIH 2026
+            </motion.div>
+
+            <motion.h1
+              initial={{ y: 12, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.35 }}
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] xl:text-[44px] leading-[1.12] font-black text-slate-900 max-w-3xl mx-auto tracking-tight"
+            >
+              India&apos;s OPD has two minutes.
+              <br />
+              <span className="text-emerald-700">MediKiosk returns them.</span>
+            </motion.h1>
+          </div>
+
+          {/* MIDDLE: The 2 Videos (Patient on Left & Doctor on Right, facing each other) */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold text-emerald-900 bg-emerald-50/90 border border-emerald-200/90 mb-6 shadow-2xs"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, delay: 0.15 }}
+            className="flex items-center justify-center gap-6 sm:gap-12 md:gap-16 lg:gap-20 w-full max-w-4xl my-1 sm:my-2"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-            All India Institute of Ayurveda · Ministry of Ayush · SIH 2026
+            {/* Patient Animation */}
+            <div className="flex flex-col items-center">
+              <div className="w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[220px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain pointer-events-none select-none"
+                >
+                  <source src="/animation/patient_alpha.webm" type="video/webm" />
+                  <source src="/animation/patient_clean.mp4" type="video/mp4" />
+                </video>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Patient Intake
+              </div>
+            </div>
+
+            {/* Doctor Animation */}
+            <div className="flex flex-col items-center">
+              <div className="w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[220px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain pointer-events-none select-none"
+                >
+                  <source src="/animation/doctor_alpha.webm" type="video/webm" />
+                  <source src="/animation/doctor_clean.mp4" type="video/mp4" />
+                </video>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                Doctor Consultation
+              </div>
+            </div>
           </motion.div>
 
-          {/* Punchy Hero Headline */}
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
+          {/* BOTTOM: Launch Kiosk Button & Subtext */}
+          <motion.div
+            initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl sm:text-5xl lg:text-6xl leading-[1.08] font-black text-slate-900 max-w-3xl mx-auto tracking-tight"
+            transition={{ duration: 0.35, delay: 0.25 }}
+            className="flex flex-col items-center gap-2 w-full"
           >
-            India's OPD has two minutes.
-            <br />
-            <span className="text-emerald-700">MediKiosk returns them.</span>
-          </motion.h1>
-        </div>
+            <Link
+              href="/login/patient"
+              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
+            >
+              <span>Launch Kiosk</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
+              Patient self-service · 8 Indic languages · Voice &amp; Touch
+            </span>
+          </motion.div>
 
-        {/* Launch Kiosk — pinned to bottom center */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.3 }}
-          className="absolute bottom-32 left-0 right-0 flex flex-col items-center gap-2 z-10"
-        >
-          <Link
-            href="/login/patient"
-            className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-emerald-700 text-white text-sm font-bold shadow-md hover:bg-emerald-800 hover:shadow-lg active:scale-[0.98] transition-all duration-150"
-          >
-            Launch Kiosk
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-          <span className="text-xs text-slate-500 font-medium">
-            Patient self-service · 8 Indic languages · Voice &amp; Touch
-          </span>
-        </motion.div>
+        </div>
 
       </section>
 
