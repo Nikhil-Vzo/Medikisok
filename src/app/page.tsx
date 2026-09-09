@@ -27,12 +27,12 @@ export default function HomePage() {
         transition={{ duration: 0.4 }}
         className="sticky top-0 z-50 border-b border-emerald-100/80 bg-[#F8FAF9]/85 backdrop-blur-md"
       >
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center shadow-xs group-hover:bg-emerald-800 transition-colors">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-700 flex items-center justify-center shadow-xs group-hover:bg-emerald-800 transition-colors">
               <span className="text-white text-xs font-bold tracking-tight">M</span>
             </div>
-            <span className="text-base font-bold tracking-tight text-slate-900">MediKiosk</span>
+            <span className="text-sm sm:text-base font-bold tracking-tight text-slate-900">MediKiosk</span>
             <span className="hidden sm:inline-block ml-1.5 text-[11px] font-semibold text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50/90">
               ABDM Integrated
             </span>
@@ -48,7 +48,7 @@ export default function HomePage() {
               Ministry Portal
             </Link>
           </nav>
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <HighContrastToggle />
             <InstallPwaButton variant="nav" />
             <Link
@@ -59,9 +59,10 @@ export default function HomePage() {
             </Link>
             <Link
               href="/login/patient"
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-all shadow-xs hover:shadow-sm whitespace-nowrap"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-9 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-all shadow-xs hover:shadow-sm whitespace-nowrap shrink-0"
             >
-              <span>Launch Kiosk</span>
+              <span className="hidden sm:inline">Launch </span>
+              <span>Kiosk</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -69,7 +70,7 @@ export default function HomePage() {
       </motion.header>
 
       {/* ============================= HERO (PATIENT & DOCTOR VIDEO DUALITY) ============================= */}
-      <section className="relative overflow-hidden h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] w-full flex flex-col justify-between items-center py-3 sm:py-5">
+      <section className="relative overflow-hidden min-h-[calc(100dvh-3.5rem)] sm:min-h-0 sm:h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-4rem)] w-full flex flex-col justify-between items-center py-2 sm:py-5">
         {/* Ayurvedic Botanical Motif Background */}
         <div
           className="absolute inset-0 pointer-events-none select-none bg-cover bg-center opacity-60 mix-blend-multiply"
@@ -78,7 +79,7 @@ export default function HomePage() {
         {/* Soft atmospheric gradient to maintain optimal text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAF9]/60 via-[#F8FAF9]/25 to-[#F8FAF9]/75 pointer-events-none select-none" />
 
-        <div className="relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col justify-evenly items-center text-center">
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 flex-1 flex flex-col justify-between sm:justify-evenly items-center text-center py-2 sm:py-0">
 
           {/* TOP: Institutional Badge & Headline */}
           <div className="flex flex-col items-center">
@@ -86,18 +87,18 @@ export default function HomePage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold text-emerald-900 bg-emerald-50/90 border border-emerald-200/90 mb-2 sm:mb-3 shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold text-emerald-900 bg-emerald-50/90 border border-emerald-200/90 mb-1.5 sm:mb-3 shadow-2xs max-w-[94vw] text-center"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              All India Institute of Ayurveda · Ministry of Ayush
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span className="truncate sm:overflow-visible">All India Institute of Ayurveda · Ministry of Ayush</span>
             </motion.div>
 
             <motion.h1
               initial={{ y: 12, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.35 }}
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] xl:text-[44px] leading-[1.12] font-black text-slate-900 max-w-3xl mx-auto tracking-tight"
+              className="text-xl xs:text-2xl sm:text-3xl md:text-4xl lg:text-[40px] xl:text-[44px] leading-[1.15] sm:leading-[1.12] font-black text-slate-900 max-w-3xl mx-auto tracking-tight px-1"
             >
               India&apos;s OPD has two minutes.
               <br />
@@ -110,11 +111,11 @@ export default function HomePage() {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.45, delay: 0.15 }}
-            className="flex items-center justify-center gap-6 sm:gap-12 md:gap-16 lg:gap-20 w-full max-w-4xl my-1 sm:my-2"
+            className="flex items-center justify-center gap-4 sm:gap-12 md:gap-16 lg:gap-20 w-full max-w-4xl my-1 sm:my-2"
           >
             {/* Patient Animation */}
             <div className="flex flex-col items-center">
-              <div className="w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[220px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
+              <div className="w-24 xs:w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[160px] xs:max-h-[190px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
                 <video
                   autoPlay
                   loop
@@ -126,7 +127,7 @@ export default function HomePage() {
                   <source src="/animation/patient_clean.mp4" type="video/mp4" />
                 </video>
               </div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1.5">
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[9px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 Patient Intake
               </div>
@@ -134,7 +135,7 @@ export default function HomePage() {
 
             {/* Doctor Animation */}
             <div className="flex flex-col items-center">
-              <div className="w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[220px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
+              <div className="w-24 xs:w-28 sm:w-36 md:w-44 lg:w-52 aspect-[9/16] max-h-[160px] xs:max-h-[190px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[350px] flex items-center justify-center">
                 <video
                   autoPlay
                   loop
@@ -146,7 +147,7 @@ export default function HomePage() {
                   <source src="/animation/doctor_clean.mp4" type="video/mp4" />
                 </video>
               </div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1.5">
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/95 backdrop-blur-xs border border-emerald-200/80 text-[9px] sm:text-[11px] font-semibold text-emerald-900 shadow-2xs mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                 Doctor Consultation
               </div>
@@ -158,16 +159,16 @@ export default function HomePage() {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.35, delay: 0.25 }}
-            className="flex flex-col items-center gap-2 w-full"
+            className="flex flex-col items-center gap-1.5 sm:gap-2 w-full pb-2 sm:pb-0"
           >
             <Link
               href="/login/patient"
-              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
+              className="group inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
             >
               <span>Launch Kiosk</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
+            <span className="text-[10px] sm:text-xs text-slate-500 font-medium px-4 text-center">
               Patient self-service · 8 Indic languages · Voice &amp; Touch
             </span>
           </motion.div>

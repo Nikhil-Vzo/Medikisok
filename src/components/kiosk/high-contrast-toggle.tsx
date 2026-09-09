@@ -15,17 +15,20 @@ export function HighContrastToggle({ className = "" }: HighContrastToggleProps) 
     <button
       onClick={toggle}
       type="button"
+      title={isHighContrast ? "High Contrast Mode: ON (Click to turn off)" : "High Contrast Mode: OFF (Click to turn on)"}
       aria-label={isHighContrast ? "Disable high contrast dark mode" : "Enable high contrast dark mode"}
       aria-pressed={isHighContrast}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all font-semibold text-xs cursor-pointer select-none
+      className={`relative inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-all cursor-pointer select-none shrink-0 shadow-2xs active:scale-95
         ${isHighContrast
-          ? "border-emerald-400 bg-emerald-950/80 text-emerald-300 hover:bg-emerald-900/90 shadow-xs ring-1 ring-emerald-400"
-          : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-500 hover:bg-emerald-50"
+          ? "border-emerald-400 bg-emerald-950 text-emerald-300 hover:bg-emerald-900 shadow-xs ring-1 ring-emerald-400"
+          : "border-slate-200 bg-white text-slate-700 hover:text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50/60"
         }
         focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${className}`}
     >
-      <Contrast className={`w-3.5 h-3.5 ${isHighContrast ? "text-emerald-300" : "text-emerald-700"}`} aria-hidden="true" />
-      <span>{isHighContrast ? "High Contrast: ON" : "High Contrast"}</span>
+      <Contrast className={`w-4 h-4 ${isHighContrast ? "text-emerald-300" : "text-emerald-700"}`} aria-hidden="true" />
+      {isHighContrast && (
+        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+      )}
     </button>
   );
 }

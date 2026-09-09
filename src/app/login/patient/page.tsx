@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProgressSteps, StepItem } from "@/components/ui/progress-steps";
+import { LanguageDropdown } from "@/components/shared/language-dropdown";
+import { getPatientAuthStrings } from "@/lib/translations/patient-auth-strings";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -34,18 +36,6 @@ interface AbhaProfile {
   mobile: string;
   token: string;
 }
-
-/* ─── Constants ─────────────────────────────────────────────────────────── */
-
-const ABHA_STEPS_EN: StepItem[] = [
-  { id: "identify", label: "Enter Identity" },
-  { id: "confirmed", label: "ABHA Ready" },
-];
-
-const ABHA_STEPS_HI: StepItem[] = [
-  { id: "identify", label: "पहचान दर्ज करें", labelHindi: "Enter Identity" },
-  { id: "confirmed", label: "ABHA तैयार", labelHindi: "ABHA Ready" },
-];
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
@@ -66,62 +56,23 @@ export default function PatientLoginPage() {
   // Result state
   const [profile, setProfile] = React.useState<AbhaProfile | null>(null);
 
-  // Language (default to English)
-  const [lang, setLang] = React.useState<"hi" | "en">("en");
+  // Language (supports all 8 Indic languages)
+  const [lang, setLang] = React.useState<string>("en");
 
-  const steps = lang === "hi" ? ABHA_STEPS_HI : ABHA_STEPS_EN;
-  const stepIndex = flowStep === "identify" ? 0 : 1;
-
-  /* ─── Helpers ──────────────────────────────────────────────────────── */
-
-  function getCurrentLangStrings() {
-    if (lang === "hi") {
-      return {
-        title: "मरीज़ रजिस्ट्रेशन (ABHA)",
-        subtitle: "अपना आभा (ABHA) नंबर या मोबाइल दर्ज कर तुरंत चेक-इन करें।",
-        verify: "सत्यापित करें व आगे बढ़ें",
-        changeId: "विवरण बदलें",
-        verifiedTitle: "ABHA खाता सत्यापित हो गया!",
-        verifiedSub: "आपकी राष्ट्रीय स्वास्थ्य पहचान सफलतापूर्वक लिंक हो गई है।",
-        proceed: "मरीज पोर्टल व सेवाओं पर जाएं",
-        directKiosk: "सीधे कियोस्क इनटेक पर जाएं (त्वरित)",
-        skipDirect: "सीधे कियोस्क पर जाएं",
-        abhaTab: "ABHA ID",
-        mobileTab: "मोबाइल नंबर",
-        qrTab: "QR स्कैन",
-        enterAbha: "14 अंकों का ABHA नंबर दर्ज करें",
-        abhaPlaceholder: "91-XXXX-XXXX-XXXX",
-        enterMobile: "10 अंकों का मोबाइल नंबर",
-        mobilePlaceholder: "9876543210",
-        scanCard: "ABHA कार्ड QR स्कैन करें",
-        scanSimulate: "कैमरा QR स्कैनर प्रारंभ करें",
-        privacy: "DPDP Act 2023 के तहत पूर्ण सुरक्षित व एंड-टू-एंड एन्क्रिप्टेड",
-      };
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("lang");
+      if (p) setLang(p);
     }
-    return {
-      title: "Patient Registration (ABHA)",
-      subtitle: "Enter your ABHA number or mobile to verify identity and begin intake.",
-      verify: "Verify & Continue",
-      changeId: "Change Details",
-      verifiedTitle: "ABHA Health Profile Verified!",
-      verifiedSub: "Your national health identifier is confirmed and ready for clinical intake.",
-      proceed: "Access Patient Portal & Services",
-      directKiosk: "Direct Kiosk Intake (Quick Start)",
-      skipDirect: "Direct Intake",
-      abhaTab: "ABHA ID",
-      mobileTab: "Mobile",
-      qrTab: "QR Scan",
-      enterAbha: "Enter your 14-digit ABHA Number",
-      abhaPlaceholder: "91-XXXX-XXXX-XXXX",
-      enterMobile: "Enter 10-digit mobile number",
-      mobilePlaceholder: "9876543210",
-      scanCard: "Scan ABHA Card QR",
-      scanSimulate: "Start Camera QR Scan",
-      privacy: "Protected & Encrypted under DPDP Act 2023 · ABDM Compliant",
-    };
-  }
+  }, []);
 
-  const t = getCurrentLangStrings();
+  const t = getPatientAuthStrings(lang);
+
+  const steps: StepItem[] = [
+    { id: "identify", label: t.stepIdentify },
+    { id: "confirmed", label: t.stepConfirmed },
+  ];
+  const stepIndex = flowStep === "identify" ? 0 : 1;
 
   /* ─── Auth Handlers (Real ABDM / DB Verification) ─── */
 
@@ -133,12 +84,12 @@ export default function PatientLoginPage() {
     const trimmedName = customName.trim();
 
     if (authMethod === "abha" && !trimmedAbha && !trimmedName) {
-      setApiError(lang === "hi" ? "कृपया अपना 14 अंकों का ABHA नंबर दर्ज करें" : "Please enter your 14-digit ABHA Number");
+      setApiError(t.errEnterAbha);
       return;
     }
 
     if (authMethod === "mobile" && !trimmedMobile && !trimmedName) {
-      setApiError(lang === "hi" ? "कृपया अपना 10 अंकों का मोबाइल नंबर दर्ज करें" : "Please enter your 10-digit mobile number");
+      setApiError(t.errEnterMobile);
       return;
     }
 
@@ -246,35 +197,16 @@ export default function PatientLoginPage() {
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </Link>
             <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Patient Authentication</span>
+            <span className="text-[13px] font-medium text-slate-600">{t.headerTitle}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex gap-1 bg-white rounded-lg border border-slate-200 p-0.5 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setLang("en")}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                  lang === "en" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50"
-                }`}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang("hi")}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                  lang === "hi" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50"
-                }`}
-              >
-                हिंदी
-              </button>
-            </div>
+            <LanguageDropdown currentLang={lang} onSelect={setLang} />
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 max-w-xl mx-auto w-full">
+      <div className="flex-1 flex items-center justify-center py-10 pb-28 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-xl mx-auto w-full">
         <div className="w-full space-y-6 bg-white p-6 sm:p-8 rounded-xl border border-slate-200/80 shadow-sm">
           {/* Header */}
           <div className="space-y-3">
@@ -283,7 +215,7 @@ export default function PatientLoginPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-800 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{lang === "hi" ? "पोर्टल चयन पर वापस जाएं" : "Back to Portal Selection"}</span>
+              <span>{t.backToSelection}</span>
             </Link>
 
             <div className="flex items-center justify-between">
@@ -291,7 +223,7 @@ export default function PatientLoginPage() {
                 {t.title}
               </h1>
               <Badge variant="default" className="text-xs font-medium">
-                ABHA Verified
+                {t.verifiedBadge}
               </Badge>
             </div>
             <p className="text-xs text-slate-500 font-medium">{t.subtitle}</p>
@@ -341,13 +273,13 @@ export default function PatientLoginPage() {
               {/* Patient Name input (Optional or Custom) */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-700">
-                  {lang === "hi" ? "मरीज़ का पूरा नाम (वैकल्पिक)" : "Patient Full Name (Optional if registered)"}
+                  {t.nameLabel}
                 </label>
                 <input
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  placeholder={lang === "hi" ? "उदा. अपना नाम दर्ज करें" : "e.g. Enter your full name"}
+                  placeholder={t.namePlaceholder}
                   className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-medium focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                 />
               </div>
@@ -366,7 +298,7 @@ export default function PatientLoginPage() {
                     className="w-full h-12 px-4 rounded-lg border border-slate-200 text-base font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
                   />
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{lang === "hi" ? "14 अंकों का नंबर (जैसे: 91-XXXX-XXXX-XXXX)" : "14 digits (format: 91-XXXX-XXXX-XXXX)"}</span>
+                    <span>{t.abhaFormat}</span>
                   </div>
                 </div>
               )}
@@ -390,7 +322,7 @@ export default function PatientLoginPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{lang === "hi" ? "10 अंकों का सक्रिय मोबाइल नंबर" : "10-digit registered mobile number"}</span>
+                    <span>{t.mobileFormat}</span>
                   </div>
                 </div>
               )}
@@ -402,12 +334,12 @@ export default function PatientLoginPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900">{t.scanCard}</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Hold your physical ABHA card or Ayushman Bharat health card to camera</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t.scanCardDesc}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setApiError(lang === "hi" ? "कैमरा QR स्कैनर उपलब्ध नहीं है। कृपया ABHA नंबर मैन्युअली दर्ज करें।" : "Camera QR scanner not active on this device. Please enter ABHA number manually.");
+                      setApiError(t.scanErr);
                     }}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs"
                   >
@@ -429,7 +361,7 @@ export default function PatientLoginPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      <span>{lang === "hi" ? "सत्यापित हो रहा है..." : "Verifying ABHA ID..."}</span>
+                      <span>{t.verifying}</span>
                     </>
                   ) : (
                     <>
@@ -493,21 +425,21 @@ export default function PatientLoginPage() {
 
                   <div className="grid grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-100">
                     <div>
-                      <span className="text-xs font-medium text-slate-500 block mb-0.5">ABHA Number</span>
+                      <span className="text-xs font-medium text-slate-500 block mb-0.5">{t.abhaNumberLabel}</span>
                       <p className="font-semibold text-slate-900 text-sm">{profile.abhaId}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-slate-500 block mb-0.5">ABHA Address</span>
+                      <span className="text-xs font-medium text-slate-500 block mb-0.5">{t.abhaAddressLabel}</span>
                       <p className="text-slate-700 text-xs truncate">{profile.abhaAddress}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs font-medium text-slate-600 pt-1 border-t border-slate-100">
-                    <span>Gender: <strong className="text-slate-800">{profile.gender}</strong></span>
+                    <span>{t.genderLabel}: <strong className="text-slate-800">{profile.gender}</strong></span>
                     <span>·</span>
-                    <span>YOB: <strong className="text-slate-800">{profile.yearOfBirth}</strong></span>
+                    <span>{t.yobLabel}: <strong className="text-slate-800">{profile.yearOfBirth}</strong></span>
                     <span>·</span>
-                    <span>Status: <strong className="text-emerald-700">VERIFIED</strong></span>
+                    <span>{t.statusLabel}: <strong className="text-emerald-700">{t.statusVerified}</strong></span>
                   </div>
                 </div>
               </div>

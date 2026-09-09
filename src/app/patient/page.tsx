@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LanguageDropdown } from "@/components/shared/language-dropdown";
+import { getPatientPortalStrings } from "@/lib/translations/patient-portal-strings";
 import {
   fetchPatientPrescriptionsFromDb,
   fetchPatientLabReportsFromDb,
@@ -54,14 +56,15 @@ function PatientPortalContent() {
   const paramName = searchParams.get("name") || "";
   const paramGender = searchParams.get("gender") || "Not Specified";
   const paramAge = searchParams.get("age") || "";
-  const paramLang = (searchParams.get("lang") === "hi" ? "hi" : "en") as "hi" | "en";
+  const paramLang = searchParams.get("lang") || "en";
 
   const [activeAbha, setActiveAbha] = React.useState(paramAbha);
   const [activeName, setActiveName] = React.useState(paramName);
   const [activeGender, setActiveGender] = React.useState(paramGender);
   const [activeAge, setActiveAge] = React.useState(paramAge);
 
-  const [lang, setLang] = React.useState<"hi" | "en">(paramLang);
+  const [lang, setLang] = React.useState<string>(paramLang);
+  const t = getPatientPortalStrings(lang);
   const [showAbhaModal, setShowAbhaModal] = React.useState(false);
   const [showRxModal, setShowRxModal] = React.useState(false);
   const [rxActiveTab, setRxActiveTab] = React.useState<"rx" | "labs">("rx");
@@ -272,27 +275,7 @@ function PatientPortalContent() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Bilingual Segmented Toggle */}
-            <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setLang("en")}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
-                  lang === "en" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang("hi")}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
-                  lang === "hi" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                हिंदी
-              </button>
-            </div>
+            <LanguageDropdown currentLang={lang} onSelect={setLang} />
 
             <Link
               href="/login/patient"

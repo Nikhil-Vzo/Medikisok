@@ -7,7 +7,7 @@ import {
   Upload, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle,
   FileText, Camera, QrCode, HeartPulse, RefreshCw, Flame, Wind,
   Thermometer, Activity, AlertTriangle, UserPlus, RotateCcw,
-  History, Clock, Printer, MapPin, Calendar, Bell
+  History, Clock, Printer, MapPin, Calendar, Bell, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -107,15 +107,22 @@ export default function KioskPage() {
         setLanguage(urlLang);
       }
 
-      if (effectiveAbha) setAbhaId(effectiveAbha);
-      if (effectiveName) setPatientName(effectiveName);
-      if (effectiveAge && !isNaN(Number(effectiveAge))) setPatientAge(Number(effectiveAge));
-      if (effectiveGender) setPatientGender(effectiveGender);
+      const isGuest = !effectiveAbha || effectiveAbha.startsWith("CRN-") || effectiveAbha.startsWith("GUEST-");
+      const assignedCrn = effectiveAbha && effectiveAbha.trim() ? effectiveAbha.trim() : (isGuest ? `CRN-${Math.floor(100000 + Math.random() * 900000)}` : "");
+      const assignedName = effectiveName && effectiveName.trim() ? effectiveName.trim() : (isGuest ? "Guest Patient" : "OPD Patient");
 
-      const isAuthSession = urlAuth || Boolean(effectiveAbha && effectiveName);
+      const isAuthSession = urlAuth || Boolean(effectiveAbha && effectiveName) || (isGuest && Boolean(requestedStep || urlAuth));
 
-      // If authenticated via patient portal, bypass redundant authentication step completely!
+      // If authenticated via patient portal or guest direct flow:
       if (isAuthSession) {
+        setAbhaId(assignedCrn);
+        setPatientName(assignedName);
+        if (effectiveAge && !isNaN(Number(effectiveAge))) setPatientAge(Number(effectiveAge));
+        else if (isGuest) setPatientAge(35);
+
+        if (effectiveGender && effectiveGender !== "Not Specified") setPatientGender(effectiveGender);
+        else if (isGuest) setPatientGender("Not Specified");
+
         setIsPortalSession(true);
         setConsentGranted(true);
 
@@ -133,20 +140,25 @@ export default function KioskPage() {
         });
         setContinuity(decision);
 
-        // If explicitly requesting a step, route to it; otherwise default to continuity (Visit Purpose)
-        // so the patient chooses: Follow-up for old illness OR Fresh consultation for new illness!
         const validSteps: KioskStep[] = [
           "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm"
         ];
         const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
           ? requestedStep
-          : (urlVisitType ? "complaint_select" : "continuity");
+          : (urlVisitType ? "complaint_select" : (isGuest ? "complaint_select" : "continuity"));
 
         setStep(targetStep);
         setPresetNotice(
-          `ABDM Authenticated Session · ${effectiveName || effectiveAbha} · Direct OPD Consultation Active`
+          isGuest
+            ? `Local Hospital Encounter (Option A) · ${assignedCrn} · Direct HIS OPD Routing Active`
+            : `ABDM Authenticated Session · ${assignedName} · Direct OPD Consultation Active`
         );
       } else {
+        if (effectiveAbha) setAbhaId(effectiveAbha);
+        if (effectiveName) setPatientName(effectiveName);
+        if (effectiveAge && !isNaN(Number(effectiveAge))) setPatientAge(Number(effectiveAge));
+        if (effectiveGender) setPatientGender(effectiveGender);
+
         if (requestedStep) {
           const validSteps: KioskStep[] = [
             "identify", "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm", "completed"
@@ -353,19 +365,35 @@ export default function KioskPage() {
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
               <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                <span className="flex items-center gap-1.5 font-bold text-emerald-900">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                  {language === "hi" ? "प्रमाणित ABHA सत्र:" : "Authenticated ABHA Session:"}
-                </span>
-                <span className="text-slate-900 font-bold">{patientName}</span>
-                <span className="font-mono text-slate-600 text-[11px]">({abhaId})</span>
-                <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-emerald-300 text-emerald-800">
-                  {language === "hi" ? "सीधा ओपीडी परामर्श सक्रिय" : "Direct OPD Intake Active"}
-                </span>
+                {(!abhaId || abhaId.startsWith("CRN-") || abhaId.startsWith("GUEST-")) ? (
+                  <>
+                    <span className="flex items-center gap-1.5 font-bold text-teal-900">
+                      <Building2 className="w-4 h-4 text-teal-700 shrink-0" />
+                      <span>{language === "hi" ? "अस्पताल स्थानीय पंजीकरण:" : "Local Hospital Encounter:"}</span>
+                    </span>
+                    <span className="text-slate-900 font-bold">{patientName}</span>
+                    <span className="font-mono text-teal-800 text-[11px] font-bold">({abhaId})</span>
+                    <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-teal-300 text-teal-800">
+                      {language === "hi" ? "अस्पताल HIS सीधा परामर्श" : "Hospital HIS Direct Routing · Bypassing ABDM"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5 font-bold text-emerald-900">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                      {language === "hi" ? "प्रमाणित ABHA सत्र:" : "Authenticated ABHA Session:"}
+                    </span>
+                    <span className="text-slate-900 font-bold">{patientName}</span>
+                    <span className="font-mono text-slate-600 text-[11px]">({abhaId})</span>
+                    <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-emerald-300 text-emerald-800">
+                      {language === "hi" ? "सीधा ओपीडी परामर्श सक्रिय" : "Direct OPD Intake Active"}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             <Link
-              href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender)}&age=${patientAge}&lang=${language}`}
+              href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender || "")}&age=${patientAge || ""}&lang=${language}`}
               className="inline-flex items-center gap-1 text-emerald-800 hover:text-emerald-950 hover:underline font-bold px-2.5 py-1.5 rounded-xl hover:bg-emerald-100/70 border border-emerald-200/70 bg-white sm:bg-transparent transition-colors shrink-0 self-start sm:self-auto"
             >
               <span>{language === "hi" ? "← पोर्टल पर वापस जाएं" : "← Back to Portal"}</span>
@@ -396,14 +424,60 @@ export default function KioskPage() {
                 <LanguageSelector currentLang={language} onSelect={(lang) => { setLanguage(lang); }} />
               </div>
 
-              {/* ABHA Input Card */}
+              {/* ABHA / Guest Input Card */}
               <div className="p-6 sm:p-8 bg-white rounded-xl border border-slate-200/80 shadow-sm space-y-6">
+                {/* Method selector tabs */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (abhaId.startsWith("CRN-")) {
+                        setAbhaId("");
+                        setPresetNotice(null);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                      !abhaId.startsWith("CRN-")
+                        ? "bg-white text-emerald-950 shadow-xs border border-emerald-100"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    ABHA ID (Ayushman Bharat)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!abhaId.startsWith("CRN-")) {
+                        const newCrn = `CRN-${Math.floor(100000 + Math.random() * 900000)}`;
+                        setAbhaId(newCrn);
+                        if (!patientName) setPatientName("Guest Patient");
+                        if (!patientAge) setPatientAge(35);
+                        if (!patientGender) setPatientGender("Not Specified");
+                        setPresetNotice(`Option A: Guest / Local Hospital Workflow · Assigned ${newCrn}`);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                      abhaId.startsWith("CRN-")
+                        ? "bg-white text-teal-950 shadow-xs border border-teal-200"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Guest Walk-in (No ABHA)
+                  </button>
+                </div>
+
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <label className="block text-xs font-semibold text-slate-700">
-                      14-Digit ABHA ID (Ayushman Bharat Health Account)
+                      {abhaId.startsWith("CRN-")
+                        ? "Local Hospital Identifier (CRN / UHID)"
+                        : "14-Digit ABHA ID (Ayushman Bharat Health Account)"}
                     </label>
-                    <span className="text-xs font-medium text-emerald-700">ABDM FHIR R4 Compliant</span>
+                    <span className="text-xs font-medium text-emerald-700">
+                      {abhaId.startsWith("CRN-")
+                        ? "Hospital Internal HIS Database · ABDM Bypass"
+                        : "ABDM FHIR R4 Compliant"}
+                    </span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -411,7 +485,7 @@ export default function KioskPage() {
                       type="text"
                       value={abhaId}
                       onChange={(e) => handleAbhaInput(e.target.value)}
-                      placeholder="91-XXXX-XXXX-XXXX"
+                      placeholder={abhaId.startsWith("CRN-") ? "CRN-XXXXXX" : "91-XXXX-XXXX-XXXX"}
                       className="flex-1 h-14 px-4 rounded-lg border border-slate-200 text-lg font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 tracking-wider font-mono"
                     />
                   </div>
@@ -779,10 +853,10 @@ export default function KioskPage() {
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="text-center max-w-xl mx-auto space-y-2">
                 <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-                  Aaj ki mukhya pareshani kya hai?
+                  {language === "hi" ? "आज की मुख्य परेशानी क्या है?" : "Aaj ki mukhya pareshani kya hai?"}
                 </h3>
                 <p className="text-sm text-slate-600 font-medium">
-                  What is your primary clinical complaint today?
+                  {language === "hi" ? "कृपया अपनी प्राथमिक स्वास्थ्य समस्या चुनें" : "What is your primary clinical complaint today?"}
                 </p>
               </div>
 
@@ -1247,8 +1321,13 @@ export default function KioskPage() {
                   </div>
 
                   <div className="p-4 rounded-lg bg-emerald-50/40 border border-emerald-100 space-y-1">
-                    <span className="font-semibold text-emerald-800 text-xs">ABDM ABHA Link</span>
+                    <span className="font-semibold text-emerald-800 text-xs">
+                      {(!abhaId || abhaId.startsWith("CRN-") || abhaId.startsWith("GUEST-")) ? "Hospital CRN (Option A Guest Record)" : "ABDM ABHA Link"}
+                    </span>
                     <p className="text-sm font-semibold text-slate-900">{abhaId}</p>
+                    {(!abhaId || abhaId.startsWith("CRN-") || abhaId.startsWith("GUEST-")) && (
+                      <p className="text-[10px] text-teal-800 font-medium">Local HIS Storage · Direct routing to OPD doctor desk</p>
+                    )}
                   </div>
                 </div>
 
@@ -1436,6 +1515,19 @@ export default function KioskPage() {
                     </span>
                   </div>
                 </div>
+                {/* Guest / Local Hospital Retrospective ABHA Linking Notice */}
+                {(!abhaId || abhaId.startsWith("CRN-") || abhaId.startsWith("GUEST-")) && (
+                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-left space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-700 shrink-0" />
+                      <span className="text-xs font-bold text-blue-950">Option A: Guest / Local Hospital Record</span>
+                      <Badge variant="outline" className="text-[10px] bg-white border-blue-300 text-blue-800">CRN: {abhaId}</Badge>
+                    </div>
+                    <p className="text-[11px] text-blue-900 leading-relaxed">
+                      Your clinical intake is safely stored in the hospital's internal database and tagged <strong>Ready for Review</strong> for the OPD physician. If you wish to link this record to your national ABHA ID in the future, OPD desk staff can bind this CRN to your ABHA profile anytime.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

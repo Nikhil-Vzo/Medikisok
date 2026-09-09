@@ -208,27 +208,27 @@ export function ScreenAssistantBot() {
   return (
     <>
       {/* Floating Bottom-Left Container */}
-      <div className="fixed bottom-5 left-5 z-50 font-sans select-none print:hidden">
+      <div className="fixed bottom-3 left-3 sm:bottom-5 sm:left-5 z-50 font-sans select-none print:hidden">
         {/* Closed Floating Trigger Button */}
         {!isOpen && (
           <button
             type="button"
             onClick={() => setIsOpen(true)}
             aria-label="Open MediKiosk AI Assistant"
-            className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white shadow-xl shadow-emerald-950/20 hover:shadow-2xl hover:shadow-emerald-950/30 transition-all duration-200 active:scale-95 border border-emerald-500/40"
+            className="group relative flex items-center gap-1.5 sm:gap-2 p-2.5 sm:px-4 sm:py-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg shadow-emerald-950/25 hover:shadow-xl transition-all duration-200 active:scale-95 border border-emerald-500/40"
           >
             <div className="relative">
-              <Bot className="w-5 h-5 text-white" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-300 animate-ping" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-300" />
+              <Bot className="w-4 h-4 text-white" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-300" />
             </div>
-            <span className="text-xs font-bold tracking-tight pr-1">Ask MediKiosk AI</span>
+            <span className="hidden sm:inline text-xs font-bold tracking-tight pr-0.5">Ask MediKiosk AI</span>
           </button>
         )}
 
         {/* Expanded Chat Window */}
         {isOpen && (
-          <div className="w-[calc(100vw-2.5rem)] sm:w-[390px] h-[520px] max-h-[calc(100vh-6rem)] bg-white rounded-2xl shadow-2xl border border-emerald-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+          <div className="w-[calc(100vw-1.5rem)] sm:w-[390px] h-[500px] max-h-[calc(100dvh-5rem)] bg-white rounded-2xl shadow-2xl border border-emerald-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
             {/* Header */}
             <div className="p-3.5 bg-gradient-to-r from-emerald-800 to-emerald-700 text-white flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2.5">
