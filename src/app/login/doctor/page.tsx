@@ -37,10 +37,13 @@ export default function DoctorLoginPage() {
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </Link>
             <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Clinician Authentication</span>
+            <span className="text-[13px] font-medium text-slate-600">
+              <span className="hidden sm:inline">Clinician Authentication</span>
+              <span className="sm:hidden font-semibold">Doctor Login</span>
+            </span>
           </div>
 
-          <Badge variant="default" className="text-xs font-medium">
+          <Badge variant="default" className="text-[11px] sm:text-xs font-medium shrink-0">
             AIIA Faculty Portal
           </Badge>
         </div>
@@ -86,7 +89,7 @@ export default function DoctorLoginPage() {
                   value={staffId}
                   onChange={(e) => setStaffId(e.target.value)}
                   placeholder="AIIA-DOC-XXXX"
-                  className="w-full h-12 pl-10 pr-4 rounded-lg border border-slate-200 text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
+                  className="w-full h-12 pl-10 pr-4 rounded-lg border border-slate-200 text-base sm:text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
                 />
                 <Stethoscope className="w-4 h-4 text-emerald-700 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
@@ -101,7 +104,7 @@ export default function DoctorLoginPage() {
                   type="text"
                   value={roomNumber}
                   onChange={(e) => setRoomNumber(e.target.value)}
-                  className="w-full h-12 px-3.5 rounded-lg border border-slate-200 text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
+                  className="w-full h-12 px-3.5 rounded-lg border border-slate-200 text-base sm:text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
                 />
               </div>
 
@@ -112,7 +115,7 @@ export default function DoctorLoginPage() {
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full h-12 px-3 rounded-lg border border-slate-200 text-xs font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all bg-white text-slate-900"
+                  className="w-full h-12 px-3 rounded-lg border border-slate-200 text-base sm:text-xs font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all bg-white text-slate-900"
                 >
                   <option>AIIA Ayurvedic General OPD</option>
                   <option>Kayachikitsa (Internal Medicine)</option>
@@ -133,7 +136,7 @@ export default function DoctorLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter security PIN"
-                  className="w-full h-12 pl-10 pr-4 rounded-lg border border-slate-200 text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
+                  className="w-full h-12 pl-10 pr-4 rounded-lg border border-slate-200 text-base sm:text-sm font-semibold focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-900"
                 />
                 <Lock className="w-4 h-4 text-emerald-700 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>

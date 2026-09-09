@@ -404,8 +404,9 @@ export default function AdminPage() {
               </Link>
               <span className="text-slate-300">/</span>
               <span className="text-[13px] font-medium text-slate-700 flex items-center gap-1.5">
-                <Landmark className="w-3.5 h-3.5 text-emerald-700" />
-                Ministry of Ayush & NHA Command Centre
+                <Landmark className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span className="hidden sm:inline">Ministry of Ayush & NHA Command Centre</span>
+                <span className="sm:hidden font-semibold">Command Centre</span>
               </span>
             </div>
 

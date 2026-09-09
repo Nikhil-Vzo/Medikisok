@@ -34,29 +34,8 @@ import { CHIEF_COMPLAINTS, getQuestionsForComplaint } from "@/lib/ontologies/chi
 import { KioskStep } from "@/types/kiosk";
 
 export default function KioskPage() {
-  const [step, setStep] = React.useState<KioskStep>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlAuth = params.get("authenticated") === "true" || params.get("from") === "portal";
-      const urlAbha = params.get("abha");
-      const urlName = params.get("name");
-      const requestedStep = params.get("step") as KioskStep | null;
-      let hasLocal = false;
-      try {
-        const saved = localStorage.getItem("medikiosk_patient_session");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.abhaId || parsed.fullName) hasLocal = true;
-        }
-      } catch (e) {}
-
-      if (urlAuth || (urlAbha && urlName) || (params.get("from") === "portal" && hasLocal)) {
-        return requestedStep || "complaint_select";
-      }
-      if (requestedStep) return requestedStep;
-    }
-    return "identify";
-  });
+  const [step, setStep] = React.useState<KioskStep>("identify");
+  const [mounted, setMounted] = React.useState(false);
   const [language, setLanguage] = React.useState("en");
   const [clinicalMode, setClinicalMode] = React.useState<"allopathy" | "ayush">("allopathy");
 
@@ -76,6 +55,7 @@ export default function KioskPage() {
 
   // Hydrate custom patient profile if routed from patient login or verified portal
   React.useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlAbha = params.get("abha");
@@ -315,16 +295,16 @@ export default function KioskPage() {
     <div className="min-h-screen bg-[#F7FAF8] text-slate-900 flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-950">
       {/* Top Header matching landing page & clinician workspace */}
       <header className="sticky top-0 z-50 border-b border-emerald-100 bg-[#F7FAF8]/90 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs shrink-0">
                 <span className="text-white text-[11px] font-bold">M</span>
               </div>
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </a>
-            <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Patient Intake Terminal</span>
+            <span className="text-slate-300 hidden sm:inline">/</span>
+            <span className="text-[13px] font-medium text-slate-600 hidden sm:inline truncate max-w-[140px] md:max-w-none">Patient Intake Terminal</span>
             <span className="text-slate-300 hidden md:inline">/</span>
             <Link
               href={`/patient?abha=${encodeURIComponent(abhaId)}&name=${encodeURIComponent(patientName)}&gender=${encodeURIComponent(patientGender)}&age=${patientAge}`}
@@ -334,13 +314,13 @@ export default function KioskPage() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Terminal 01: Active
             </span>
             <HighContrastToggle />
-            <Badge variant={clinicalMode === "ayush" ? "vedic" : "default"} className="text-xs font-medium">
+            <Badge variant={clinicalMode === "ayush" ? "vedic" : "default"} className="text-[11px] sm:text-xs font-medium shrink-0">
               {clinicalMode === "ayush" ? "Ayurveda Mode" : "Allopathy Mode"}
             </Badge>
           </div>
@@ -348,19 +328,19 @@ export default function KioskPage() {
       </header>
 
       {/* Main Terminal Body */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-3 sm:py-5 space-y-4 flex flex-col justify-between">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-3 sm:px-6 py-3 sm:py-5 space-y-4 flex flex-col justify-between">
         {/* Privacy Guard Inactivity Timer */}
         {step !== "identify" && step !== "completed" && (
           <InactivityTimer onTimeout={() => setStep("identify")} />
         )}
 
         {/* Stepper Card */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-emerald-100 shadow-sm">
+        <div className="p-2 sm:p-4 rounded-xl bg-white border border-emerald-100 shadow-sm">
           <ProgressSteps steps={stepsList} currentStepIndex={getStepIndex()} />
         </div>
 
         {/* Authenticated Portal Session Banner */}
-        {isPortalSession && (
+        {mounted && isPortalSession && (
           <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-950 font-semibold shadow-2xs animate-in fade-in duration-200">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
@@ -693,23 +673,23 @@ export default function KioskPage() {
                       setIsReturningPatient(true);
                       setStep("complaint_select");
                     }}
-                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                    className="group p-5 sm:p-9 rounded-2xl sm:rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 sm:space-y-8 text-left hover:-translate-y-1 shadow-sm"
                   >
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                          <History className="w-7 h-7" strokeWidth={2.2} />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <History className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.2} />
                         </div>
-                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="text-xs font-bold px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {language === "hi" ? "डेल्टा इनटेक · 2 मिनट" : "Delta Triage · 2 Mins"}
                         </span>
                       </div>
 
-                      <div className="space-y-2">
-                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <h4 className="text-xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
                           {language === "hi" ? "पिछली बीमारी का फॉलो-अप" : "Regarding Previous Illness"}
                         </h4>
-                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                        <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
                           {language === "hi"
                             ? "पुरानी तकलीफ, दवाइयों का असर और सुधार की जांच। सिस्टम सिर्फ वही सवाल पूछेगा जो पिछली बार के बाद बदले हैं।"
                             : "Follow-up for your ongoing condition, review how previous medicines worked, and report recovery progress."}
@@ -717,9 +697,9 @@ export default function KioskPage() {
                       </div>
                     </div>
 
-                    <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                    <div className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-xs sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                       <span>{language === "hi" ? "पिछली बीमारी का फॉलो-अप लें" : "Follow-up for Previous Illness"}</span>
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
@@ -731,23 +711,23 @@ export default function KioskPage() {
                       setIsReturningPatient(false);
                       setStep("complaint_select");
                     }}
-                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                    className="group p-5 sm:p-9 rounded-2xl sm:rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 sm:space-y-8 text-left hover:-translate-y-1 shadow-sm"
                   >
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between">
-                        <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                          <Stethoscope className="w-7 h-7" strokeWidth={2.2} />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <Stethoscope className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.2} />
                         </div>
-                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                        <span className="text-xs font-bold px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                           {language === "hi" ? "नई समस्या · संपूर्ण इनटेक" : "New Illness · Full Intake"}
                         </span>
                       </div>
 
-                      <div className="space-y-2">
-                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <h4 className="text-xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
                           {language === "hi" ? "नई बीमारी / नया परामर्श" : "New Illness / Different Issue"}
                         </h4>
-                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                        <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
                           {language === "hi"
                             ? "किसी नए दर्द, नई समस्या या अचानक उभरे लक्षणों के लिए। पुरानी फाइल से अलग नए लक्षणों का संपूर्ण इनटेक होगा।"
                             : "Consulting for a newly developed health problem, new pain, or different symptoms. A fresh clinical history will be taken."}
@@ -755,9 +735,9 @@ export default function KioskPage() {
                       </div>
                     </div>
 
-                    <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                    <div className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-xs sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                       <span>{language === "hi" ? "नई बीमारी के लिए परामर्श शुरू करें" : "Start Intake for New Illness"}</span>
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
                 </div>
@@ -776,23 +756,23 @@ export default function KioskPage() {
                       setIsReturningPatient(true);
                       setStep("complaint_select");
                     }}
-                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                    className="group p-5 sm:p-9 rounded-2xl sm:rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 sm:space-y-8 text-left hover:-translate-y-1 shadow-sm"
                   >
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                          <History className="w-7 h-7" strokeWidth={2.2} />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <History className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.2} />
                         </div>
-                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="text-xs font-bold px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {language === "hi" ? "त्वरित जांच · 3 मिनट" : "Fast-Track · 3 Mins"}
                         </span>
                       </div>
 
-                      <div className="space-y-2">
-                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <h4 className="text-xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
                           {language === "hi" ? "हाँ, पहले आ चुका हूँ" : "Yes, Returning Patient"}
                         </h4>
-                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                        <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
                           {language === "hi"
                             ? "आपकी पुरानी फाइल व दवाइयों का रिकॉर्ड सीधे लिंक होगा। दोबारा लंबी जानकारी नहीं भरनी होगी।"
                             : "Fast-track your consultation using linked prior prescriptions and medical history."}
@@ -800,9 +780,9 @@ export default function KioskPage() {
                       </div>
                     </div>
 
-                    <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                    <div className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-xs sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                       <span>{language === "hi" ? "पुराने मरीज़ के रूप में आगे बढ़ें" : "Continue as Returning Patient"}</span>
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
@@ -814,23 +794,23 @@ export default function KioskPage() {
                       setIsReturningPatient(false);
                       setStep("complaint_select");
                     }}
-                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                    className="group p-5 sm:p-9 rounded-2xl sm:rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-6 sm:space-y-8 text-left hover:-translate-y-1 shadow-sm"
                   >
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between">
-                        <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                          <UserPlus className="w-7 h-7" strokeWidth={2.2} />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                          <UserPlus className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.2} />
                         </div>
-                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                        <span className="text-xs font-bold px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                           {language === "hi" ? "नया पंजीकरण" : "New Registration"}
                         </span>
                       </div>
 
-                      <div className="space-y-2">
-                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <h4 className="text-xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
                           {language === "hi" ? "नहीं, पहली बार आया हूँ" : "No, First-Time Visit"}
                         </h4>
-                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                        <p className="text-xs sm:text-base text-slate-600 font-medium leading-relaxed">
                           {language === "hi"
                             ? "अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी नई ओपीडी फाइल व जांच रिकॉर्ड तैयार होगा।"
                             : "First visit to this hospital. A complete clinical case sheet will be prepared for your doctor."}
@@ -838,9 +818,9 @@ export default function KioskPage() {
                       </div>
                     </div>
 
-                    <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                    <div className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-xs sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
                       <span>{language === "hi" ? "नए मरीज़ के रूप में शुरू करें" : "Begin First-Time Intake"}</span>
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
                 </div>

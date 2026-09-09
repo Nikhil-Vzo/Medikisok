@@ -266,16 +266,16 @@ export const PrescriptionBuilder: React.FC<PrescriptionBuilderProps> = ({
   ).length;
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-slate-200 space-y-5">
+    <div className="p-4 sm:p-6 bg-white rounded-xl border border-slate-200 space-y-4 sm:space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0">
             <Pill className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-[15px] font-semibold tracking-tight text-slate-900">Active OPD Prescription & Ayush Formulations</h4>
-            <p className="text-xs text-slate-500 font-normal">Drug search, interaction safety checks & PDF export</p>
+            <h4 className="text-[14px] sm:text-[15px] font-semibold tracking-tight text-slate-900">Active OPD Prescription & Ayush Formulations</h4>
+            <p className="text-xs text-slate-500 font-normal hidden sm:block">Drug search, interaction safety checks & PDF export</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

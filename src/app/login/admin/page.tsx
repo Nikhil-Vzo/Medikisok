@@ -37,10 +37,13 @@ export default function MinistryAdminLoginPage() {
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </Link>
             <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Ministry Command Access</span>
+            <span className="text-[13px] font-medium text-slate-600">
+              <span className="hidden sm:inline">Ministry Command Access</span>
+              <span className="sm:hidden font-semibold">Ministry Login</span>
+            </span>
           </div>
 
-          <Badge variant="default" className="text-xs font-medium bg-emerald-100 text-emerald-900 border border-emerald-300">
+          <Badge variant="default" className="text-[11px] sm:text-xs font-medium bg-emerald-100 text-emerald-900 border border-emerald-300 shrink-0">
             Government of India
           </Badge>
         </div>
@@ -82,7 +85,7 @@ export default function MinistryAdminLoginPage() {
                 required
                 value={officialId}
                 onChange={(e) => setOfficialId(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
 
@@ -94,7 +97,7 @@ export default function MinistryAdminLoginPage() {
                 type="text"
                 readOnly
                 value={authority}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 cursor-not-allowed"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-base sm:text-xs font-medium text-slate-700 bg-slate-50 cursor-not-allowed"
               />
             </div>
 
@@ -106,7 +109,7 @@ export default function MinistryAdminLoginPage() {
                 type="text"
                 readOnly
                 value={accessLevel}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 cursor-not-allowed"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-base sm:text-xs font-medium text-slate-700 bg-slate-50 cursor-not-allowed"
               />
             </div>
 
@@ -122,7 +125,7 @@ export default function MinistryAdminLoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
 

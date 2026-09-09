@@ -290,7 +290,7 @@ function PatientPortalContent() {
       </header>
 
       {/* ── Main Content Container ───────────────────────────────────────── */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-7 sm:space-y-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 sm:pb-16 space-y-6 sm:space-y-8">
 
         {/* Unauthenticated Session Banner */}
         {(!activeName && !activeAbha && !paramName && !paramAbha) && (
@@ -720,9 +720,9 @@ function PatientPortalContent() {
       {/* ── MODAL 1: Digital ABHA Health Card (rounded-3xl) ──────────────── */}
       {showAbhaModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-emerald-800 text-white p-5 flex items-center justify-between">
+            <div className="bg-emerald-800 text-white p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-emerald-300" />
                 <h3 className="font-bold text-base">Ayushman Bharat Health Account (ABDM)</h3>
@@ -737,7 +737,7 @@ function PatientPortalContent() {
             </div>
 
             {/* Official Card Body */}
-            <div className="p-6 sm:p-7 space-y-6">
+            <div className="p-5 sm:p-7 space-y-6 overflow-y-auto flex-1">
               <div className="border border-emerald-200 rounded-2xl p-5 bg-gradient-to-b from-white to-emerald-50/30 space-y-4 shadow-xs">
                 <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
                   <div>
@@ -982,9 +982,9 @@ function PatientPortalContent() {
       {/* ── MODAL 3: Digital OPD Token Slip (rounded-3xl) ────────────────── */}
       {showTokenModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="bg-white border-b border-slate-200 p-5 flex items-center justify-between text-slate-900">
+            <div className="bg-white border-b border-slate-200 p-5 flex items-center justify-between text-slate-900 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">
                   <Clock className="w-4 h-4" />
@@ -1003,7 +1003,7 @@ function PatientPortalContent() {
             </div>
 
             {/* Ticket Slip Body */}
-            <div className="p-6 sm:p-7 space-y-6">
+            <div className="p-5 sm:p-7 space-y-6 overflow-y-auto flex-1">
               <div className="border border-slate-200 bg-slate-50 rounded-2xl p-6 space-y-5 text-center shadow-xs">
                 <div className="border-b border-slate-200 pb-3">
                   <p className="text-xs font-bold uppercase text-slate-900 tracking-wider">
@@ -1097,9 +1097,9 @@ function PatientPortalContent() {
       {/* ── MODAL 4: Hospital Help & Helplines (rounded-3xl) ─────────────── */}
       {showHelpModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="bg-rose-800 text-white p-5 flex items-center justify-between">
+            <div className="bg-rose-800 text-white p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <PhoneCall className="w-5 h-5 text-rose-200" />
                 <h3 className="font-bold text-base">
@@ -1116,7 +1116,7 @@ function PatientPortalContent() {
             </div>
 
             {/* Body */}
-            <div className="p-6 sm:p-7 space-y-5">
+            <div className="p-5 sm:p-7 space-y-5 overflow-y-auto flex-1">
               <p className="text-xs text-slate-500 font-medium">
                 {lang === "hi"
                   ? "किसी भी आपातकाल में इन नंबरों पर सीधे कॉल करें:"

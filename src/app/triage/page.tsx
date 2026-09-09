@@ -54,7 +54,7 @@ export default function TriagePage() {
     <div className="flex-1 flex flex-col bg-[#F7FAF8] text-slate-900 antialiased min-h-screen selection:bg-emerald-100 selection:text-emerald-950">
       {/* Top Bar matching landing page */}
       <header className="sticky top-0 z-50 border-b border-emerald-100 bg-[#F7FAF8]/90 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/" className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs">
@@ -63,7 +63,10 @@ export default function TriagePage() {
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </a>
             <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Emergency Triage</span>
+            <span className="text-[13px] font-medium text-slate-600">
+              <span className="hidden sm:inline">Emergency Triage</span>
+              <span className="sm:hidden font-semibold">Triage</span>
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -71,16 +74,17 @@ export default function TriagePage() {
               href="/doctor"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-950 hover:text-emerald-800 transition px-3 py-1.5 rounded-md border border-emerald-200 hover:border-emerald-300 bg-white shadow-xs"
             >
-              <span>Doctor Workspace</span>
+              <span className="hidden sm:inline">Doctor Workspace</span>
+              <span className="sm:hidden font-semibold">Doctor</span>
               <ArrowRight className="w-3.5 h-3.5 text-emerald-700" />
             </a>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto w-full px-6 lg:px-8 py-10 space-y-8">
+      <main className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Top Clinical Banner */}
-        <section className="rounded-xl border border-red-200/80 bg-red-50/60 p-6 lg:p-7">
+        <section className="rounded-xl border border-red-200/80 bg-red-50/60 p-4 sm:p-6 lg:p-7">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-start gap-4">
               <div className="w-11 h-11 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0">
@@ -133,7 +137,7 @@ export default function TriagePage() {
             alerts.map((alertItem) => (
               <article
                 key={alertItem.id}
-                className="p-6 rounded-xl border border-red-200 bg-white hover:border-red-300 transition shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                className="p-4 sm:p-6 rounded-xl border border-red-200 bg-white hover:border-red-300 transition shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-700 font-bold text-base shrink-0">

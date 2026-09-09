@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Stethoscope, User, AlertCircle, CheckCircle2, FileText, Code2, RefreshCw, Eye, Wifi, Clock, Play, Pause, RotateCcw, ArrowRight, ClipboardCheck } from "lucide-react";
+import { Stethoscope, User, AlertCircle, CheckCircle2, FileText, Code2, RefreshCw, Eye, Wifi, Clock, Play, Pause, RotateCcw, ArrowRight, ArrowLeft, ClipboardCheck } from "lucide-react";
 import { PatientQueueTable, QueuePatient } from "@/components/doctor/patient-queue-table";
 import { SoapSummaryEditor } from "@/components/doctor/soap-summary-editor";
 import { AyushParikshaCard } from "@/components/doctor/ayush-pariksha-card";
@@ -30,6 +30,7 @@ export default function DoctorPage() {
   const [isFhirModalOpen, setIsFhirModalOpen] = React.useState(false);
   const [isRealtimeActive, setIsRealtimeActive] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<"summary" | "timeline" | "ocr" | "prescription">("summary");
+  const [mobileTab, setMobileTab] = React.useState<"queue" | "case">("queue");
 
   // Red-flag triage: compute from chief complaint + SOAP severity
   const [triggeredRedFlags, setTriggeredRedFlags] = React.useState<ReturnType<typeof evaluateRedFlagsFromText>>({ isEmergency: false, triggeredRules: [] });
@@ -182,27 +183,27 @@ export default function DoctorPage() {
     <div className="flex-1 flex flex-col bg-[#F7FAF8] text-slate-900 antialiased min-h-screen selection:bg-emerald-100 selection:text-emerald-950">
       {/* Top Header matching landing page */}
       <header className="sticky top-0 z-50 border-b border-emerald-100 bg-[#F7FAF8]/90 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs shrink-0">
                 <span className="text-white text-[11px] font-bold">M</span>
               </div>
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </a>
-            <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">Clinician Workspace</span>
+            <span className="text-slate-300 hidden sm:inline">/</span>
+            <span className="text-[13px] font-medium text-slate-600 hidden sm:inline truncate max-w-[140px] md:max-w-none">Clinician Workspace</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* 2-Minute Consultation Timer Widget */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
-              <Clock className="w-3.5 h-3.5 text-emerald-700" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-emerald-800 font-medium">OPD Timer:</span>
-                <span className="text-xs font-semibold text-emerald-950">{formatTimer(timerSeconds)}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+              <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-emerald-800 font-medium hidden md:inline">OPD Timer:</span>
+                <span className="text-xs font-semibold text-emerald-950 font-mono">{formatTimer(timerSeconds)}</span>
               </div>
-              <div className="flex items-center gap-1 ml-1 border-l border-emerald-200 pl-1.5">
+              <div className="flex items-center gap-0.5 sm:gap-1 ml-0.5 sm:ml-1 border-l border-emerald-200 pl-1 sm:pl-1.5">
                 <button
                   type="button"
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
@@ -224,7 +225,7 @@ export default function DoctorPage() {
 
             <button
               onClick={loadQueue}
-              className="p-2 rounded-md bg-white border border-slate-200 hover:border-emerald-300 text-slate-600 hover:text-emerald-900 transition-colors"
+              className="p-1.5 sm:p-2 rounded-md bg-white border border-slate-200 hover:border-emerald-300 text-slate-600 hover:text-emerald-900 transition-colors shrink-0"
               title="Refresh Queue"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -232,7 +233,7 @@ export default function DoctorPage() {
 
             <HighContrastToggle />
 
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
+            <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800 shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               {isRealtimeActive ? "HIS: Realtime" : "HIS: Connected"}
             </span>
@@ -240,27 +241,27 @@ export default function DoctorPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
         {/* Clinician Desk Sub-Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl bg-white border border-slate-200/80">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-white border border-slate-200/80">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-sm shrink-0">
               DS
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-slate-900">Dr. Sharma, MD</h2>
-                <Badge variant="default" className="text-xs font-medium">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900">Dr. Sharma, MD</h2>
+                <Badge variant="default" className="text-[11px] sm:text-xs font-medium">
                   Room #3 · AIIA Ayurveda OPD
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 font-normal mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5">
                 Consultation Console · Multimodal Clinical Intake Feed with Automated ABDM FHIR Sync
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-2.5 sm:gap-3 text-xs text-slate-500 shrink-0">
             <span className="font-medium text-emerald-800">OPD Target: 2 Min</span>
             <span>·</span>
             <a href="/triage" className="text-red-600 hover:text-red-700 font-medium hover:underline inline-flex items-center gap-1">
@@ -270,21 +271,66 @@ export default function DoctorPage() {
           </div>
         </div>
 
+        {/* Mobile Tab Switcher (< lg) */}
+        <div className="lg:hidden flex rounded-xl bg-slate-100/90 p-1 border border-slate-200 gap-1 text-xs">
+          <button
+            type="button"
+            onClick={() => setMobileTab("queue")}
+            className={cn(
+              "flex-1 py-2 rounded-lg font-bold transition-all text-center",
+              mobileTab === "queue"
+                ? "bg-white text-emerald-950 shadow-xs border border-emerald-100"
+                : "text-slate-600 hover:text-slate-900"
+            )}
+          >
+            OPD Queue ({patients.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("case")}
+            disabled={!selectedPatient}
+            className={cn(
+              "flex-1 py-2 rounded-lg font-bold transition-all text-center disabled:opacity-50",
+              mobileTab === "case"
+                ? "bg-white text-emerald-950 shadow-xs border border-emerald-100"
+                : "text-slate-600 hover:text-slate-900"
+            )}
+          >
+            {selectedPatient ? `Case: ${selectedPatient.name.split(" ")[0]}` : "No Case Selected"}
+          </button>
+        </div>
+
         {/* Main Grid: Queue Table on Left, Case Review on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Queue */}
-          <div className="lg:col-span-4 space-y-4">
+          <div className={cn("lg:col-span-4 space-y-4", mobileTab === "case" ? "hidden lg:block" : "block")}>
             <PatientQueueTable
               patients={patients}
               selectedVisitId={selectedPatient?.visitId}
-              onSelectPatient={setSelectedPatient}
+              onSelectPatient={(p) => {
+                setSelectedPatient(p);
+                setMobileTab("case");
+              }}
               onRefresh={loadQueue}
             />
           </div>
 
           {/* Right Column: Active Case Workspace */}
-          {selectedPatient && currentSummaryDraft ? (
-            <div className="lg:col-span-8 space-y-5">
+          <div className={cn("lg:col-span-8", mobileTab === "queue" ? "hidden lg:block" : "block")}>
+            {selectedPatient && (
+              <div className="lg:hidden mb-3">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("queue")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>← Back to Queue ({patients.length})</span>
+                </button>
+              </div>
+            )}
+            {selectedPatient && currentSummaryDraft ? (
+              <div className="space-y-5">
             {/* Unified Clinical Case & Telemetry Header */}
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
               {/* Core Demographics & Allotment Bar */}
@@ -536,9 +582,9 @@ export default function DoctorPage() {
               />
             </div>
           )}
-        </div>
-      ) : (
-            <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 flex flex-col items-center justify-center min-h-[460px]">
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-12 text-center space-y-3 flex flex-col items-center justify-center min-h-[380px]">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                 <Stethoscope className="w-7 h-7" />
               </div>
@@ -549,6 +595,7 @@ export default function DoctorPage() {
             </div>
           )}
         </div>
+      </div>
       </main>
 
       {/* HL7 FHIR Modal */}

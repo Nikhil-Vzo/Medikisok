@@ -53,25 +53,25 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
   const cHist = summary.classicalHistory;
 
   return (
-    <div className={cn("bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6", className)}>
+    <div className={cn("bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-8 space-y-5 sm:space-y-6", className)}>
       {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-900">Clinical Intake Summary</h3>
-            <Badge variant="ayush">AIIA Classical Standard</Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg sm:text-2xl font-bold text-slate-900">Clinical Intake Summary</h3>
+            <Badge variant="ayush" className="text-[11px]">AIIA Classical Standard</Badge>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Human-in-the-loop: Verify, amend, and confirm before saving into hospital HIS/EMR
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <Button variant="outline" size="sm" onClick={onViewFhir} className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={onViewFhir} className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50 shrink-0">
             <Code2 className="w-3.5 h-3.5 text-emerald-700" />
             FHIR R4
           </Button>
-          <Button variant="outline" size="sm" onClick={onDownloadPdf} className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50">
+          <Button variant="outline" size="sm" onClick={onDownloadPdf} className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50 shrink-0">
             <FileDown className="w-3.5 h-3.5 text-emerald-700" />
             Export PDF
           </Button>
@@ -81,7 +81,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
               size="sm"
               onClick={handleSendToHis}
               disabled={isSendingToHis}
-              className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50"
+              className="gap-1.5 text-xs font-semibold text-emerald-950 border-emerald-200 hover:bg-emerald-50 shrink-0"
             >
               <Send className="w-3.5 h-3.5 text-emerald-700" />
               {isSendingToHis ? "Sending…" : "Push to HIS"}
@@ -92,7 +92,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
             size="sm"
             onClick={handleApprove}
             disabled={isApproved}
-            className="gap-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs"
+            className="gap-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs shrink-0"
           >
             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
             {isApproved ? "Approved & Synced" : "Confirm Case"}
@@ -101,12 +101,12 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div className="flex items-center gap-1.5 p-1 bg-emerald-50/50 rounded-lg border border-emerald-200/60">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-1.5 p-1 bg-emerald-50/50 rounded-lg border border-emerald-200/60 w-full sm:w-auto">
           <button
             onClick={() => setViewMode("eight_part")}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+              "flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-center",
               viewMode === "eight_part"
                 ? "bg-emerald-700 text-white shadow-xs"
                 : "text-slate-600 hover:text-emerald-950"
@@ -117,7 +117,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
           <button
             onClick={() => setViewMode("soap")}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+              "flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-center",
               viewMode === "soap"
                 ? "bg-emerald-700 text-white shadow-xs"
                 : "text-slate-600 hover:text-emerald-950"
@@ -126,7 +126,7 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
             Compact SOAP View
           </button>
         </div>
-        <span className="text-[11px] text-slate-400 font-medium">
+        <span className="text-[11px] text-slate-400 font-medium hidden lg:inline">
           {viewMode === "eight_part" ? "Standard Indian OPD History Elicitation Framework" : "Subjective · Objective · Assessment · Plan"}
         </span>
       </div>

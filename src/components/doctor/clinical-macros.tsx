@@ -65,15 +65,15 @@ export const ClinicalMacros: React.FC<ClinicalMacrosProps> = ({ onApplyMacro }) 
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-slate-200 space-y-4">
+    <div className="p-4 sm:p-6 bg-white rounded-xl border border-slate-200 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
             <Zap className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-[15px] font-semibold tracking-tight text-slate-900">Institutional Order Sets</h4>
-            <p className="text-xs text-slate-500 font-normal">Standardized AIIA Clinical Protocols & fast prescription macros</p>
+            <h4 className="text-[14px] sm:text-[15px] font-semibold tracking-tight text-slate-900">Institutional Order Sets</h4>
+            <p className="text-xs text-slate-500 font-normal hidden sm:block">Standardized AIIA Clinical Protocols & fast prescription macros</p>
           </div>
         </div>
         <Badge variant="default" className="text-xs font-medium">

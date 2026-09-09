@@ -190,17 +190,17 @@ export default function PatientLoginPage() {
       <header className="border-b border-emerald-100 bg-[#F7FAF8]/90 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/login" className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs">
+            <Link href="/login" className="flex items-center gap-2.5 shrink-0">
+              <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center shadow-xs shrink-0">
                 <span className="text-white text-[11px] font-bold">M</span>
               </div>
               <span className="text-[15px] font-semibold text-slate-900">MediKiosk</span>
             </Link>
-            <span className="text-slate-300">/</span>
-            <span className="text-[13px] font-medium text-slate-600">{t.headerTitle}</span>
+            <span className="text-slate-300 hidden sm:inline">/</span>
+            <span className="text-[13px] font-medium text-slate-600 hidden sm:inline truncate">{t.headerTitle}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <LanguageDropdown currentLang={lang} onSelect={setLang} />
           </div>
         </div>
@@ -280,7 +280,7 @@ export default function PatientLoginPage() {
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   placeholder={t.namePlaceholder}
-                  className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-sm font-medium focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
+                  className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-base sm:text-sm font-medium focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                 />
               </div>
 

@@ -26,6 +26,7 @@ export default function HospitalDeskPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterTab, setFilterTab] = React.useState<"all" | "unassigned" | "emergency" | "allotted">("all");
+  const [mobileTab, setMobileTab] = React.useState<"queue" | "details">("queue");
   const [saveSuccessNotice, setSaveSuccessNotice] = React.useState<string | null>(null);
 
   // Vitals form state for selected patient
@@ -259,8 +260,9 @@ export default function HospitalDeskPage() {
             </Link>
             <span className="text-slate-300">/</span>
             <span className="text-[13px] font-medium text-slate-700 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-              Hospital Desk (Lobby Triage & Allotment)
+              <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span className="hidden sm:inline">Hospital Desk (Lobby Triage & Allotment)</span>
+              <span className="sm:hidden font-semibold">Hospital Desk</span>
             </span>
           </div>
 
@@ -342,10 +344,36 @@ export default function HospitalDeskPage() {
           </div>
         )}
 
+        {/* Mobile Tab Segmented Switcher (< lg) */}
+        <div className="lg:hidden flex rounded-xl bg-slate-200/80 p-1 text-xs font-semibold gap-1">
+          <button
+            type="button"
+            onClick={() => setMobileTab("queue")}
+            className={`flex-1 py-2 rounded-lg transition-all ${
+              mobileTab === "queue"
+                ? "bg-white text-emerald-950 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Waiting Queue ({filteredPatients.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("details")}
+            className={`flex-1 py-2 rounded-lg transition-all ${
+              mobileTab === "details"
+                ? "bg-white text-emerald-950 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            {selectedPatient ? `Patient: ${selectedPatient.name.split(" ")[0]}` : "Allotment & Vitals"}
+          </button>
+        </div>
+
         {/* 2-Column Core Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Lobby Patient Queue */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className={`lg:col-span-5 space-y-4 ${mobileTab === "queue" ? "block" : "hidden lg:block"}`}>
             <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
@@ -403,7 +431,10 @@ export default function HospitalDeskPage() {
                   return (
                     <div
                       key={p.visitId}
-                      onClick={() => setSelectedPatient(p)}
+                      onClick={() => {
+                        setSelectedPatient(p);
+                        setMobileTab("details");
+                      }}
                       className={`p-4 rounded-xl border transition-all cursor-pointer text-left space-y-2.5 ${
                         isSelected
                           ? "bg-emerald-50/70 border-emerald-600 shadow-xs ring-1 ring-emerald-600"
@@ -467,9 +498,19 @@ export default function HospitalDeskPage() {
           </div>
 
           {/* Right Column: Active Patient Coordination & Clinical Allotment */}
-          <div className="lg:col-span-7 space-y-5">
+          <div className={`lg:col-span-7 space-y-5 ${mobileTab === "details" ? "block" : "hidden lg:block"}`}>
             {selectedPatient ? (
               <>
+                {/* Mobile Back Button (< lg) */}
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("queue")}
+                  className="lg:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 mb-1"
+                >
+                  <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                  <span>← Back to Waiting Queue</span>
+                </button>
+
                 {/* Active Patient Card with Paging Action */}
                 <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
