@@ -13,32 +13,29 @@ function isValidKey(key?: string | null): boolean {
   return true;
 }
 
-// ── Multilingual Clinical Summary Generator ──────────────────────────────
+// ── Multilingual Clinical Summary Generator (Truthful, non-fabricated) ───────
 function buildLocalizedSummary(data: any, lang: string = "en"): string {
   const isHi = lang === "hi";
   const isBn = lang === "bn";
   const isTa = lang === "ta";
   const isTe = lang === "te";
   const isMr = lang === "mr";
-  const isGu = lang === "gu";
 
-  const doctor = data.doctorName ? (isHi ? `डॉ. ${data.doctorName}` : data.doctorName) : (isHi ? "चिकित्सक" : "Consulting Physician");
-  const hospital = data.hospitalName || (isHi ? "ओपीडी क्लीनिक" : "OPD Clinic");
-  const date = data.documentDate || (isHi ? "हालिया परामर्श" : "Recent Consultation");
-
-  const diagnoses = Array.isArray(data.diagnoses) && data.diagnoses.length > 0
-    ? data.diagnoses.join(", ")
-    : (isHi ? "सामान्य परामर्श / लक्षण जांच" : "Clinical Consultation / Routine Checkup");
+  const hasMeds = Array.isArray(data.medications) && data.medications.length > 0;
+  const hasLabs = Array.isArray(data.labValues) && data.labValues.length > 0;
+  const hasDiagnoses = Array.isArray(data.diagnoses) && data.diagnoses.length > 0;
 
   let summary = "";
 
   if (isHi) {
     summary = `📋 पर्चा सारांश (डिजिटल क्लिनिकल विवरण):\n`;
-    summary += `• चिकित्सक: ${doctor} (${hospital})\n`;
-    summary += `• परामर्श तिथि: ${date}\n`;
-    summary += `• निदान / बीमारी: ${diagnoses}\n\n`;
+    if (data.doctorName) summary += `• चिकित्सक: डॉ. ${data.doctorName}\n`;
+    if (data.hospitalName) summary += `• अस्पताल/क्लीनिक: ${data.hospitalName}\n`;
+    if (data.documentDate) summary += `• परामर्श तिथि: ${data.documentDate}\n`;
+    if (hasDiagnoses) summary += `• निदान / बीमारी: ${data.diagnoses.join(", ")}\n`;
+    summary += `\n`;
 
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
+    if (hasMeds) {
       summary += `💊 निर्धारित दवाइयां (${data.medications.length}):\n`;
       data.medications.forEach((m: any, idx: number) => {
         const freq = m.frequency ? `· ${m.frequency}` : "";
@@ -46,26 +43,26 @@ function buildLocalizedSummary(data: any, lang: string = "en"): string {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} ${freq} ${dur}\n`;
       });
       summary += `\n`;
+    } else {
+      summary += `ℹ️ कोई विशिष्ट दवा विवरण दर्ज नहीं मिला।\n\n`;
     }
 
-    if (Array.isArray(data.labValues) && data.labValues.length > 0) {
+    if (hasLabs) {
       summary += `🧪 प्रयोगशाला जांच:\n`;
       data.labValues.forEach((l: any) => {
-        summary += `  • ${l.test}: ${l.value} (${l.range || "सामान्य"}) ${l.abnormal ? "[असामान्य/चेतावनी]" : "[सामान्य]"}\n`;
+        summary += `  • ${l.test}: ${l.value} (${l.range || "मानक"}) ${l.abnormal ? "[चेतावनी/असामान्य]" : "[सामान्य]"}\n`;
       });
       summary += `\n`;
     }
 
     if (data.doctorAdvice) {
       summary += `📝 डॉक्टर सलाह: ${data.doctorAdvice}\n`;
-    } else {
-      summary += `📝 डॉक्टर सलाह: दवाइयां समय पर लें और पर्याप्त पानी पिएं।\n`;
     }
   } else if (isBn) {
-    summary = `📋 প্রেসক্রিপশন সারসংক্ষেপ (ক্লিনিক্যাল বিবরণ):\n`;
-    summary += `• চিকিৎসক: ${doctor} (${hospital})\n`;
-    summary += `• রোগ নির্ণয় / অবস্থা: ${diagnoses}\n\n`;
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
+    summary = `📋 প্রেসক্রিপশন সারসংক্ষেপ:\n`;
+    if (data.doctorName) summary += `• চিকিৎসক: ${data.doctorName}\n`;
+    if (hasDiagnoses) summary += `• রোগ নির্ণয়: ${data.diagnoses.join(", ")}\n\n`;
+    if (hasMeds) {
       summary += `💊 নির্ধারিত ওষুধসমূহ:\n`;
       data.medications.forEach((m: any, idx: number) => {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""} ${m.duration || ""}\n`;
@@ -73,19 +70,19 @@ function buildLocalizedSummary(data: any, lang: string = "en"): string {
     }
   } else if (isTa) {
     summary = `📋 மருத்துவ சீட்டு சுருக்கம்:\n`;
-    summary += `• மருத்துவர்: ${doctor} (${hospital})\n`;
-    summary += `• நோய் / பாதிப்பு: ${diagnoses}\n\n`;
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
-      summary += `💊 பரிந்துரைக்கப்பட்ட மருந்துகள்:\n`;
+    if (data.doctorName) summary += `• மருத்துவர்: ${data.doctorName}\n`;
+    if (hasDiagnoses) summary += `• பாதிப்பு: ${data.diagnoses.join(", ")}\n\n`;
+    if (hasMeds) {
+      summary += `💊 மருந்துகள்:\n`;
       data.medications.forEach((m: any, idx: number) => {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
       });
     }
   } else if (isTe) {
     summary = `📋 ప్రిస్క్రిప్షన్ సారాంశం:\n`;
-    summary += `• వైద్యులు: ${doctor} (${hospital})\n`;
-    summary += `• రోగ నిర్ధారణ: ${diagnoses}\n\n`;
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
+    if (data.doctorName) summary += `• వైద్యులు: ${data.doctorName}\n`;
+    if (hasDiagnoses) summary += `• నిర్ధారణ: ${data.diagnoses.join(", ")}\n\n`;
+    if (hasMeds) {
       summary += `💊 సూచించిన మందులు:\n`;
       data.medications.forEach((m: any, idx: number) => {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
@@ -93,22 +90,24 @@ function buildLocalizedSummary(data: any, lang: string = "en"): string {
     }
   } else if (isMr) {
     summary = `📋 प्रिस्क्रिप्शन सारांश:\n`;
-    summary += `• डॉक्टर: ${doctor} (${hospital})\n`;
-    summary += `• निदान / आजार: ${diagnoses}\n\n`;
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
+    if (data.doctorName) summary += `• डॉक्टर: ${data.doctorName}\n`;
+    if (hasDiagnoses) summary += `• निदान: ${data.diagnoses.join(", ")}\n\n`;
+    if (hasMeds) {
       summary += `💊 लिहून दिलेली औषधे:\n`;
       data.medications.forEach((m: any, idx: number) => {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
       });
     }
   } else {
-    // English default
+    // English default — strictly truth-based
     summary = `📋 Clinical Prescription Summary:\n`;
-    summary += `• Prescribing Doctor: ${doctor} (${hospital})\n`;
-    summary += `• Date: ${date}\n`;
-    summary += `• Diagnosis / Indications: ${diagnoses}\n\n`;
+    if (data.doctorName) summary += `• Prescribing Doctor: ${data.doctorName}\n`;
+    if (data.hospitalName) summary += `• Hospital / Facility: ${data.hospitalName}\n`;
+    if (data.documentDate) summary += `• Date: ${data.documentDate}\n`;
+    if (hasDiagnoses) summary += `• Diagnosis / Indications: ${data.diagnoses.join(", ")}\n`;
+    summary += `\n`;
 
-    if (Array.isArray(data.medications) && data.medications.length > 0) {
+    if (hasMeds) {
       summary += `💊 Prescribed Medications (${data.medications.length}):\n`;
       data.medications.forEach((m: any, idx: number) => {
         const freq = m.frequency ? `· ${m.frequency}` : "";
@@ -116,9 +115,11 @@ function buildLocalizedSummary(data: any, lang: string = "en"): string {
         summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} ${freq} ${dur}\n`;
       });
       summary += `\n`;
+    } else {
+      summary += `ℹ️ No specific medications detected in this document.\n\n`;
     }
 
-    if (Array.isArray(data.labValues) && data.labValues.length > 0) {
+    if (hasLabs) {
       summary += `🧪 Laboratory Findings:\n`;
       data.labValues.forEach((l: any) => {
         summary += `  • ${l.test}: ${l.value} (${l.range || "Standard"}) ${l.abnormal ? "[Alert/Abnormal]" : "[Normal]"}\n`;
@@ -126,10 +127,12 @@ function buildLocalizedSummary(data: any, lang: string = "en"): string {
       summary += `\n`;
     }
 
-    summary += `📝 Doctor's Advice: Follow prescribed dosages and take medications with water as directed.`;
+    if (data.doctorAdvice) {
+      summary += `📝 Doctor's Advice: ${data.doctorAdvice}\n`;
+    }
   }
 
-  return summary;
+  return summary.trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -211,43 +214,56 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const prompt = `You are an expert medical OCR specialist for Indian hospital OPDs.
-Analyze this medical document (handwritten prescription, lab report, or discharge slip).
-Extract all clinical entities accurately and output strictly a JSON object with this structure:
+    const prompt = `You are an expert medical OCR vision specialist for Indian hospital OPDs.
+Examine this medical prescription or lab document image carefully.
+
+CRITICAL ACCURACY & GROUND TRUTH DIRECTIVES:
+1. ONLY extract clinical entities that are ACTUALLY WRITTEN or PRINTED in this specific image.
+2. DO NOT invent, hallucinate, or guess medications that do not appear in the image.
+3. Carefully decipher Indian doctor handwriting and clinical abbreviations:
+   - Shorthand frequencies: "1-0-1" -> "Twice daily (Morning & Night) / BD", "1-0-0" -> "Once daily (Morning) / OD", "0-0-1" -> "Once daily (Night) / HS", "1-1-1" -> "Thrice daily / TDS", "SOS" -> "As needed", "Stat" -> "Immediately".
+   - Timings: "AC" -> "Before meals", "PC" -> "After meals".
+   - Drug forms: Tab (Tablet), Cap (Capsule), Syp (Syrup), Inj (Injection), Oint (Ointment), Churna, Vati, Kwath, Drop.
+4. If an item is partially illegible, extract only the decipherable name with confidence between 0.5 and 0.8.
+5. If this image is NOT a medical prescription or contains no legible medical text, return "medications": [] and "diagnoses": [].
+
+Output strictly valid JSON matching this schema:
 {
-  "docType": "prescription" | "lab_report" | "discharge_summary",
-  "documentDate": "YYYY-MM-DD" (or null if not found),
-  "doctorName": "string" (or null),
-  "hospitalName": "string" (or null),
+  "docType": "prescription" | "lab_report" | "discharge_summary" | "other",
+  "documentDate": "YYYY-MM-DD or null",
+  "doctorName": "Doctor name or null",
+  "hospitalName": "Hospital or Clinic name or null",
   "medications": [
     {
-      "name": "Drug Brand/Generic name",
-      "dosage": "e.g. 500mg, 40mg",
-      "frequency": "e.g. BD (Twice daily), OD (Once daily), TDS",
-      "duration": "e.g. 15 days, 1 month",
+      "name": "Exact drug name",
+      "dosage": "Strength e.g. 500mg, 40mg, 5ml",
+      "frequency": "Frequency e.g. 1-0-1 (BD), 1-0-0 (OD)",
+      "duration": "Duration e.g. 5 Days, 1 Month",
       "confidence": 0.95
     }
   ],
   "labValues": [
     {
-      "test": "e.g. Fasting Blood Sugar, HbA1c, Serum Creatinine",
-      "value": "e.g. 168 mg/dL, 8.4%",
-      "range": "e.g. 70-100 mg/dL",
-      "abnormal": true | false
+      "test": "Test name",
+      "value": "Value with unit",
+      "range": "Normal range",
+      "abnormal": false
     }
   ],
-  "diagnoses": ["e.g. Type 2 Diabetes Mellitus", "Essential Hypertension"],
-  "proceduresSurgeries": ["e.g. Cholecystectomy 2021", "Appendectomy"],
-  "allergies": ["e.g. Penicillin allergy"],
-  "doctorAdvice": "Diet, precautions or lifestyle guidance",
-  "summaryText": "Concise summary of findings from this document"
+  "diagnoses": ["Clinical diagnosis or null"],
+  "proceduresSurgeries": [],
+  "allergies": [],
+  "doctorAdvice": "Specific advice or lifestyle note written on document, or null",
+  "summaryText": "Brief truthful summary of what is visible in the document"
 }`;
 
+    // Multi-tier fast model fallback: tries the fastest active models first
     const candidateModels = [
-      "gemini-3.6-flash",
-      process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      "gemini-2.5-flash-latest",
-      "gemini-flash-latest",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "gemini-3.6-flash"
     ];
 
     let lastError: any = null;
@@ -259,12 +275,13 @@ Extract all clinical entities accurately and output strictly a JSON object with 
         const model = genAI!.getGenerativeModel({
           model: cand,
           generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 1500,
+            temperature: 0.05,
+            responseMimeType: "application/json",
+            maxOutputTokens: 1200,
           },
         });
 
-        // Fast timeout per candidate to keep OCR responsive
+        // Fast 9-second timeout so mobile uploads never hang indefinitely
         const generatePromise = model.generateContent([
           prompt,
           {
@@ -275,7 +292,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
           }
         ]);
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Timeout after 15s on ${cand}`)), 15000)
+          setTimeout(() => reject(new Error(`Timeout after 9s on ${cand}`)), 9000)
         );
 
         const result: any = await Promise.race([generatePromise, timeoutPromise]);
@@ -289,30 +306,26 @@ Extract all clinical entities accurately and output strictly a JSON object with 
     }
 
     if (!responseText) {
-      console.warn("Vision models did not return response, using clinical OCR extraction fallback:", lastError);
-      const fallbackData = {
-        docType: "prescription",
-        documentDate: new Date().toISOString().split("T")[0],
-        doctorName: "Dr. AIIA OPD Kayachikitsa",
-        hospitalName: "All India Institute of Ayurveda (AIIA)",
-        medications: [
-          { name: "Sitopaladi Churna", dosage: "3g", frequency: "BD (Twice daily)", duration: "7 Days", confidence: 0.95 },
-          { name: "Paracetamol", dosage: "650mg", frequency: "SOS", duration: "3 Days", confidence: 0.92 }
-        ],
-        labValues: [],
-        diagnoses: ["Clinical Prescription Digitized"],
-        doctorAdvice: "Take prescribed medicines after meals with warm water.",
-        summaryText: "Clinical prescription digitized successfully."
-      };
-      const localizedSummary = buildLocalizedSummary(fallbackData, language);
+      console.warn("Vision models exhausted or image illegible:", lastError);
       return NextResponse.json({
         success: true,
-        engine: "gemini-fallback",
+        engine: "notice",
         extracted: {
-          ...fallbackData,
-          summaryText: localizedSummary,
-          rawOcrText: localizedSummary,
-          structuredJson: fallbackData
+          docType: "prescription",
+          documentDate: null,
+          doctorName: null,
+          hospitalName: null,
+          medications: [],
+          labValues: [],
+          diagnoses: [],
+          doctorAdvice: null,
+          summaryText: language === "hi"
+            ? "⚠️ पर्चे से पाठ को स्पष्ट रूप से पढ़ा नहीं जा सका। कृपया सुनिश्चित करें कि तस्वीर साफ, सीधी और पर्याप्त रोशनी में ली गई है।"
+            : "⚠️ Could not clearly extract legible prescription text from the uploaded image. Please ensure the document is clear, well-lit, and in focus, or try taking another photo.",
+          rawOcrText: language === "hi"
+            ? "⚠️ पर्चे से पाठ को स्पष्ट रूप से पढ़ा नहीं जा सका। कृपया स्पष्ट तस्वीर दोबारा अपलोड करें।"
+            : "⚠️ Could not clearly extract legible prescription text. Please ensure the photo is clear and try again.",
+          structuredJson: { medications: [], diagnoses: [], labValues: [] }
         }
       });
     }
@@ -326,16 +339,15 @@ Extract all clinical entities accurately and output strictly a JSON object with 
 
     try {
       const parsedData = JSON.parse(jsonString);
-      // Generate clear, readable clinical summary in the preferred language
       const localizedSummary = buildLocalizedSummary(parsedData, language);
 
       return NextResponse.json({
         success: true,
-        engine: "gemini",
+        engine: `gemini (${usedModel})`,
         extracted: {
           ...parsedData,
-          summaryText: localizedSummary,
-          rawOcrText: localizedSummary, // Never output ugly raw JSON to user
+          summaryText: localizedSummary || parsedData.summaryText,
+          rawOcrText: localizedSummary || parsedData.summaryText,
           structuredJson: parsedData
         }
       });
@@ -343,7 +355,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
       const fallbackSummary = buildLocalizedSummary({ summaryText: responseText }, language);
       return NextResponse.json({
         success: true,
-        engine: "gemini",
+        engine: `gemini (${usedModel})`,
         extracted: {
           docType: "prescription",
           medications: [],
@@ -362,7 +374,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
         error: "extraction_failed",
         message: error?.message || "Document scanning failed. Please ensure the image is clear and try again."
       },
-      { status: 500 }
+      { status: 200 }
     );
   }
 }

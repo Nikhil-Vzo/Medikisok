@@ -285,26 +285,26 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       }
       const img = new Image();
       img.onload = () => {
-        const MAX_DIM = 1600;
+        const MAX_DIM = 1280;
         let { width, height } = img;
-        if (width <= MAX_DIM && height <= MAX_DIM) {
-          resolve(dataUrl);
-          return;
-        }
-        if (width > height) {
-          height = Math.round((height * MAX_DIM) / width);
-          width = MAX_DIM;
-        } else {
-          width = Math.round((width * MAX_DIM) / height);
-          height = MAX_DIM;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
         }
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.88));
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
         } else {
           resolve(dataUrl);
         }
@@ -334,15 +334,29 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
     // Capture to offscreen canvas
     const canvas = canvasRef.current || document.createElement("canvas");
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
-    canvas.width = Math.min(1920, width);
-    canvas.height = Math.min(1920, height);
+    const vWidth = video.videoWidth || 1280;
+    const vHeight = video.videoHeight || 720;
+    const MAX_DIM = 1280;
+    let targetWidth = vWidth;
+    let targetHeight = vHeight;
+    if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
+      if (targetWidth > targetHeight) {
+        targetHeight = Math.round((targetHeight * MAX_DIM) / targetWidth);
+        targetWidth = MAX_DIM;
+      } else {
+        targetWidth = Math.round((targetWidth * MAX_DIM) / targetHeight);
+        targetHeight = MAX_DIM;
+      }
+    }
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const base64 = canvas.toDataURL("image/jpeg", 0.88);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+      ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+      const base64 = canvas.toDataURL("image/jpeg", 0.82);
       setCapturedImage(base64);
       stopCamera(false);
       resetState();

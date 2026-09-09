@@ -154,9 +154,10 @@ MediKiosk Assistant is operating in local mode.
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const candidateModels = [
-      "gemini-3.6-flash",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
+      "gemini-3.7-flash",
       process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      "gemini-2.5-flash-latest",
       "gemini-flash-latest",
     ];
 
