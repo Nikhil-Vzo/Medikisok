@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 import { Footer } from "@/components/shared/footer";
+import { InstallPwaButton } from "@/components/shared/install-pwa-button";
 
 export default function HomePage() {
   return (
@@ -51,6 +52,7 @@ export default function HomePage() {
           </nav>
           <div className="flex items-center gap-2.5">
             <HighContrastToggle />
+            <InstallPwaButton variant="nav" />
             <Link
               href="/login"
               className="inline-flex items-center gap-1 px-3.5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-emerald-300 hover:text-emerald-900 transition-all shadow-2xs"
@@ -153,22 +155,25 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* BOTTOM: Launch Kiosk Button & Subtext */}
+          {/* BOTTOM: Launch Kiosk Button & Download Web App Button */}
           <motion.div
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.35, delay: 0.25 }}
-            className="flex flex-col items-center gap-2 w-full"
+            className="flex flex-col items-center gap-3 w-full"
           >
-            <Link
-              href="/login/patient"
-              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
-            >
-              <span>Launch Kiosk</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md sm:max-w-none">
+              <Link
+                href="/login/patient"
+                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
+              >
+                <span>Launch Kiosk</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <InstallPwaButton variant="hero" className="w-full sm:w-auto" />
+            </div>
             <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
-              Patient self-service · 8 Indic languages · Voice &amp; Touch
+              Installable PWA · 8 Indic languages · Voice &amp; Touch self-service
             </span>
           </motion.div>
 
