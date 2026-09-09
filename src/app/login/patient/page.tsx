@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Loader2,
   User,
-  Zap
+  Zap,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,13 +114,18 @@ export default function PatientLoginPage() {
         throw new Error(data.error || "Identity verification failed");
       }
 
+      const isGuestLogin = authMethod === "mobile" && !trimmedAbha;
+      const assignedAbha = isGuestLogin
+        ? `CRN-${Math.floor(100000 + Math.random() * 900000)}`
+        : (data.abhaId || trimmedAbha || "91-0000-0000-0001");
+
       const verifiedProfile: AbhaProfile = {
-        abhaId: data.abhaId || (trimmedAbha || "91-0000-0000-0001"),
+        abhaId: assignedAbha,
         abhaAddress: data.abhaAddress || (trimmedName ? `${trimmedName.toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"),
-        fullName: data.fullName || (trimmedName || "Patient"),
+        fullName: data.fullName || trimmedName || (isGuestLogin ? "Guest Patient" : "Patient"),
         gender: data.gender || "Not specified",
         yearOfBirth: data.yearOfBirth || (new Date().getFullYear() - 30),
-        mobile: data.mobile || (trimmedMobile || "XXXXXXXXXX"),
+        mobile: data.mobile || trimmedMobile || "9876543210",
         token: data.token || "TOKEN-VERIFIED",
       };
       setProfile(verifiedProfile);
@@ -130,6 +136,7 @@ export default function PatientLoginPage() {
             ...verifiedProfile,
             age: String(age),
             authenticated: true,
+            isGuest: isGuestLogin,
           }));
         } catch (e) {
           // ignore storage quota errors
@@ -147,12 +154,15 @@ export default function PatientLoginPage() {
   function handleProceed() {
     if (profile) {
       const age = new Date().getFullYear() - profile.yearOfBirth;
+      const isGuest = profile.abhaId.startsWith("CRN-") || authMethod === "mobile";
       const params = new URLSearchParams({
         abha: profile.abhaId,
         name: profile.fullName,
         gender: profile.gender,
         age: String(age),
         lang: lang,
+        mobile: profile.mobile || mobileNumber,
+        ...(isGuest ? { guest: "true" } : {})
       });
       router.push(`/patient?${params.toString()}`);
     } else {
@@ -163,12 +173,15 @@ export default function PatientLoginPage() {
   function handleDirectKiosk() {
     if (profile) {
       const age = new Date().getFullYear() - profile.yearOfBirth;
+      const isGuest = profile.abhaId.startsWith("CRN-") || authMethod === "mobile";
       const params = new URLSearchParams({
         abha: profile.abhaId,
         name: profile.fullName,
         gender: profile.gender,
         age: String(age),
         lang: lang,
+        mobile: profile.mobile || mobileNumber,
+        ...(isGuest ? { guest: "true" } : {})
       });
       router.push(`/kiosk?${params.toString()}`);
     } else {
@@ -233,6 +246,86 @@ export default function PatientLoginPage() {
           <div className="p-3 bg-slate-50/70 rounded-lg border border-slate-200/80">
             <ProgressSteps steps={steps} currentStepIndex={stepIndex} />
           </div>
+
+          {/* 3-Category Patient Quick Selector for Demo & Testing */}
+          {flowStep === "identify" && (
+            <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                  {lang === "hi" ? "त्वरित मरीज़ श्रेणी टेस्ट (3 श्रेणियां)" : "1-Click Patient Category Testing:"}
+                </span>
+                <span className="text-[10px] text-emerald-700 font-medium">Demo Data</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod("abha");
+                    setCustomName("Ramesh Sharma");
+                    setAbhaNumber("14-5555-6666-7777");
+                    setMobileNumber("9876543210");
+                  }}
+                  className={`p-2 rounded-lg border text-left transition-all shadow-2xs group cursor-pointer ${
+                    abhaNumber === "14-5555-6666-7777"
+                      ? "bg-emerald-100 border-emerald-600 ring-1 ring-emerald-600"
+                      : "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/80"
+                  }`}
+                >
+                  <span className="block text-xs font-bold text-slate-900 group-hover:text-emerald-900">
+                    1. Old Patient
+                  </span>
+                  <span className="block text-[10px] text-slate-500">
+                    Ramesh (Prior Visit &amp; Rx on file)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod("abha");
+                    setCustomName("Pooja Gupta");
+                    setAbhaNumber("14-9999-8888-1111");
+                    setMobileNumber("9811223344");
+                  }}
+                  className={`p-2 rounded-lg border text-left transition-all shadow-2xs group cursor-pointer ${
+                    abhaNumber === "14-9999-8888-1111"
+                      ? "bg-emerald-100 border-emerald-600 ring-1 ring-emerald-600"
+                      : "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/80"
+                  }`}
+                >
+                  <span className="block text-xs font-bold text-slate-900 group-hover:text-emerald-900">
+                    2. New Patient
+                  </span>
+                  <span className="block text-[10px] text-slate-500">
+                    Pooja (Fresh ABHA, 0 records)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod("mobile");
+                    setCustomName("Sunita Verma");
+                    setAbhaNumber("");
+                    setMobileNumber("9876543210");
+                  }}
+                  className={`p-2 rounded-lg border text-left transition-all shadow-2xs group cursor-pointer ${
+                    authMethod === "mobile" && !abhaNumber
+                      ? "bg-amber-100 border-amber-600 ring-1 ring-amber-600"
+                      : "bg-white border-amber-200 hover:border-amber-400 hover:bg-amber-50/80"
+                  }`}
+                >
+                  <span className="block text-xs font-bold text-amber-950">
+                    3. Guest Patient
+                  </span>
+                  <span className="block text-[10px] text-amber-800/80">
+                    Mobile Walk-In (No ABHA)
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Auth Method Tabs — shown during identify step */}
           {flowStep === "identify" && (

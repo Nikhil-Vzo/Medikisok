@@ -9,7 +9,7 @@ import {
   CheckCircle2, AlertCircle, Pill, X,
   RefreshCw, HeartPulse, Building2, Sun, Moon, Sunrise, Printer,
   Phone, Ambulance, Mic, Info, Check, LogOut, ChevronRight,
-  Calendar, CheckCircle
+  Calendar, CheckCircle, ChevronDown, ChevronUp, Sparkles, Link2, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   fetchHospitalDepartmentsFromDb,
   PortalDepartment,
 } from "@/lib/supabase/db";
+import { PatientVisitRecord } from "@/app/api/patient/records/route";
 
 /* ─── Data Types & Defaults ─────────────────────────────────────────────── */
 
@@ -120,11 +121,30 @@ function PatientPortalContent() {
   const paramGender = searchParams.get("gender") || "Not Specified";
   const paramAge = searchParams.get("age") || "";
   const paramLang = searchParams.get("lang") || "en";
+  const paramMobile = searchParams.get("mobile") || "";
+  const paramGuest = searchParams.get("guest") === "true";
 
   const [activeAbha, setActiveAbha] = React.useState(paramAbha);
   const [activeName, setActiveName] = React.useState(paramName);
   const [activeGender, setActiveGender] = React.useState(paramGender);
   const [activeAge, setActiveAge] = React.useState(paramAge);
+  const [activeMobile, setActiveMobile] = React.useState(paramMobile);
+  const [isGuest, setIsGuest] = React.useState(paramGuest);
+  const [isAbhaLinked, setIsAbhaLinked] = React.useState(false);
+
+  // 3-Category Patient Data & History
+  const [pastRecords, setPastRecords] = React.useState<PatientVisitRecord[]>([]);
+  const [isLoadingRecords, setIsLoadingRecords] = React.useState(true);
+  const [selectedRecordId, setSelectedRecordId] = React.useState<string | null>(null);
+  const [viewingRxRecord, setViewingRxRecord] = React.useState<PatientVisitRecord | null>(null);
+
+  // Retrospective ABHA Linking Modal state
+  const [showLinkAbhaModal, setShowLinkAbhaModal] = React.useState(false);
+  const [linkAbhaInput, setLinkAbhaInput] = React.useState("");
+  const [linkOtpInput, setLinkOtpInput] = React.useState("123456");
+  const [isLinking, setIsLinking] = React.useState(false);
+  const [linkError, setLinkError] = React.useState<string | null>(null);
+  const [linkSuccessBanner, setLinkSuccessBanner] = React.useState<string | null>(null);
 
   const [lang, setLang] = React.useState<string>(paramLang);
   const t = getPatientPortalStrings(lang);
@@ -276,6 +296,106 @@ function PatientPortalContent() {
     loadPortalDbData();
   }, [activeAbha, paramAbha]);
 
+  // Load past records for Old Patient & Guest Patient
+  React.useEffect(() => {
+    async function loadPastRecords() {
+      const effectiveAbha = activeAbha || paramAbha;
+      const effectivePhone = activeMobile || paramMobile;
+      setIsLoadingRecords(true);
+      try {
+        const query = new URLSearchParams();
+        if (effectiveAbha) query.set("abhaId", effectiveAbha);
+        if (effectivePhone) query.set("phone", effectivePhone);
+        const res = await fetch(`/api/patient/records?${query.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.records && Array.isArray(data.records)) {
+            setPastRecords(data.records);
+            if (data.records.length > 0) {
+              setSelectedRecordId(data.records[0].id);
+              // Consolidate past prescriptions
+              const allRx: PrescriptionItem[] = [];
+              data.records.forEach((r: PatientVisitRecord) => {
+                if (r.prescriptions) {
+                  r.prescriptions.forEach((p) => {
+                    allRx.push({
+                      id: p.id,
+                      name: p.name,
+                      dosage: p.dosage,
+                      frequency: p.frequency,
+                      duration: p.duration,
+                      prescribedBy: r.doctorName,
+                      hospital: r.department,
+                      date: r.visitDate,
+                      category: p.category,
+                    });
+                  });
+                }
+              });
+              if (allRx.length > 0) {
+                setPrescriptions(allRx);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Error fetching patient records:", err);
+      } finally {
+        setIsLoadingRecords(false);
+      }
+    }
+    loadPastRecords();
+  }, [activeAbha, paramAbha, activeMobile, paramMobile]);
+
+  const handleLinkAbha = async () => {
+    if (!linkAbhaInput || linkAbhaInput.trim().length < 10) {
+      setLinkError(lang === "hi" ? "कृपया मान्य 14-अंकों की ABHA आईडी दर्ज करें" : "Please enter a valid 14-digit ABHA ID");
+      return;
+    }
+    setIsLinking(true);
+    setLinkError(null);
+    try {
+      const res = await fetch("/api/patient/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "link_abha",
+          phone: activeMobile || paramMobile || "9876543210",
+          abhaId: linkAbhaInput.trim(),
+          fullName: activeName || paramName || "Patient",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to link ABHA ID");
+      }
+      setActiveAbha(linkAbhaInput.trim());
+      setIsAbhaLinked(true);
+      setIsGuest(false);
+      setShowLinkAbhaModal(false);
+      setLinkSuccessBanner(
+        lang === "hi"
+          ? `ABHA आईडी (${linkAbhaInput.trim()}) सफलतापूर्वक लिंक हो गई! आपके मोबाइल से जुड़े सभी पुराने रिकॉर्ड अब आयुष्मान भारत डिजिटल मिशन में सुरक्षित हैं।`
+          : `ABHA ID (${linkAbhaInput.trim()}) linked successfully! All hospital records and prescriptions are now securely bound to your verified ABDM account.`
+      );
+      if (data.records && data.records.length > 0) {
+        setPastRecords(data.records);
+        setSelectedRecordId(data.records[0].id);
+      }
+    } catch (err: any) {
+      setLinkError(err.message || "Failed to link ABHA ID. Please try again.");
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const isOldPatient = pastRecords.length > 0;
+  const isGuestPatient = Boolean(
+    (isGuest || paramGuest || (!activeAbha && activeMobile) || activeAbha.startsWith("CRN-") || activeAbha.startsWith("GUEST-")) &&
+    !isAbhaLinked
+  );
+  const isNewPatient = !isOldPatient && !isGuestPatient;
+
   // Build kiosk launch query with authenticated session so kiosk skips redundant login
   const kioskParams = new URLSearchParams({
     abha: activeAbha || paramAbha,
@@ -285,6 +405,8 @@ function PatientPortalContent() {
     lang: lang,
     authenticated: "true",
     from: "portal",
+    ...(activeMobile ? { mobile: activeMobile } : {}),
+    ...(isGuestPatient ? { guest: "true" } : {})
   }).toString();
 
   const refreshQueue = async (e: React.MouseEvent) => {
@@ -402,9 +524,29 @@ function PatientPortalContent() {
                   : "Ayushman Bharat Digital Mission · MoHFW Govt. of India"}
               </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              {lang === "hi" ? "सत्यापित ABHA ID" : "Verified ABHA ID"}
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${
+              isGuestPatient
+                ? "bg-amber-50 text-amber-900 border-amber-200"
+                : isOldPatient
+                ? "bg-emerald-50 text-emerald-900 border-emerald-200"
+                : "bg-blue-50 text-blue-900 border-blue-200"
+            }`}>
+              {isGuestPatient ? (
+                <>
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  {lang === "hi" ? "अतिथि ओपीडी मरीज़ · मोबाइल पंजीकृत" : "Guest OPD Patient · Mobile Registered"}
+                </>
+              ) : isOldPatient ? (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  {lang === "hi" ? "पुराना मरीज़ · पूर्व रिकॉर्ड उपलब्ध" : "Old Patient · Prior Records Verified"}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  {lang === "hi" ? "नया मरीज़ · सत्यापित ABHA ID" : "New Patient · Verified ABHA"}
+                </>
+              )}
             </span>
           </div>
 
@@ -425,6 +567,12 @@ function PatientPortalContent() {
                   </span>
                   <span>·</span>
                   <span>{activeGender || paramGender}{(activeAge || paramAge) ? `, ${activeAge || paramAge} ${lang === "hi" ? "वर्ष" : "Years"}` : ""}</span>
+                  {activeMobile && (
+                    <>
+                      <span>·</span>
+                      <span className="text-slate-700 font-semibold font-mono">📱 {activeMobile}</span>
+                    </>
+                  )}
                   <span>·</span>
                   <span className="text-slate-500">
                     {(activeName || paramName) ? `${(activeName || paramName).toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"}
@@ -435,15 +583,27 @@ function PatientPortalContent() {
 
             {/* Quick Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAbhaModal(true)}
-                className="h-12 px-5 text-xs sm:text-sm font-bold border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-800 rounded-2xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
-              >
-                <QrCode className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={1.75} />
-                <span>{lang === "hi" ? "ABHA कार्ड देखें" : "View ABHA Card"}</span>
-              </Button>
+              {isGuestPatient ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLinkAbhaModal(true)}
+                  className="h-12 px-5 text-xs sm:text-sm font-bold border-amber-300 hover:border-amber-400 bg-amber-50/80 hover:bg-amber-100 text-amber-950 rounded-2xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
+                >
+                  <Link2 className="w-4 h-4 text-amber-700 shrink-0" strokeWidth={2} />
+                  <span>{lang === "hi" ? "ABHA आईडी लिंक करें" : "Link ABHA ID"}</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAbhaModal(true)}
+                  className="h-12 px-5 text-xs sm:text-sm font-bold border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-800 rounded-2xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
+                >
+                  <QrCode className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={1.75} />
+                  <span>{lang === "hi" ? "ABHA कार्ड देखें" : "View ABHA Card"}</span>
+                </Button>
+              )}
 
               <Link
                 href={`/kiosk?${kioskParams}&step=complaint_select`}
@@ -456,6 +616,279 @@ function PatientPortalContent() {
             </div>
           </div>
         </div>
+
+        {/* Success Banner after Linking ABHA */}
+        {linkSuccessBanner && (
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center justify-between gap-3 animate-in fade-in duration-200 shadow-xs">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0" />
+              <p className="text-xs sm:text-sm font-semibold">{linkSuccessBanner}</p>
+            </div>
+            <button
+              onClick={() => setLinkSuccessBanner(null)}
+              className="text-emerald-700 hover:text-emerald-950 p-1 rounded-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── DYNAMIC 3-CATEGORY WORKFLOW SECTION ───────────────────────── */}
+
+        {/* ── CATEGORY 3: GUEST PATIENT (Mobile Walk-in without ABHA) ─────── */}
+        {isGuestPatient && (
+          <div className="rounded-3xl bg-gradient-to-r from-amber-50/80 via-white to-orange-50/60 border-2 border-amber-200/90 shadow-sm p-6 sm:p-7 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-wide">
+                    {lang === "hi" ? "अतिथि / अस्थायी ओपीडी खाता" : "Guest / Temporary OPD Account"}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Mobile: <strong className="text-slate-900 font-mono font-bold">{activeMobile || "Verified Walk-in"}</strong>
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-950">
+                  {lang === "hi" ? "अस्पताल में स्थानीय रिकॉर्ड सुरक्षित हैं" : "Hospital Encounter Saved by Mobile Number"}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                  {lang === "hi"
+                    ? "आपकी जांच और पर्चे स्थानीय अस्पताल CRN में सुरक्षित हैं। जब भी आप अपनी 14-अंकों की ABHA आईडी बनाएंगे या लिंक करेंगे, आपके सभी रिकॉर्ड स्वतः राष्ट्रीय आयुष्मान भारत में स्थानांतरित हो जाएंगे।"
+                    : "Your medical consultations and prescriptions are safely preserved in the hospital database under this mobile number. When you create or link an ABHA ID, all records will be automatically bound to your national Ayushman Bharat health account."}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <Button
+                  onClick={() => setShowLinkAbhaModal(true)}
+                  className="h-11 px-5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs sm:text-sm shadow-xs inline-flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Link2 className="w-4 h-4" />
+                  <span>{lang === "hi" ? "ABHA आईडी लिंक करें" : "Link ABHA ID Now"}</span>
+                </Button>
+                <Link
+                  href={`/kiosk?${kioskParams}&step=complaint_select`}
+                  className="h-11 px-4 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-800 font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>{lang === "hi" ? "अतिथि परामर्श जारी रखें" : "Proceed as Guest"}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CATEGORY 1: OLD PATIENT (Has Medical History in DB) ─────────── */}
+        {isOldPatient && (
+          <div className="space-y-4">
+            {/* Top Prompt: "Do you have a new problem?" Card */}
+            <div className="rounded-3xl bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/50 border border-emerald-200 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-xs">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                  {lang === "hi" ? "फॉलो-अप या नई समस्या?" : "Follow-up or Fresh Problem?"}
+                </span>
+                <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-950">
+                  {lang === "hi" ? "क्या आज आपको कोई नई तकलीफ या बीमारी है?" : "Do you have a new health problem today?"}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
+                  {lang === "hi"
+                    ? "यदि आप किसी नई समस्या के लिए डॉक्टर से मिलना चाहते हैं, तो 'नई बीमारी के लिए परामर्श' चुनें। यदि पुरानी बीमारी का फॉलो-अप है, तो नीचे दिए गए रिकॉर्ड से जारी रखें।"
+                    : "If you want consultation for a fresh illness, start a new intake. To consult regarding your previous ongoing treatment, select the visit below."}
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <Link
+                  href={`/kiosk?${kioskParams}&step=complaint_select&visit_type=fresh`}
+                  className="h-12 px-6 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs sm:text-sm shadow-xs inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  <span>{lang === "hi" ? "नई बीमारी के लिए परामर्श लें →" : "Consult for a New Problem →"}</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Previous Consultations & Medical History Section */}
+            <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-950 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-800" />
+                    <span>{lang === "hi" ? "पिछले परामर्श और मेडिकल रिकॉर्ड" : "Previous Consultations & Medical Records"}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {lang === "hi"
+                      ? "दवाइयां देखने या उसी बीमारी के फॉलो-अप के लिए संबंधित रिकॉर्ड पर क्लिक करें:"
+                      : "Click any record to inspect prescriptions, doctor advice, or continue treatment for that condition:"}
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-xs font-bold text-slate-700 w-fit">
+                  {pastRecords.length} {lang === "hi" ? "विज़िट रिकॉर्ड दर्ज" : "Visits Recorded"}
+                </Badge>
+              </div>
+
+              {/* Accordion list of prior visits */}
+              <div className="space-y-3.5">
+                {pastRecords.map((record) => {
+                  const isExpanded = selectedRecordId === record.id;
+                  return (
+                    <div
+                      key={record.id}
+                      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                        isExpanded
+                          ? "border-emerald-600 bg-emerald-50/20 shadow-xs ring-1 ring-emerald-600/30"
+                          : "border-slate-200 hover:border-slate-300 bg-slate-50/60 hover:bg-slate-50"
+                      }`}
+                    >
+                      {/* Accordion Header */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRecordId(isExpanded ? null : record.id)}
+                        className="w-full p-4 sm:p-5 text-left flex items-start sm:items-center justify-between gap-4 cursor-pointer"
+                      >
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-slate-900 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200">
+                              📅 {record.visitDate}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-600">
+                              {record.department} · {record.doctorName} ({record.roomNumber})
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300">
+                              {record.prescriptions?.length || 0} {lang === "hi" ? "दवाइयां" : "Prescriptions"}
+                            </span>
+                          </div>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-950 truncate">
+                            {record.chiefComplaint}
+                          </h4>
+                          <p className="text-xs text-slate-500 font-medium">
+                            <strong className="text-slate-700">{lang === "hi" ? "निदान:" : "Diagnosis:"}</strong> {record.diagnosis}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-bold text-emerald-800 hidden sm:inline">
+                            {isExpanded ? (lang === "hi" ? "पर्चा छुपाएं" : "Collapse") : (lang === "hi" ? "पर्चा देखें" : "View Prescriptions")}
+                          </span>
+                          <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700">
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Accordion Expanded Body */}
+                      {isExpanded && (
+                        <div className="px-4 sm:px-6 pb-6 pt-2 border-t border-emerald-200/80 bg-white space-y-4 animate-in fade-in duration-150">
+                          {/* Prescriptions List */}
+                          <div className="space-y-2.5">
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                              {lang === "hi" ? "डॉक्टर द्वारा जारी दवाइयां (Prescribed Medicines):" : "Prescribed Medicines for this Visit:"}
+                            </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {record.prescriptions.map((rx) => (
+                                <div
+                                  key={rx.id}
+                                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs space-y-1.5"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <h5 className="font-bold text-slate-950 text-sm">{rx.name}</h5>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                                      {rx.category === "ayurveda" ? "Ayurveda" : "Allopathy"}
+                                    </span>
+                                  </div>
+                                  <p className="text-slate-700 font-semibold">
+                                    {rx.dosage} · <span className="text-slate-900 font-bold">{rx.frequency}</span> ({rx.duration})
+                                  </p>
+                                  {rx.instructions && (
+                                    <p className="text-[11px] text-slate-500 italic">
+                                      💡 {rx.instructions}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Doctor Advice if available */}
+                          {record.doctorAdvice && (
+                            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 space-y-0.5">
+                              <span className="font-bold text-amber-900 block">
+                                {lang === "hi" ? "चिकित्सक सलाह व खान-पान:" : "Doctor's Advice & Lifestyle Guidance:"}
+                              </span>
+                              <p className="text-slate-700">{record.doctorAdvice}</p>
+                            </div>
+                          )}
+
+                          {/* Action Buttons for this Record */}
+                          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-slate-100">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingRxRecord(record)}
+                              className="h-10 text-xs font-bold border-slate-300 text-slate-800 hover:bg-slate-50 rounded-xl cursor-pointer"
+                            >
+                              <Printer className="w-3.5 h-3.5 mr-1.5" />
+                              {lang === "hi" ? "पूरा पर्चा देखें / प्रिंट करें" : "View / Print Full Prescription Slip"}
+                            </Button>
+
+                            <Link
+                              href={`/kiosk?${kioskParams}&step=complaint_select&visit_type=followup&complaint=${encodeURIComponent(record.chiefComplaint)}`}
+                              className="h-10 px-5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs shadow-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <Stethoscope className="w-3.5 h-3.5" />
+                              <span>{lang === "hi" ? "इसी समस्या के लिए फॉलो-अप परामर्श लें" : "Continue with this problem (Follow-up)"}</span>
+                              <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CATEGORY 2: NEW PATIENT (Verified ABHA with 0 Past Records) ── */}
+        {isNewPatient && (
+          <div className="rounded-3xl bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/50 border border-blue-200 p-6 sm:p-8 space-y-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-md border border-blue-200">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-700" />
+                  {lang === "hi" ? "नया मरीज़ इनटेक (First OPD Visit)" : "New Patient Intake (First OPD Visit)"}
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950">
+                  {lang === "hi" ? `स्वागत है, ${activeName || "मरीज़"}!` : `Welcome to MediKiosk, ${activeName || "Patient"}!`}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                  {lang === "hi"
+                    ? "आपकी ABHA आईडी सत्यापित है। इस अस्पताल में आपका कोई पुराना मेडिकल रिकॉर्ड दर्ज नहीं है। आज अपना पहला ओपीडी परामर्श शुरू करें—अपनी भाषा में बोलकर लक्षण बताएं या अन्य अस्पताल का पर्चा स्कैन करें।"
+                    : "Your ABHA ID is verified. You have no previous medical records at this hospital. Start your first OPD consultation today using our bilingual voice triage or by scanning external prescriptions."}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <Link
+                  href={`/kiosk?${kioskParams}&step=complaint_select`}
+                  className="h-12 px-6 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs sm:text-sm shadow-xs inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  <Stethoscope className="w-4 h-4" />
+                  <span>{lang === "hi" ? "परामर्श प्रारंभ करें" : "Start Doctor Consultation"}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href={`/kiosk?${kioskParams}&step=scan`}
+                  className="h-12 px-4 rounded-2xl border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{lang === "hi" ? "पर्चा स्कैन करें" : "Scan Rx"}</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── 2. Four Purpose-Built Core Service Cards (Grid) ─────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
@@ -1298,6 +1731,232 @@ function PatientPortalContent() {
                   {lang === "hi" ? "बंद करें" : "Close"}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 5: Retrospective Link ABHA ID Modal ────────────────────── */}
+      {showLinkAbhaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-amber-800 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Link2 className="w-5 h-5 text-amber-300" />
+                <h3 className="font-bold text-base">
+                  {lang === "hi" ? "ABHA आईडी लिंक करें" : "Link Ayushman Bharat (ABHA) ID"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLinkAbhaModal(false);
+                  setLinkError(null);
+                }}
+                className="text-amber-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-7 space-y-5">
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs space-y-1">
+                <p className="font-bold">
+                  {lang === "hi" ? "स्थानीय अस्पताल रिकॉर्ड का एकीकरण" : "Retrospective Hospital Record Binding"}
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  {lang === "hi"
+                    ? `मोबाइल नंबर (${activeMobile || paramMobile || "पंजीकृत"}) के तहत संग्रहीत आपके सभी परामर्श रिकॉर्ड आपकी नई ABHA आईडी से स्थायी रूप से जुड़ जाएंगे।`
+                    : `All consultations, prescriptions, and lab reports stored under mobile number (${activeMobile || paramMobile || "registered"}) will be permanently bound to your ABDM health account.`}
+                </p>
+              </div>
+
+              {linkError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{linkError}</span>
+                </div>
+              )}
+
+              {/* Form Inputs */}
+              <div className="space-y-4 text-xs">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-800 block">
+                    {lang === "hi" ? "14-अंकों की ABHA आईडी दर्ज करें:" : "Enter 14-Digit ABHA Number:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={linkAbhaInput}
+                    onChange={(e) => setLinkAbhaInput(e.target.value)}
+                    placeholder="14-5555-6666-7777"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono text-sm font-semibold focus:outline-emerald-700 focus:border-emerald-700"
+                  />
+                  {/* Demo Quick Fill */}
+                  <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
+                    <span>Quick Fill:</span>
+                    <button
+                      type="button"
+                      onClick={() => setLinkAbhaInput("14-5555-6666-7777")}
+                      className="text-emerald-700 font-bold hover:underline"
+                    >
+                      Ramesh Sharma (14-5555...)
+                    </button>
+                    <span>·</span>
+                    <button
+                      type="button"
+                      onClick={() => setLinkAbhaInput("14-9999-8888-1111")}
+                      className="text-blue-700 font-bold hover:underline"
+                    >
+                      Pooja Gupta (14-9999...)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-800 block">
+                    {lang === "hi" ? "सत्यापन कोड (Aadhaar / Mobile OTP):" : "Verification OTP (Sent to mobile):"}
+                  </label>
+                  <input
+                    type="text"
+                    value={linkOtpInput}
+                    onChange={(e) => setLinkOtpInput(e.target.value)}
+                    placeholder="123456"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono text-sm tracking-widest font-semibold focus:outline-emerald-700 focus:border-emerald-700"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    {lang === "hi" ? "परीक्षण के लिए डिफ़ॉल्ट OTP: 123456" : "Demo environment default OTP: 123456"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleLinkAbha}
+                  disabled={isLinking}
+                  className="flex-1 bg-amber-700 hover:bg-amber-800 text-white font-bold h-12 rounded-2xl cursor-pointer text-xs sm:text-sm"
+                >
+                  {isLinking ? (
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                  )}
+                  <span>{lang === "hi" ? "सत्यापित करें और लिंक करें" : "Verify & Link ABHA"}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowLinkAbhaModal(false);
+                    setLinkError(null);
+                  }}
+                  className="h-12 px-5 text-xs sm:text-sm font-semibold border-slate-300 rounded-2xl cursor-pointer"
+                >
+                  {lang === "hi" ? "रद्द करें" : "Cancel"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 6: Single Past Visit Prescription Slip Modal ────────────── */}
+      {viewingRxRecord && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-emerald-900 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-5 h-5 text-emerald-300" />
+                <h3 className="font-bold text-base">
+                  {lang === "hi" ? "डिजिटल ओपीडी पर्चा" : "Digital OPD Prescription Record"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingRxRecord(null)}
+                className="text-emerald-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Slip Content */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-800">
+              <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div>
+                    <h4 className="font-bold text-slate-950 text-sm">{viewingRxRecord.department}</h4>
+                    <p className="text-slate-500 text-[11px]">{viewingRxRecord.doctorName} · {viewingRxRecord.roomNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 block">
+                      📅 {viewingRxRecord.visitDate}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Chief Complaint & Diagnosis:</span>
+                  <p className="font-bold text-slate-950 text-sm">{viewingRxRecord.chiefComplaint}</p>
+                  <p className="text-slate-600 font-medium">{viewingRxRecord.diagnosis}</p>
+                </div>
+              </div>
+
+              {/* Prescriptions */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-sm text-slate-950 flex items-center gap-2">
+                  <Pill className="w-4 h-4 text-emerald-800" />
+                  <span>{lang === "hi" ? "दवाइयां और सेवन विधि:" : "Prescribed Medicines & Dosage:"}</span>
+                </h4>
+                <div className="space-y-2.5">
+                  {viewingRxRecord.prescriptions.map((rx) => (
+                    <div key={rx.id} className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1 shadow-2xs">
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-slate-950 text-sm">{rx.name}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                          {rx.category === "ayurveda" ? "Ayurveda" : "Allopathy"}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 font-semibold">
+                        {rx.dosage} · <span className="text-slate-900 font-bold">{rx.frequency}</span> ({rx.duration})
+                      </p>
+                      {rx.instructions && (
+                        <p className="text-[11px] text-slate-500 italic">💡 {rx.instructions}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Doctor Advice */}
+              {viewingRxRecord.doctorAdvice && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
+                  <span className="font-bold text-amber-900 block">
+                    {lang === "hi" ? "चिकित्सक सलाह:" : "Doctor's Advice:"}
+                  </span>
+                  <p className="text-slate-700 leading-relaxed">{viewingRxRecord.doctorAdvice}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+              <Link
+                href={`/kiosk?${kioskParams}&step=complaint_select&visit_type=followup&complaint=${encodeURIComponent(viewingRxRecord.chiefComplaint)}`}
+                className="h-11 px-5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Stethoscope className="w-3.5 h-3.5" />
+                <span>{lang === "hi" ? "फॉलो-अप परामर्श लें" : "Follow-up for this Complaint"}</span>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => setViewingRxRecord(null)}
+                className="h-11 px-5 rounded-xl text-xs font-semibold border-slate-300 cursor-pointer"
+              >
+                {lang === "hi" ? "बंद करें" : "Close"}
+              </Button>
             </div>
           </div>
         </div>

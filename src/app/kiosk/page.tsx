@@ -107,14 +107,18 @@ export default function KioskPage() {
         setConsentGranted(true);
 
         const urlVisitType = params.get("visit_type");
+        const urlComplaint = params.get("complaint");
         const urlIsReturning = params.get("revisit") === "true" || urlVisitType === "followup";
         setIsReturningPatient(urlIsReturning);
+        if (urlComplaint) {
+          setSelectedComplaint(urlComplaint);
+        }
 
         const decision = computeContinuity({
           isReturning: urlIsReturning,
           ...(urlIsReturning ? {
             lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            lastChiefComplaint: "Prior consultation follow-up",
+            lastChiefComplaint: urlComplaint || "Prior consultation follow-up",
             lastMedications: ["Sitopaladi Churna 3g BD", "Tab Paracetamol 650mg SOS"]
           } : {})
         });
@@ -125,7 +129,9 @@ export default function KioskPage() {
         ];
         const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
           ? requestedStep
-          : (urlVisitType ? "complaint_select" : (isGuest ? "complaint_select" : "continuity"));
+          : (urlVisitType === "followup" && urlComplaint
+              ? "mode_select"
+              : (urlVisitType ? "complaint_select" : (isGuest ? "complaint_select" : "continuity")));
 
         setStep(targetStep);
         setPresetNotice(

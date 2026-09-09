@@ -13,7 +13,8 @@ import {
   ScanLine,
   ShieldOff,
   Type,
-  FileSearch
+  FileSearch,
+  Smartphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const nativeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // OCR mode toggle
   const [ocrMode, setOcrMode] = React.useState<OcrMode>("camera");
@@ -73,7 +75,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         const data = await res.json();
         setOcrStatus(data.configured ? "ready" : "no_credentials");
       } catch {
-        setOcrStatus("no_credentials");
+        setOcrStatus("ready"); // gracefully allow camera scanning
       }
     };
     checkOcrStatus();
@@ -81,20 +83,61 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
   // Start Video Stream
   const startCamera = async () => {
-    if (ocrStatus === "no_credentials") return;
     setCameraError(null);
+    setIsProcessing(false);
+
+    // If browser does not support getUserMedia or is in an insecure context, trigger phone camera directly
+    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+      if (nativeCameraInputRef.current) {
+        nativeCameraInputRef.current.click();
+      } else {
+        setCameraError("Camera streaming is not supported on this browser. Please use the upload button.");
+      }
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
-      if (videoRef.current) {
+      let stream: MediaStream | null = null;
+      try {
+        // Attempt 1: Rear / Environment camera with high resolution
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+      } catch (e1) {
+        try {
+          // Attempt 2: Environment camera without strict resolution constraint
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+          });
+        } catch (e2) {
+          // Attempt 3: Any video device available (front camera, desktop webcam, etc.)
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+        }
+      }
+
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("autoplay", "true");
+        videoRef.current.setAttribute("muted", "true");
+        videoRef.current.muted = true;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((playErr) => console.warn("Video play error on metadata:", playErr));
+        };
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn("Video direct play error:", playErr);
+        }
         setIsCameraActive(true);
       }
     } catch (err: any) {
-      console.warn("Camera access failed:", err);
-      setCameraError("Camera access denied or unavailable. You can upload an image file directly.");
+      console.warn("Live camera access failed:", err);
+      setCameraError(
+        "Live camera preview could not be opened. Tap 'Take Photo with Phone Camera' to capture using your device camera."
+      );
       setIsCameraActive(false);
     }
   };
@@ -161,11 +204,16 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
   // Capture Snapshot from Video
   const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current) return;
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = Math.min(1600, video.videoWidth || 1280);
-    canvas.height = Math.min(1600, video.videoHeight || 720);
+    let canvas = canvasRef.current;
+    if (!canvas) {
+      canvas = document.createElement("canvas");
+    }
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    canvas.width = Math.min(1600, width);
+    canvas.height = Math.min(1600, height);
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -447,29 +495,35 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              {ocrMode === "camera" ? (
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={startCamera}
-                  className="font-semibold text-xs bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
-                  disabled={ocrStatus === "checking"}
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Open Kiosk Camera
-                </Button>
-              ) : null}
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={startCamera}
+                className="font-semibold text-xs bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Open Live Camera
+              </Button>
+
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => nativeCameraInputRef.current?.click()}
+                className="bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 font-semibold text-xs shadow-2xs"
+              >
+                <Smartphone className="w-4 h-4 mr-2 text-emerald-700" />
+                Take Photo with Phone Camera
+              </Button>
+
               <Button
                 variant="outline"
                 size="md"
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-white text-emerald-950 border-emerald-300 hover:bg-emerald-50 font-semibold text-xs shadow-xs"
+                className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-semibold text-xs shadow-xs"
               >
-                <Upload className="w-4 h-4 mr-2 text-emerald-700" />
-                {ocrMode === "upload"
-                  ? `Upload ${docTypeLabel} Photo`
-                  : "Upload from Gallery"}
+                <Upload className="w-4 h-4 mr-2 text-slate-600" />
+                Upload from Gallery
               </Button>
             </div>
 
@@ -491,6 +545,28 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Hidden Canvas for Live Video Snapshot Capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Hidden Native Phone Camera Input (Direct native camera app on mobile) */}
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Hidden Gallery / File Upload Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
 
       {/* ── Extracted Text Panel ──────────────────────────────────── */}
       {(extractedText || extractionError) && (

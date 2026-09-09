@@ -41,6 +41,15 @@ export interface PatientPortalStrings {
   morning: string;
   noon: string;
   night: string;
+  pastRecordsTitle?: string;
+  pastRecordsSub?: string;
+  followUpBtn?: string;
+  newProblemBtn?: string;
+  newPatientWelcome?: string;
+  newPatientDirectIntake?: string;
+  guestLinkAbhaBanner?: string;
+  linkAbhaBtn?: string;
+  abhaLinkedSuccess?: string;
 }
 
 export const PATIENT_PORTAL_STRINGS: Record<string, PatientPortalStrings> = {
@@ -399,5 +408,25 @@ export const PATIENT_PORTAL_STRINGS: Record<string, PatientPortalStrings> = {
 };
 
 export function getPatientPortalStrings(lang: string): PatientPortalStrings {
-  return PATIENT_PORTAL_STRINGS[lang] || PATIENT_PORTAL_STRINGS["en"];
+  const base = PATIENT_PORTAL_STRINGS[lang] || PATIENT_PORTAL_STRINGS["en"];
+  const isHi = lang === "hi";
+
+  return {
+    ...base,
+    pastRecordsTitle: isHi ? "पिछली चिकित्सीय जांच व पुराने पर्चे" : "Previous Consultations & Medical Records",
+    pastRecordsSub: isHi
+      ? "पुराने अस्पताल दौरे व दवाइयां देखें, और उसी समस्या के लिए पुनः परामर्श लें"
+      : "Review past visits & prescriptions, or follow up on an ongoing health condition",
+    followUpBtn: isHi ? "इसी समस्या के लिए पुनः परामर्श लें (Follow-up)" : "Continue with this problem (Book Follow-up OPD)",
+    newProblemBtn: isHi ? "नई समस्या है? नई बीमारी हेतु परामर्श शुरू करें" : "Do you have a new problem? Consult for fresh illness",
+    newPatientWelcome: isHi ? "मेडीकियोस्क में आपका स्वागत है! आपका कोई पुराना ओपीडी रिकॉर्ड दर्ज नहीं है।" : "Welcome to MediKiosk! No prior OPD consultation records found on file.",
+    newPatientDirectIntake: isHi ? "डॉक्टर परामर्श व लक्षण दर्ज करें" : "Start Doctor Consultation & Register Health Complaint",
+    guestLinkAbhaBanner: isHi
+      ? "आप मोबाइल नंबर से अतिथि मरीज़ के रूप में जुड़े हैं। अपने सभी पुराने पर्चे आयुष्मान भारत क्लाउड में सुरक्षित रखने हेतु ABHA आईडी लिंक करें।"
+      : "You are logged in as a Guest Patient using your mobile number. Link your 14-digit ABHA ID to sync all your past hospital visits with India's Ayushman Bharat Digital Mission (ABDM) cloud.",
+    linkAbhaBtn: isHi ? "ABHA आईडी लिंक करें" : "Link ABHA ID to Account",
+    abhaLinkedSuccess: isHi
+      ? "ABHA आईडी सफलतापूर्वक लिंक हो गई! आपके सभी पुराने रिकॉर्ड आयुष्मान भारत से जुड़ गए हैं।"
+      : "ABHA ID successfully linked! All previous hospital records are now bound to your ABHA account.",
+  };
 }
