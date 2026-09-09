@@ -59,14 +59,15 @@ export async function savePatientIntake(data: {
       }
     }
 
-    // 2. Direct Supabase Upsert / Insert
+    // 2. Direct Supabase Upsert / Insert (only for valid ABHA IDs, skip temporary walk-in CRN IDs)
     let profileId: string | null = null;
-    try {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("abha_id", data.patient.abhaId)
-        .maybeSingle();
+    if (data.patient.abhaId && !data.patient.abhaId.startsWith("CRN-")) {
+      try {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("abha_id", data.patient.abhaId)
+          .maybeSingle();
 
       if (existingProfile) {
         profileId = existingProfile.id;
@@ -91,6 +92,7 @@ export async function savePatientIntake(data: {
     } catch (profErr) {
       console.warn("Direct profile query skipped:", profErr);
     }
+  }
 
     let visitId: string = `visit-${Date.now()}`;
     try {
@@ -443,9 +445,10 @@ export interface PortalDepartment {
 }
 
 export async function fetchPatientPrescriptionsFromDb(abhaId?: string): Promise<PortalPrescription[] | null> {
-  if (!abhaId) return null;
+  if (!abhaId || abhaId.startsWith("CRN-")) return null;
   try {
     const cleanDigits = abhaId.replace(/\D/g, "");
+    if (cleanDigits.length < 10) return null;
     const formatted = cleanDigits.length === 14
       ? `${cleanDigits.slice(0, 2)}-${cleanDigits.slice(2, 6)}-${cleanDigits.slice(6, 10)}-${cleanDigits.slice(10, 14)}`
       : abhaId.trim();
@@ -485,9 +488,10 @@ export async function fetchPatientPrescriptionsFromDb(abhaId?: string): Promise<
 }
 
 export async function fetchPatientLabReportsFromDb(abhaId?: string): Promise<PortalLabReport[] | null> {
-  if (!abhaId) return null;
+  if (!abhaId || abhaId.startsWith("CRN-")) return null;
   try {
     const cleanDigits = abhaId.replace(/\D/g, "");
+    if (cleanDigits.length < 10) return null;
     const formatted = cleanDigits.length === 14
       ? `${cleanDigits.slice(0, 2)}-${cleanDigits.slice(2, 6)}-${cleanDigits.slice(6, 10)}-${cleanDigits.slice(10, 14)}`
       : abhaId.trim();
