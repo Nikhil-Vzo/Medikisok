@@ -36,6 +36,12 @@ export const SoapSummaryEditor: React.FC<SoapSummaryEditorProps> = ({
   const [isSendingToHis, setIsSendingToHis] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"eight_part" | "soap">("eight_part");
 
+  // Sync state when active patient/summary changes
+  React.useEffect(() => {
+    setDoctorNotes(summary.doctorNotes || "");
+    setIsApproved(false);
+  }, [summary.chiefComplaint, summary.historyOfPresentIllness, summary.doctorNotes]);
+
   const handleApprove = () => {
     setIsApproved(true);
     onApprove(doctorNotes);

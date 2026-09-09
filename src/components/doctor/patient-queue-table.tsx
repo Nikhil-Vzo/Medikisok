@@ -34,6 +34,7 @@ export interface QueuePatient {
   };
   nurseNotes?: string;
   isCalled?: boolean;
+  socratesData?: any;
   verifiedMedications?: any[];
   draftSummary?: any;
   fhirBundle?: any;

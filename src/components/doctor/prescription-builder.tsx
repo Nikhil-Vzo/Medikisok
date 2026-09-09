@@ -157,6 +157,22 @@ export const PrescriptionBuilder: React.FC<PrescriptionBuilderProps> = ({
   const [newMedFreq, setNewMedFreq] = React.useState("1-0-1 (BD — Twice daily)");
   const searchRef = React.useRef<HTMLDivElement>(null);
 
+  // Sync medications when initialMedications changes (e.g., patient switch)
+  React.useEffect(() => {
+    if (initialMedications && initialMedications.length > 0) {
+      setMedications(
+        initialMedications.map((m, idx) => ({
+          id: `med-${idx}`,
+          name: m.name,
+          dosage: m.dosage,
+          frequency: m.frequency,
+          duration: (m as any).duration || "14 Days",
+          instructions: (m as any).instructions || "As directed by physician",
+        }))
+      );
+    }
+  }, [initialMedications]);
+
   // Close dropdown on outside click
   React.useEffect(() => {
     function handler(e: MouseEvent) {

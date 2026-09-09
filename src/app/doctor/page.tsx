@@ -18,9 +18,10 @@ import { fetchQueuePatientsFromSupabase, approveSummaryInSupabase, sendToHisStub
 import { createClient } from "@/lib/supabase/client";
 import { generateAndPrintClinicalReport } from "@/lib/utils/pdf-generator";
 import { RedFlagAlertBanner } from "@/components/doctor/red-flag-alert-banner";
-import { evaluateRedFlagsFromText } from "@/lib/ontologies/red-flags";
+import { evaluateRedFlagsFromText, RED_FLAG_RULES } from "@/lib/ontologies/red-flags";
 import { ClinicalSuggestion, ClinicalSummaryDraft } from "@/types/clinical";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
+import { MOCK_DOCTOR_QUEUE } from "@/lib/mock-data/doctor-queue";
 
 const DEFAULT_SUGGESTIONS: ClinicalSuggestion[] = [];
 
@@ -46,8 +47,13 @@ export default function DoctorPage() {
       ? `severity ${socrates.severity ?? ""} ${socrates.site ?? ""} ${socrates.character ?? ""} ${socrates.radiation ?? ""}`
       : "";
     const result = evaluateRedFlagsFromText(selectedPatient.chiefComplaint || "", socratesText);
-    setTriggeredRedFlags(result);
-  }, [selectedPatient?.id, selectedPatient?.chiefComplaint]);
+    if (selectedPatient.isEmergency && result.triggeredRules.length === 0) {
+      const fallbackRule = RED_FLAG_RULES.find((r) => r.id === "acs_chest_pain");
+      setTriggeredRedFlags({ isEmergency: true, triggeredRules: fallbackRule ? [fallbackRule] : [] });
+    } else {
+      setTriggeredRedFlags(result);
+    }
+  }, [selectedPatient?.id, selectedPatient?.chiefComplaint, selectedPatient?.isEmergency]);
 
   // 2-Minute OPD Target Consultation Timer
   const [timerSeconds, setTimerSeconds] = React.useState(120);
@@ -69,12 +75,13 @@ export default function DoctorPage() {
     return `${mins.toString().padStart(2, "0")}:${remainder.toString().padStart(2, "0")}`;
   };
 
-  // Load from Supabase and /api/queue on mount with client-side deduplication
+  // Load from Supabase and /api/queue on mount with client-side deduplication & guaranteed mock fallbacks
   const loadQueue = React.useCallback(async () => {
     const remotePatients = await fetchQueuePatientsFromSupabase();
+    const dedupMap = new Map<string, any>();
+
+    // 1. Process remote patients from Supabase if present
     if (remotePatients && remotePatients.length > 0) {
-      // Deduplicate by unique patient identity (ABHA or name)
-      const dedupMap = new Map<string, any>();
       for (const p of remotePatients) {
         const cleanAbha = (p.abhaId || "").replace(/\D/g, "");
         const key = cleanAbha.length >= 10 && !cleanAbha.includes("0000000000")
@@ -95,19 +102,32 @@ export default function DoctorPage() {
           }
         }
       }
-      const uniquePatients = Array.from(dedupMap.values());
-      setPatients(uniquePatients);
-      setSelectedPatient((prev) => {
-        if (prev) {
-          const match = uniquePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId || p.abhaId === prev.abhaId);
-          if (match) return match;
-        }
-        return uniquePatients[0] || null;
-      });
-    } else {
-      setPatients([]);
-      setSelectedPatient(null);
     }
+
+    // 2. Ensure both curated mockups (one red-flagged emergency, one stable OPD) are always available
+    for (const mockP of MOCK_DOCTOR_QUEUE) {
+      const mockKey = `abha_${mockP.abhaId.replace(/\D/g, "")}`;
+      if (!dedupMap.has(mockKey)) {
+        dedupMap.set(mockKey, mockP);
+      }
+    }
+
+    const uniquePatients = Array.from(dedupMap.values());
+    // Sort emergency patients first, then by token number
+    uniquePatients.sort((a, b) => {
+      if (a.isEmergency && !b.isEmergency) return -1;
+      if (!a.isEmergency && b.isEmergency) return 1;
+      return (a.tokenNumber || 99) - (b.tokenNumber || 99);
+    });
+
+    setPatients(uniquePatients);
+    setSelectedPatient((prev) => {
+      if (prev) {
+        const match = uniquePatients.find((p: any) => p.id === prev.id || p.visitId === prev.visitId || p.abhaId === prev.abhaId);
+        if (match) return match;
+      }
+      return uniquePatients[0] || null;
+    });
   }, []);
 
   React.useEffect(() => {
@@ -163,6 +183,7 @@ export default function DoctorPage() {
         allergies: dbDraft?.allergies || [],
         scannedDocumentsSummary: dbDraft?.scannedDocumentsSummary || "",
         classicalHistory: dbDraft?.classicalHistory || null,
+        doctorNotes: dbDraft?.doctorNotes || "",
         status: "draft",
         isEmergencyTriage: selectedPatient.isEmergency || false,
         createdAt: new Date().toISOString(),
@@ -496,7 +517,13 @@ export default function DoctorPage() {
           {activeTab === "summary" && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* AI Decision Support Panel */}
-              <SuggestionAlerts suggestions={selectedPatient.isEmergency ? DEFAULT_SUGGESTIONS : [DEFAULT_SUGGESTIONS[1]]} />
+              <SuggestionAlerts
+                suggestions={
+                  selectedPatient.suggestions && selectedPatient.suggestions.length > 0
+                    ? selectedPatient.suggestions
+                    : (selectedPatient.isEmergency ? DEFAULT_SUGGESTIONS : [])
+                }
+              />
 
               {/* Ayurvedic Pariksha Card (If Ayush Mode) */}
               {selectedPatient.clinicalMode === "ayush" && (
@@ -521,7 +548,8 @@ export default function DoctorPage() {
                   medications: currentSummaryDraft.currentMedications,
                   allergies: currentSummaryDraft.allergies,
                   scannedSummary: currentSummaryDraft.scannedDocumentsSummary,
-                  classicalHistory: currentSummaryDraft.classicalHistory
+                  classicalHistory: currentSummaryDraft.classicalHistory,
+                  doctorNotes: currentSummaryDraft.doctorNotes,
                 }}
                 onApprove={async (notes) => {
                   if (selectedPatient.summaryId) {
@@ -558,7 +586,41 @@ export default function DoctorPage() {
           {/* Tab 2: OCR Split View Verification */}
           {activeTab === "ocr" && (
             <div className="animate-in fade-in duration-200">
-              <OcrDocumentInspector />
+              <OcrDocumentInspector
+                documentTitle={
+                  selectedPatient.isEmergency
+                    ? "Emergency Triage Referral & Pre-Hospital ECG Strip"
+                    : "Previous Prescription & Glycemic Panel (Dr. Rajesh Verma)"
+                }
+                extractedData={
+                  selectedPatient.isEmergency
+                    ? {
+                        medications: [
+                          { name: "Tab Telmisartan", dosage: "40mg", frequency: "1-0-0 (OD)" },
+                          { name: "Tab Amlodipine", dosage: "5mg", frequency: "0-1-0 (HS)" },
+                        ],
+                        labValues: [
+                          { test: "Point-of-Care Troponin I", value: "0.85 ng/mL", range: "< 0.04 ng/mL", abnormal: true },
+                          { test: "Random Blood Glucose", value: "198 mg/dL", range: "70-140 mg/dL", abnormal: true },
+                          { test: "Total Cholesterol", value: "248 mg/dL", range: "< 200 mg/dL", abnormal: true },
+                        ],
+                        diagnoses: ["Acute Coronary Syndrome (STEMI)", "Hypertensive Urgency", "Essential Hypertension"],
+                      }
+                    : {
+                        medications: [
+                          { name: "Tab Metformin", dosage: "500mg", frequency: "1-0-1 (BD)" },
+                          { name: "Tab Telmisartan", dosage: "40mg", frequency: "1-0-0 (OD)" },
+                          { name: "Cap Calcium + Vit D3", dosage: "500mg", frequency: "0-1-0 (HS)" },
+                        ],
+                        labValues: [
+                          { test: "HbA1c", value: "6.8%", range: "< 5.7% (Goal < 7.0%)", abnormal: false },
+                          { test: "Fasting Blood Sugar", value: "118 mg/dL", range: "70-100 mg/dL", abnormal: false },
+                          { test: "Serum Creatinine", value: "0.8 mg/dL", range: "0.6-1.1 mg/dL", abnormal: false },
+                        ],
+                        diagnoses: ["Type 2 Diabetes Mellitus", "Primary Essential Hypertension"],
+                      }
+                }
+              />
             </div>
           )}
 
