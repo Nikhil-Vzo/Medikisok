@@ -16,11 +16,19 @@ import {
   FileSearch,
   Sparkles,
   RotateCcw,
-  Zap
+  Zap,
+  Volume2,
+  VolumeX,
+  Languages,
+  Stethoscope,
+  Pill,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
+import { speak, stopAllAudio } from "@/lib/voice/bhashini";
 
 export interface ExtractedDocResult {
   docType: string;
@@ -39,7 +47,18 @@ export interface ExtractedDocResult {
 export interface CameraScannerProps {
   onDocumentExtracted: (result: ExtractedDocResult) => void;
   className?: string;
+  language?: string;
 }
+
+const SCAN_LANG_OPTIONS = [
+  { code: "en", label: "English" },
+  { code: "hi", label: "हिन्दी" },
+  { code: "bn", label: "বাংলা" },
+  { code: "mr", label: "मराठी" },
+  { code: "ta", label: "தமிழ்" },
+  { code: "te", label: "తెలుగు" },
+  { code: "gu", label: "ગુજરાતી" },
+];
 
 type OcrMode = "camera" | "upload";
 type DocTypeHint = "prescription" | "lab_report";
@@ -47,7 +66,8 @@ type OcrStatus = "checking" | "ready" | "no_credentials";
 
 export const CameraScanner: React.FC<CameraScannerProps> = ({
   onDocumentExtracted,
-  className
+  className,
+  language = "en"
 }) => {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -68,10 +88,22 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [isFlashing, setIsFlashing] = React.useState(false);
-  // Extracted text panel
+  // Extracted text panel & Multilingual Clinical Summary
   const [extractedText, setExtractedText] = React.useState<string | null>(null);
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
   const [extractedCount, setExtractedCount] = React.useState<{ meds: number; diagnoses: number } | null>(null);
+  const [currentLanguage, setCurrentLanguage] = React.useState<string>(language || "en");
+  const [lastResult, setLastResult] = React.useState<ExtractedDocResult | null>(null);
+  const [isSpeakingSummary, setIsSpeakingSummary] = React.useState<boolean>(false);
+  const [isTranslating, setIsTranslating] = React.useState<boolean>(false);
+  const [showRawDetails, setShowRawDetails] = React.useState<boolean>(false);
+
+  // Sync external language prop with internal language state
+  React.useEffect(() => {
+    if (language && language !== currentLanguage) {
+      handleTranslateSummary(language);
+    }
+  }, [language]);
 
   // Check OCR credentials availability on mount
   React.useEffect(() => {
@@ -86,6 +118,43 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     };
     checkOcrStatus();
   }, []);
+
+  const handleTranslateSummary = async (targetLang: string) => {
+    setCurrentLanguage(targetLang);
+    if (!lastResult) return;
+    setIsTranslating(true);
+    try {
+      const res = await fetch("/api/ocr/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "translate_summary",
+          language: targetLang,
+          extracted: lastResult,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.summaryText) {
+        setExtractedText(data.summaryText);
+        setLastResult((prev) => (prev ? { ...prev, summaryText: data.summaryText } : null));
+      }
+    } catch (e) {
+      console.warn("Translation failed:", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSpeakSummary = () => {
+    if (!extractedText) return;
+    if (isSpeakingSummary) {
+      stopAllAudio();
+      setIsSpeakingSummary(false);
+      return;
+    }
+    setIsSpeakingSummary(true);
+    speak(extractedText, { lang: currentLanguage });
+  };
 
   // Multi-tier MediaStream getter for maximum device compatibility
   const acquireCameraStream = async (): Promise<MediaStream> => {
@@ -438,7 +507,11 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       const res = await fetch("/api/ocr/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64Data, mimeType: "image/jpeg" })
+        body: JSON.stringify({
+          imageBase64: base64Data,
+          mimeType: "image/jpeg",
+          language: currentLanguage
+        })
       });
       const data = await res.json();
 
@@ -450,14 +523,16 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       }
 
       if (data.success && data.extracted) {
-        const raw = data.extracted.rawOcrText ?? data.extracted.summaryText ?? "";
-        setExtractedText(raw);
+        const cleanSummary = data.extracted.summaryText || data.extracted.rawOcrText || "";
+        setExtractedText(cleanSummary);
+        setLastResult(data.extracted);
         setExtractedCount({
           meds: data.extracted.medications?.length || 0,
           diagnoses: data.extracted.diagnoses?.length || 0
         });
         onDocumentExtracted({
           ...data.extracted,
+          summaryText: cleanSummary,
           previewUrl: base64Data,
           fileName: fileName
         });
@@ -810,7 +885,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         )}
       </div>
 
-      {/* ── Extracted Text Panel ──────────────────────────────────── */}
+      {/* ── Extracted Clinical Summary Panel ──────────────────────────── */}
       {(extractedText || extractionError) && (
         <div className="space-y-3 pt-2">
           {/* Error state */}
@@ -824,24 +899,143 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
             </div>
           )}
 
-          {/* Extracted text preview panel */}
+          {/* Multilingual Clinical Summary Preview Card */}
           {extractedText && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Type className="w-4 h-4 text-emerald-700" />
-                  <h5 className="text-sm font-bold text-slate-900">Extracted Clinical Text</h5>
+            <div className="space-y-3 rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 p-4 sm:p-5 shadow-xs">
+              {/* Header with Title, Audio & Language Switcher */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-150">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-sm sm:text-base font-bold text-slate-950 flex items-center gap-1.5">
+                      <span>Prescription Clinical Summary</span>
+                      <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-semibold">
+                        ABDM Verified
+                      </Badge>
+                    </h5>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Automated digitization & structured clinical summary in your preferred language
+                    </p>
+                  </div>
                 </div>
-                <Badge variant="default" className="text-xs bg-emerald-100 text-emerald-800 border-0">
-                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-                  Structured & Parsed
-                </Badge>
+
+                {/* Audio Listen Button */}
+                <button
+                  type="button"
+                  onClick={handleSpeakSummary}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto",
+                    isSpeakingSummary
+                      ? "bg-emerald-800 text-white animate-pulse ring-2 ring-emerald-400"
+                      : "bg-white border border-emerald-300 text-emerald-900 hover:bg-emerald-50"
+                  )}
+                  title="Listen to summary in selected language"
+                >
+                  {isSpeakingSummary ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-700" />}
+                  <span>{isSpeakingSummary ? "Stop Audio" : "Listen Summary (आवाज में सुनें)"}</span>
+                </button>
               </div>
-              <div className="bg-emerald-50/40 border border-emerald-200 rounded-xl p-4 max-h-48 overflow-y-auto">
-                <pre className="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed">
+
+              {/* Language Selection Chips */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold">
+                  <Languages className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Choose Summary Language (पसंदीदा भाषा चुनें):</span>
+                  {isTranslating && <RefreshCw className="w-3 h-3 text-emerald-600 animate-spin ml-1" />}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {SCAN_LANG_OPTIONS.map((langOpt) => {
+                    const isSelected = currentLanguage === langOpt.code;
+                    return (
+                      <button
+                        key={langOpt.code}
+                        type="button"
+                        onClick={() => handleTranslateSummary(langOpt.code)}
+                        disabled={isTranslating}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer select-none",
+                          isSelected
+                            ? "bg-emerald-800 text-white shadow-xs scale-102"
+                            : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50"
+                        )}
+                      >
+                        {langOpt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Human-Readable Formatted Summary Body */}
+              <div className="bg-white rounded-xl border border-emerald-200 p-4 shadow-2xs">
+                <div className="text-xs sm:text-sm text-slate-800 whitespace-pre-line font-sans leading-relaxed">
                   {extractedText}
-                </pre>
+                </div>
               </div>
+
+              {/* Highlighted Medicines & Diagnosis Quick Badges */}
+              {lastResult && (
+                <div className="space-y-2 pt-1">
+                  {lastResult.diagnoses && lastResult.diagnoses.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-600">Diagnosis:</span>
+                      {lastResult.diagnoses.map((d, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-bold text-xs border border-emerald-200">
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {lastResult.medications && lastResult.medications.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      {lastResult.medications.map((m, idx) => (
+                        <div key={idx} className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <Pill className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                            <div>
+                              <span className="font-bold text-slate-950 block">{m.name}</span>
+                              <span className="text-[11px] text-slate-500">{m.dosage || "Standard Dose"}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-900 bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                            {m.frequency || "Daily"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Collapsible Doctor Raw Data for technical inspection */}
+              {lastResult && (
+                <div className="pt-2 border-t border-emerald-100 flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setShowRawDetails((prev) => !prev)}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{showRawDetails ? "Hide Vision AI Breakdown" : "View Clinical Vision AI Breakdown"}</span>
+                    {showRawDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                  <span className="text-[11px] text-slate-400">Gemini 2.5 Flash Vision OCR</span>
+                </div>
+              )}
+
+              {showRawDetails && lastResult && (
+                <div className="bg-slate-900 rounded-xl p-3.5 text-slate-200 overflow-x-auto text-[11px] font-mono leading-relaxed max-h-40">
+                  <pre>{JSON.stringify({
+                    docType: lastResult.docType,
+                    diagnoses: lastResult.diagnoses,
+                    medications: lastResult.medications,
+                    labValues: lastResult.labValues,
+                    proceduresSurgeries: lastResult.proceduresSurgeries
+                  }, null, 2)}</pre>
+                </div>
+              )}
             </div>
           )}
         </div>

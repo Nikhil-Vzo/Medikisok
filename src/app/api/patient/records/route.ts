@@ -9,7 +9,16 @@ export interface PatientVisitRecord {
   roomNumber: string;
   chiefComplaint: string;
   diagnosis: string;
+  diseaseDuration?: string;
   clinicalMode: "allopathy" | "ayush";
+  lastMedicationUsed?: {
+    name: string;
+    dosage: string;
+    whenUsed: string;
+    timing: string;
+    instructions?: string;
+  };
+  prescriptionImageUrl?: string;
   prescriptions: Array<{
     id: string;
     name: string;
@@ -18,6 +27,7 @@ export interface PatientVisitRecord {
     duration: string;
     instructions?: string;
     category: "allopathy" | "ayurveda";
+    whenUsed?: string;
   }>;
   labReports?: Array<{
     test: string;
@@ -29,6 +39,61 @@ export interface PatientVisitRecord {
   }>;
   doctorAdvice?: string;
   followUpRecommendedDays?: number;
+}
+
+// Generates an authentic SVG prescription slip data URL
+function generateRxSvg(title: string, doctor: string, dept: string, date: string, diagnosis: string, meds: string[]): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="800" height="1050" style="background:#ffffff; font-family: system-ui, sans-serif;">
+    <rect width="800" height="1050" fill="#ffffff"/>
+    <!-- Header Banner -->
+    <rect width="800" height="120" fill="#047857"/>
+    <text x="40" y="45" font-size="22" font-weight="900" fill="#ffffff">ALL INDIA INSTITUTE OF AYURVEDA &amp; OPD CLINIC</text>
+    <text x="40" y="72" font-size="13" font-weight="500" fill="#d1fae5">Ministry of Ayush · Govt. of India · ABDM Integrated Health Facility</text>
+    <text x="40" y="95" font-size="12" font-weight="600" fill="#a7f3d0">NABH Accredited OPD · Mathura Road, New Delhi - 110076</text>
+    
+    <!-- Doctor & OPD Info -->
+    <rect x="40" y="140" width="720" height="85" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+    <text x="60" y="172" font-size="16" font-weight="bold" fill="#065f46">${doctor}</text>
+    <text x="60" y="195" font-size="13" font-weight="600" fill="#047857">${dept}</text>
+    <text x="60" y="213" font-size="12" fill="#4b5563">Reg. No: AYUSH/DLI/2018/8892 · OPD Timing: 09:00 AM - 02:00 PM</text>
+    
+    <text x="560" y="172" font-size="12" font-weight="bold" fill="#374151">Date: ${date}</text>
+    <text x="560" y="195" font-size="12" fill="#374151">OPD Slip No: AIIA-2026-${Math.floor(1000 + Math.random() * 9000)}</text>
+    <text x="560" y="213" font-size="12" font-weight="bold" fill="#047857">ABDM Verified Record</text>
+
+    <!-- Clinical Diagnosis -->
+    <rect x="40" y="245" width="720" height="60" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="60" y="270" font-size="12" font-weight="bold" fill="#64748b">PROVISIONAL / CLINICAL DIAGNOSIS:</text>
+    <text x="60" y="292" font-size="15" font-weight="bold" fill="#0f172a">${diagnosis}</text>
+
+    <!-- Rx Symbol -->
+    <text x="45" y="365" font-size="44" font-weight="900" font-family="serif" fill="#047857">℞</text>
+    <line x1="100" y1="355" x2="760" y2="355" stroke="#047857" stroke-width="1.5"/>
+
+    <!-- Prescriptions Table -->
+    ${meds.map((m, i) => `
+      <g transform="translate(60, ${390 + (i * 75)})">
+        <circle cx="12" cy="14" r="10" fill="#ecfdf5" stroke="#10b981"/>
+        <text x="12" y="18" font-size="11" font-weight="bold" fill="#047857" text-anchor="middle">${i + 1}</text>
+        <text x="35" y="18" font-size="15" font-weight="bold" fill="#1e293b">${m}</text>
+        <line x1="35" y1="36" x2="700" y2="36" stroke="#f1f5f9" stroke-width="1"/>
+      </g>
+    `).join('')}
+
+    <!-- Footer & Doctor Signature -->
+    <line x1="40" y1="900" x2="760" y2="900" stroke="#e2e8f0" stroke-width="1.5"/>
+    <text x="40" y="930" font-size="11" fill="#64748b">Important: Complete full medicine course as advised. For emergency, visit 24x7 Casualty or call 108.</text>
+    <text x="40" y="948" font-size="11" fill="#64748b">This digital prescription is verified under ABDM M1/M2/M3 Architecture and DPDP Act 2023.</text>
+
+    <!-- Signature Stamp -->
+    <g transform="translate(560, 915)">
+      <rect x="0" y="0" width="180" height="70" rx="6" fill="#f0fdf4" stroke="#059669" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="90" y="28" font-size="14" font-weight="bold" font-style="italic" fill="#065f46" text-anchor="middle">${doctor.split(' ')[0]} ${doctor.split(' ')[1] || ''}</text>
+      <text x="90" y="46" font-size="11" font-weight="bold" fill="#047857" text-anchor="middle">Authorized Signature</text>
+      <text x="90" y="60" font-size="10" fill="#6b7280" text-anchor="middle">AIIA OPD Specialist Stamp</text>
+    </g>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 // In-memory store for retrospective linking & demo old patients
@@ -43,7 +108,27 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
       roomNumber: "Room 104",
       chiefComplaint: "Acid Peptic Disease / Amlapitta (Severe Heartburn & Gas)",
       diagnosis: "Amlapitta with Pitta-Vata imbalance",
+      diseaseDuration: "3 Months (Chronic Recurrent)",
       clinicalMode: "ayush",
+      lastMedicationUsed: {
+        name: "Avipattikar Churna 3g",
+        dosage: "3g with lukewarm water",
+        whenUsed: "Today at 8:30 AM (Morning before breakfast)",
+        timing: "Twice daily - Before meals",
+        instructions: "Mix with lukewarm water, avoid sour/spicy food",
+      },
+      prescriptionImageUrl: generateRxSvg(
+        "AIIA OPD Prescription",
+        "Dr. Ananya Sharma (MD Ayur)",
+        "Kayachikitsa (Ayurveda OPD) · Room 104",
+        "2026-08-26",
+        "Amlapitta with Pitta-Vata imbalance (Duration: 3 Months)",
+        [
+          "Avipattikar Churna 3g — Twice daily before meals (14 days)",
+          "Kamadudha Ras (Moti Yukta) 125mg — Twice daily after meals (14 days)",
+          "Sutshekhar Ras 250mg — Once daily morning empty stomach (10 days)"
+        ]
+      ),
       prescriptions: [
         {
           id: "rx-1",
@@ -53,6 +138,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
           duration: "14 days",
           instructions: "Mix with lukewarm water",
           category: "ayurveda",
+          whenUsed: "Today at 8:30 AM (Morning before breakfast)",
         },
         {
           id: "rx-2",
@@ -62,6 +148,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
           duration: "14 days",
           instructions: "Take with cow's milk",
           category: "ayurveda",
+          whenUsed: "Yesterday at 9:00 PM (After dinner)",
         },
         {
           id: "rx-3",
@@ -71,6 +158,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
           duration: "10 days",
           instructions: "Empty stomach",
           category: "ayurveda",
+          whenUsed: "Today at 7:00 AM (Empty stomach)",
         },
       ],
       labReports: [
@@ -102,7 +190,26 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
       roomNumber: "Room 102",
       chiefComplaint: "Seasonal Allergic Rhinitis & Dry Cough",
       diagnosis: "Acute Upper Respiratory Irritation",
+      diseaseDuration: "10 Days (Acute)",
       clinicalMode: "allopathy",
+      lastMedicationUsed: {
+        name: "Levocetirizine 5mg",
+        dosage: "5mg at bedtime",
+        whenUsed: "Last taken on 2026-06-17 at night (Course Completed)",
+        timing: "Once daily at bedtime",
+        instructions: "Complete 5 day course",
+      },
+      prescriptionImageUrl: generateRxSvg(
+        "AIIA OPD Prescription",
+        "Dr. Rajesh Mehra (MD Gen Med)",
+        "General Medicine OPD · Room 102",
+        "2026-06-12",
+        "Acute Upper Respiratory Irritation (Duration: 10 Days)",
+        [
+          "Levocetirizine 5mg — Once daily at bedtime (5 days)",
+          "Sitopaladi Churna 2g — Thrice daily with honey (7 days)"
+        ]
+      ),
       prescriptions: [
         {
           id: "rx-4",
@@ -111,6 +218,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
           frequency: "Once daily at bedtime",
           duration: "5 days",
           category: "allopathy",
+          whenUsed: "Completed 5 days course",
         },
         {
           id: "rx-5",
@@ -119,6 +227,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
           frequency: "Thrice daily with honey",
           duration: "7 days",
           category: "ayurveda",
+          whenUsed: "Completed 7 days course",
         },
       ],
       doctorAdvice: "Steam inhalation twice daily. Resolved completely.",
@@ -130,7 +239,7 @@ const seededOldPatientRecords: Record<string, PatientVisitRecord[]> = {
 // Map of mobile -> linked ABHA ID
 const mobileToAbhaLinkMap: Record<string, string> = {};
 
-// Mobile records store for Guest patients
+// Mobile records store for Guest patients (e.g. Sunita Verma)
 const mobileRecordsStore: Record<string, PatientVisitRecord[]> = {
   "9876543210": [
     {
@@ -141,7 +250,26 @@ const mobileRecordsStore: Record<string, PatientVisitRecord[]> = {
       roomNumber: "Room 108",
       chiefComplaint: "Chronic Lower Back Pain (Kati Shoola)",
       diagnosis: "Lumbosacral strain with Vata vriddhi",
+      diseaseDuration: "2 Months (Subacute)",
       clinicalMode: "ayush",
+      lastMedicationUsed: {
+        name: "Yograj Guggulu 500mg",
+        dosage: "2 tablets with warm water",
+        whenUsed: "Today at 9:15 AM (Morning after breakfast)",
+        timing: "Twice daily after meals",
+        instructions: "Take with warm water",
+      },
+      prescriptionImageUrl: generateRxSvg(
+        "AIIA Panchakarma Unit Prescription",
+        "Dr. P. K. Namboodiri",
+        "Panchakarma Unit · Room 108",
+        "2026-08-20",
+        "Lumbosacral strain with Vata vriddhi (Duration: 2 Months)",
+        [
+          "Yograj Guggulu 500mg — 2 tablets twice daily after meals (21 days)",
+          "Mahanarayan Taila 15ml — Gentle massage & warm fomentation twice daily (14 days)"
+        ]
+      ),
       prescriptions: [
         {
           id: "rx-guest-1",
@@ -151,6 +279,7 @@ const mobileRecordsStore: Record<string, PatientVisitRecord[]> = {
           duration: "21 days",
           instructions: "With warm water",
           category: "ayurveda",
+          whenUsed: "Today at 9:15 AM (Morning after breakfast)",
         },
         {
           id: "rx-guest-2",
@@ -160,6 +289,7 @@ const mobileRecordsStore: Record<string, PatientVisitRecord[]> = {
           duration: "14 days",
           instructions: "Gentle massage followed by warm fomentation",
           category: "ayurveda",
+          whenUsed: "Yesterday at 8:00 PM",
         },
       ],
       doctorAdvice: "Avoid lifting heavy weights. Perform mild Kati-Chakrasana exercises as demonstrated.",

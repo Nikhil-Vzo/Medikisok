@@ -1102,6 +1102,7 @@ export default function KioskPage() {
                 {/* Real Video Camera Scanner */}
                 <div className="lg:col-span-7">
                   <CameraScanner
+                    language={language}
                     onDocumentExtracted={(result: ExtractedDocResult) => {
                       setScannedFiles(prev => [...prev, { name: result.fileName, size: "1.2 MB", status: "processed" }]);
                       setExtractedEntities(prev => ({

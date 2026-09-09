@@ -435,9 +435,10 @@ export async function POST(req: NextRequest) {
 
   // ---------- PHASE: link_abha ----------
   if (phase === "link_abha") {
-    if (!abhaNumber && !abhaAddress) {
+    // If neither ABHA nor mobile is provided, return error
+    if (!abhaNumber && !abhaAddress && !body.mobile) {
       return NextResponse.json<{ success: false; error: string }>(
-        { success: false, error: "ABHA number or address required to link" },
+        { success: false, error: "ABHA number, address or mobile number required to link" },
         { status: 400 }
       );
     }
@@ -450,17 +451,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Link ABHA
+    // Link ABHA or Guest Mobile
     const existingPatient = await lookupPatientRecord(abhaNumber || body.mobile);
+    const assignedAbha = existingPatient?.abha_id || abhaNumber || `CRN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const isGuest = !abhaNumber && !existingPatient?.abha_id;
+
     const response: AbhaAuthResponse = {
       success: true,
-      abhaId: existingPatient?.abha_id || abhaNumber || "91-0000-0000-0001",
-      abhaAddress: existingPatient?.abha_address || abhaAddress || "user@abha",
-      fullName: existingPatient?.name || body.fullName || "ABHA Patient",
+      abhaId: assignedAbha,
+      abhaAddress: existingPatient?.abha_address || abhaAddress || (body.fullName ? `${body.fullName.toLowerCase().replace(/\s+/g, ".")}@abdm` : (isGuest ? "guest@medikiosk" : "patient@abdm")),
+      fullName: existingPatient?.name || body.fullName || (isGuest ? "Guest Patient" : "ABHA Patient"),
       gender: existingPatient?.gender || body.gender || "Not specified",
-      yearOfBirth: existingPatient?.age ? (new Date().getFullYear() - existingPatient.age) : (body.yearOfBirth || 1990),
+      yearOfBirth: existingPatient?.age ? (new Date().getFullYear() - existingPatient.age) : (body.yearOfBirth || (new Date().getFullYear() - 32)),
       mobile: existingPatient?.phone || body.mobile || "XXXXXXXXXX",
-      token: `link-token-${Date.now()}`,
+      token: `${isGuest ? "guest" : "link"}-token-${Date.now()}`,
     };
     return NextResponse.json(response);
   }

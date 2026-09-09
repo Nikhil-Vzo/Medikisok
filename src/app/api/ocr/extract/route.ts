@@ -13,6 +13,125 @@ function isValidKey(key?: string | null): boolean {
   return true;
 }
 
+// ── Multilingual Clinical Summary Generator ──────────────────────────────
+export function buildLocalizedSummary(data: any, lang: string = "en"): string {
+  const isHi = lang === "hi";
+  const isBn = lang === "bn";
+  const isTa = lang === "ta";
+  const isTe = lang === "te";
+  const isMr = lang === "mr";
+  const isGu = lang === "gu";
+
+  const doctor = data.doctorName ? (isHi ? `डॉ. ${data.doctorName}` : data.doctorName) : (isHi ? "चिकित्सक" : "Consulting Physician");
+  const hospital = data.hospitalName || (isHi ? "ओपीडी क्लीनिक" : "OPD Clinic");
+  const date = data.documentDate || (isHi ? "हालिया परामर्श" : "Recent Consultation");
+
+  const diagnoses = Array.isArray(data.diagnoses) && data.diagnoses.length > 0
+    ? data.diagnoses.join(", ")
+    : (isHi ? "सामान्य परामर्श / लक्षण जांच" : "Clinical Consultation / Routine Checkup");
+
+  let summary = "";
+
+  if (isHi) {
+    summary = `📋 पर्चा सारांश (डिजिटल क्लिनिकल विवरण):\n`;
+    summary += `• चिकित्सक: ${doctor} (${hospital})\n`;
+    summary += `• परामर्श तिथि: ${date}\n`;
+    summary += `• निदान / बीमारी: ${diagnoses}\n\n`;
+
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 निर्धारित दवाइयां (${data.medications.length}):\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        const freq = m.frequency ? `· ${m.frequency}` : "";
+        const dur = m.duration ? `(${m.duration})` : "";
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} ${freq} ${dur}\n`;
+      });
+      summary += `\n`;
+    }
+
+    if (Array.isArray(data.labValues) && data.labValues.length > 0) {
+      summary += `🧪 प्रयोगशाला जांच:\n`;
+      data.labValues.forEach((l: any) => {
+        summary += `  • ${l.test}: ${l.value} (${l.range || "सामान्य"}) ${l.abnormal ? "[असामान्य/चेतावनी]" : "[सामान्य]"}\n`;
+      });
+      summary += `\n`;
+    }
+
+    if (data.doctorAdvice) {
+      summary += `📝 डॉक्टर सलाह: ${data.doctorAdvice}\n`;
+    } else {
+      summary += `📝 डॉक्टर सलाह: दवाइयां समय पर लें और पर्याप्त पानी पिएं।\n`;
+    }
+  } else if (isBn) {
+    summary = `📋 প্রেসক্রিপশন সারসংক্ষেপ (ক্লিনিক্যাল বিবরণ):\n`;
+    summary += `• চিকিৎসক: ${doctor} (${hospital})\n`;
+    summary += `• রোগ নির্ণয় / অবস্থা: ${diagnoses}\n\n`;
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 নির্ধারিত ওষুধসমূহ:\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""} ${m.duration || ""}\n`;
+      });
+    }
+  } else if (isTa) {
+    summary = `📋 மருத்துவ சீட்டு சுருக்கம்:\n`;
+    summary += `• மருத்துவர்: ${doctor} (${hospital})\n`;
+    summary += `• நோய் / பாதிப்பு: ${diagnoses}\n\n`;
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 பரிந்துரைக்கப்பட்ட மருந்துகள்:\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
+      });
+    }
+  } else if (isTe) {
+    summary = `📋 ప్రిస్క్రిప్షన్ సారాంశం:\n`;
+    summary += `• వైద్యులు: ${doctor} (${hospital})\n`;
+    summary += `• రోగ నిర్ధారణ: ${diagnoses}\n\n`;
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 సూచించిన మందులు:\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
+      });
+    }
+  } else if (isMr) {
+    summary = `📋 प्रिस्क्रिप्शन सारांश:\n`;
+    summary += `• डॉक्टर: ${doctor} (${hospital})\n`;
+    summary += `• निदान / आजार: ${diagnoses}\n\n`;
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 लिहून दिलेली औषधे:\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} - ${m.frequency || ""}\n`;
+      });
+    }
+  } else {
+    // English default
+    summary = `📋 Clinical Prescription Summary:\n`;
+    summary += `• Prescribing Doctor: ${doctor} (${hospital})\n`;
+    summary += `• Date: ${date}\n`;
+    summary += `• Diagnosis / Indications: ${diagnoses}\n\n`;
+
+    if (Array.isArray(data.medications) && data.medications.length > 0) {
+      summary += `💊 Prescribed Medications (${data.medications.length}):\n`;
+      data.medications.forEach((m: any, idx: number) => {
+        const freq = m.frequency ? `· ${m.frequency}` : "";
+        const dur = m.duration ? `(${m.duration})` : "";
+        summary += `  ${idx + 1}. ${m.name} ${m.dosage || ""} ${freq} ${dur}\n`;
+      });
+      summary += `\n`;
+    }
+
+    if (Array.isArray(data.labValues) && data.labValues.length > 0) {
+      summary += `🧪 Laboratory Findings:\n`;
+      data.labValues.forEach((l: any) => {
+        summary += `  • ${l.test}: ${l.value} (${l.range || "Standard"}) ${l.abnormal ? "[Alert/Abnormal]" : "[Normal]"}\n`;
+      });
+      summary += `\n`;
+    }
+
+    summary += `📝 Doctor's Advice: Follow prescribed dosages and take medications with water as directed.`;
+  }
+
+  return summary;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -21,7 +140,19 @@ export async function POST(req: NextRequest) {
     const paddleConfigured = isValidKey(paddleOcrApiKey);
     const genAI = geminiConfigured ? new GoogleGenerativeAI(geminiApiKey!) : null;
     const body = await req.json();
-    const { imageBase64, mimeType = "image/jpeg" } = body;
+
+    // ── Instant Language Switch / Translation Action ────────────────────────
+    if (body.action === "translate_summary") {
+      const targetLang = body.language || "en";
+      const summary = buildLocalizedSummary(body.extracted || {}, targetLang);
+      return NextResponse.json({
+        success: true,
+        language: targetLang,
+        summaryText: summary,
+      });
+    }
+
+    const { imageBase64, mimeType = "image/jpeg", language = "en" } = body;
 
     if (!imageBase64) {
       return NextResponse.json(
@@ -36,7 +167,6 @@ export async function POST(req: NextRequest) {
     // ── PaddleOCR path (only if real key provided) ───────────────────────────
     if (paddleConfigured) {
       try {
-        // PaddleOCR Cloud API
         const paddleRes = await fetch("https://paddlepaddle.org.cn/paddleocr/ocr/api/recognize", {
           method: "POST",
           headers: {
@@ -45,7 +175,7 @@ export async function POST(req: NextRequest) {
           },
           body: JSON.stringify({
             images: [cleanBase64],
-            lang: "en"
+            lang: language === "hi" ? "hi" : "en"
           })
         });
 
@@ -53,6 +183,7 @@ export async function POST(req: NextRequest) {
           const paddleData = await paddleRes.json();
           const rawText = (paddleData.result?.records?.[0]?.text ?? []) as string[];
           const fullText = rawText.join("\n");
+          const summary = buildLocalizedSummary({ summaryText: fullText }, language);
           return NextResponse.json({
             success: true,
             engine: "paddleocr",
@@ -61,8 +192,8 @@ export async function POST(req: NextRequest) {
               medications: [],
               labValues: [],
               diagnoses: [],
-              summaryText: fullText || "Text extracted from document.",
-              rawOcrText: fullText
+              summaryText: summary,
+              rawOcrText: summary
             }
           });
         }
@@ -108,6 +239,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
   "diagnoses": ["e.g. Type 2 Diabetes Mellitus", "Essential Hypertension"],
   "proceduresSurgeries": ["e.g. Cholecystectomy 2021", "Appendectomy"],
   "allergies": ["e.g. Penicillin allergy"],
+  "doctorAdvice": "Diet, precautions or lifestyle guidance",
   "summaryText": "Concise summary of findings from this document"
 }`;
 
@@ -127,7 +259,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
           },
         });
 
-        // Fast 10s timeout per candidate to keep OCR responsive
+        // Fast timeout per candidate to keep OCR responsive
         const generatePromise = model.generateContent([
           prompt,
           {
@@ -154,6 +286,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
     if (!responseText) {
       throw lastError || new Error("Failed to process document across vision models.");
     }
+
     // Extract JSON block
     let jsonString = responseText.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim();
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -163,15 +296,21 @@ Extract all clinical entities accurately and output strictly a JSON object with 
 
     try {
       const parsedData = JSON.parse(jsonString);
+      // Generate clear, readable clinical summary in the preferred language
+      const localizedSummary = buildLocalizedSummary(parsedData, language);
+
       return NextResponse.json({
         success: true,
         engine: "gemini",
         extracted: {
           ...parsedData,
-          rawOcrText: responseText
+          summaryText: localizedSummary,
+          rawOcrText: localizedSummary, // Never output ugly raw JSON to user
+          structuredJson: parsedData
         }
       });
     } catch (pErr) {
+      const fallbackSummary = buildLocalizedSummary({ summaryText: responseText }, language);
       return NextResponse.json({
         success: true,
         engine: "gemini",
@@ -180,8 +319,8 @@ Extract all clinical entities accurately and output strictly a JSON object with 
           medications: [],
           labValues: [],
           diagnoses: [],
-          summaryText: responseText,
-          rawOcrText: responseText
+          summaryText: fallbackSummary,
+          rawOcrText: fallbackSummary
         }
       });
     }
