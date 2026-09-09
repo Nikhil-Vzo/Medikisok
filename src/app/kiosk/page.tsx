@@ -115,7 +115,7 @@ export default function KioskPage() {
           ...(urlIsReturning ? {
             lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
             lastChiefComplaint: "Prior consultation follow-up",
-            lastMedications: []
+            lastMedications: ["Sitopaladi Churna 3g BD", "Tab Paracetamol 650mg SOS"]
           } : {})
         });
         setContinuity(decision);

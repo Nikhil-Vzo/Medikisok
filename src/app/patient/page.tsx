@@ -45,6 +45,69 @@ interface LabItem {
   date: string;
 }
 
+const DEFAULT_SAMPLE_PRESCRIPTIONS: PrescriptionItem[] = [
+  {
+    id: "rx-1",
+    name: "Sitopaladi Churna + Madhu",
+    dosage: "3g (1/2 tsp) with lukewarm water",
+    frequency: "Twice daily (Morning & Night) after meals",
+    duration: "7 Days",
+    prescribedBy: "Dr. Ananya Sharma (MD Ayur)",
+    hospital: "AIIA New Delhi · Kayachikitsa OPD",
+    date: "04 Sep 2026",
+    category: "ayurveda",
+  },
+  {
+    id: "rx-2",
+    name: "Paracetamol 650mg (SOS / Fever)",
+    dosage: "1 tablet as needed for temp > 100°F",
+    frequency: "Max 3 times daily, 6 hours apart",
+    duration: "3 Days",
+    prescribedBy: "Dr. Rajesh Mehra (MD Gen Med)",
+    hospital: "AIIA New Delhi · General Medicine",
+    date: "04 Sep 2026",
+    category: "allopathy",
+  },
+  {
+    id: "rx-3",
+    name: "Amrutharishtam (Immunity Rasayana)",
+    dosage: "15ml with equal quantity lukewarm water",
+    frequency: "Twice daily after principal meals",
+    duration: "14 Days",
+    prescribedBy: "Dr. Ananya Sharma (MD Ayur)",
+    hospital: "AIIA New Delhi · Kayachikitsa OPD",
+    date: "28 Aug 2026",
+    category: "ayurveda",
+  },
+];
+
+const DEFAULT_SAMPLE_LABS: LabItem[] = [
+  {
+    test: "Complete Blood Count (CBC) - Hb",
+    value: "13.8",
+    unit: "g/dL",
+    normalRange: "12.0 - 16.0",
+    status: "normal",
+    date: "04 Sep 2026",
+  },
+  {
+    test: "Fasting Blood Glucose (FBS)",
+    value: "94",
+    unit: "mg/dL",
+    normalRange: "70 - 100",
+    status: "normal",
+    date: "04 Sep 2026",
+  },
+  {
+    test: "Serum Bilirubin (Total)",
+    value: "0.85",
+    unit: "mg/dL",
+    normalRange: "0.2 - 1.2",
+    status: "normal",
+    date: "04 Sep 2026",
+  },
+];
+
 /* ─── Main Portal Component ─────────────────────────────────────────────── */
 
 function PatientPortalContent() {
@@ -83,8 +146,8 @@ function PatientPortalContent() {
   const [activeToken, setActiveToken] = React.useState<ActiveQueueToken | null>(null);
   const [liveQueueServing, setLiveQueueServing] = React.useState(38);
   const [isRefreshingQueue, setIsRefreshingQueue] = React.useState(false);
-  const [prescriptions, setPrescriptions] = React.useState<PrescriptionItem[]>([]);
-  const [labReports, setLabReports] = React.useState<LabItem[]>([]);
+  const [prescriptions, setPrescriptions] = React.useState<PrescriptionItem[]>(DEFAULT_SAMPLE_PRESCRIPTIONS);
+  const [labReports, setLabReports] = React.useState<LabItem[]>(DEFAULT_SAMPLE_LABS);
   const [departments, setDepartments] = React.useState<PortalDepartment[]>([
     {
       id: "dept-1",
@@ -159,8 +222,16 @@ function PatientPortalContent() {
           fetchPatientLabReportsFromDb(effectiveAbha),
           fetchHospitalDepartmentsFromDb(),
         ]);
-        if (rxData && rxData.length > 0) setPrescriptions(rxData);
-        if (labsData && labsData.length > 0) setLabReports(labsData);
+        if (rxData && rxData.length > 0) {
+          setPrescriptions(rxData);
+        } else {
+          setPrescriptions(DEFAULT_SAMPLE_PRESCRIPTIONS);
+        }
+        if (labsData && labsData.length > 0) {
+          setLabReports(labsData);
+        } else {
+          setLabReports(DEFAULT_SAMPLE_LABS);
+        }
         if (deptsData && deptsData.length > 0) setDepartments(deptsData);
 
         // Fetch active queue status
@@ -899,8 +970,19 @@ function PatientPortalContent() {
                           </div>
 
                           <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 font-medium">
-                            <span>{rx.prescribedBy}</span>
-                            <span>{rx.duration}</span>
+                            <span className="flex items-center gap-1.5 text-slate-600">
+                              <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[200px] sm:max-w-[260px]">{rx.hospital || rx.prescribedBy}</span>
+                            </span>
+                            <span className="font-semibold text-slate-800 bg-slate-200/70 px-2 py-0.5 rounded-md shrink-0">{rx.duration}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60 font-medium">
+                            <span className="flex items-center gap-1 text-slate-600">
+                              <Stethoscope className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                              <span>{rx.prescribedBy}</span>
+                            </span>
+                            <span className="text-slate-400 text-[10px]">{rx.date}</span>
                           </div>
                         </div>
                       ))}
@@ -967,7 +1049,18 @@ function PatientPortalContent() {
           )}
         </div>
 
-            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.print();
+                }}
+                className="border-slate-300 text-slate-700 hover:bg-slate-100 text-xs sm:text-sm font-bold h-11 px-3 sm:px-4 rounded-2xl cursor-pointer inline-flex items-center gap-2 shadow-2xs"
+              >
+                <Printer className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">{lang === "hi" ? "पर्चा प्रिंट करें" : "Print Prescription"}</span>
+                <span className="sm:hidden">{lang === "hi" ? "प्रिंट" : "Print"}</span>
+              </Button>
               <Button
                 onClick={() => setShowRxModal(false)}
                 className="bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold h-11 px-6 rounded-2xl cursor-pointer"
