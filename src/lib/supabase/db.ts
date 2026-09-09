@@ -232,6 +232,8 @@ export async function fetchQueuePatientsFromSupabase() {
         nurseNotes: s.draft_summary?.nurseVitals?.triageNotes,
         draftSummary: s.draft_summary,
         fhirBundle: s.fhir_bundle,
+        scannedDocuments: s.draft_summary?.scannedDocuments || [],
+        verifiedMedications: s.draft_summary?.currentMedications || [],
       };
     });
   } catch (err) {

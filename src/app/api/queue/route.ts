@@ -154,6 +154,7 @@ export async function GET(req: NextRequest) {
               createdAt: v.visit_date,
               draftSummary: s.draft_summary,
               fhirBundle: s.fhir_bundle,
+              scannedDocuments: s.draft_summary?.scannedDocuments || [],
             };
           });
         }
@@ -183,18 +184,30 @@ export async function GET(req: NextRequest) {
       if (!existing) {
         combinedMap.set(key, item);
       } else {
-        // Keep the newest visit for this patient and merge any vitals / allotment
+        // Keep the newest visit for this patient and merge any vitals / allotment / scannedDocs
         const itemTime = new Date(item.createdAt || 0).getTime();
         const existTime = new Date(existing.createdAt || 0).getTime();
         if (itemTime >= existTime) {
           if (!item.nurseVitals && existing.nurseVitals) item.nurseVitals = existing.nurseVitals;
           if (!item.assignedRoom && existing.assignedRoom) item.assignedRoom = existing.assignedRoom;
           if (!item.assignedDoctor && existing.assignedDoctor) item.assignedDoctor = existing.assignedDoctor;
+          if ((!item.scannedDocuments || item.scannedDocuments.length === 0) && existing.scannedDocuments?.length) {
+            item.scannedDocuments = existing.scannedDocuments;
+          }
+          if ((!item.draftSummary?.currentMedications || item.draftSummary.currentMedications.length === 0) && existing.draftSummary?.currentMedications?.length) {
+            item.draftSummary = { ...item.draftSummary, currentMedications: existing.draftSummary.currentMedications };
+          }
           combinedMap.set(key, item);
         } else {
           if (!existing.nurseVitals && item.nurseVitals) existing.nurseVitals = item.nurseVitals;
           if (!existing.assignedRoom && item.assignedRoom) existing.assignedRoom = item.assignedRoom;
           if (!existing.assignedDoctor && item.assignedDoctor) existing.assignedDoctor = item.assignedDoctor;
+          if ((!existing.scannedDocuments || existing.scannedDocuments.length === 0) && item.scannedDocuments?.length) {
+            existing.scannedDocuments = item.scannedDocuments;
+          }
+          if ((!existing.draftSummary?.currentMedications || existing.draftSummary.currentMedications.length === 0) && item.draftSummary?.currentMedications?.length) {
+            existing.draftSummary = { ...existing.draftSummary, currentMedications: item.draftSummary.currentMedications };
+          }
         }
       }
     }
@@ -253,7 +266,9 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       draftSummary: summaryDraft,
       fhirBundle: fhirBundle,
-      scannedDocuments: scannedDocuments || [],
+      scannedDocuments: (scannedDocuments && scannedDocuments.length > 0)
+        ? scannedDocuments
+        : (summaryDraft?.scannedDocuments || []),
       suggestions: suggestions || [],
     };
 

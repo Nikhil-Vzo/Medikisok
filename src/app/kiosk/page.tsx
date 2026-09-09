@@ -207,7 +207,18 @@ export default function KioskPage() {
   const [selectedComplaint, setSelectedComplaint] = React.useState<string | null>(null);
 
   // Scanned Document State - starts clean and empty for live OCR demo
-  const [scannedFiles, setScannedFiles] = React.useState<Array<{ name: string; size: string; status: string }>>([]);
+  const [scannedFiles, setScannedFiles] = React.useState<Array<{
+    name: string;
+    size: string;
+    status: string;
+    previewUrl?: string;
+    imageSrc?: string;
+    medications?: any[];
+    labValues?: any[];
+    diagnoses?: string[];
+    summaryText?: string;
+    rawOcrText?: string;
+  }>>([]);
 
   const [extractedEntities, setExtractedEntities] = React.useState<{
     medications: Array<{ name: string; dosage: string; frequency: string; duration?: string; confidence?: number }>;
@@ -1104,7 +1115,18 @@ export default function KioskPage() {
                   <CameraScanner
                     language={language}
                     onDocumentExtracted={(result: ExtractedDocResult) => {
-                      setScannedFiles(prev => [...prev, { name: result.fileName, size: "1.2 MB", status: "processed" }]);
+                      setScannedFiles(prev => [...prev, {
+                        name: result.fileName,
+                        size: "1.2 MB",
+                        status: "processed",
+                        previewUrl: result.previewUrl,
+                        imageSrc: result.previewUrl,
+                        medications: result.medications,
+                        labValues: result.labValues,
+                        diagnoses: result.diagnoses,
+                        summaryText: result.summaryText,
+                        rawOcrText: result.rawOcrText
+                      }]);
                       setExtractedEntities(prev => ({
                         medications: [...prev.medications, ...result.medications],
                         labValues: [...prev.labValues, ...result.labValues],
@@ -1339,6 +1361,17 @@ export default function KioskPage() {
                       const summaryResult = await summaryRes.json();
                       const liveSummary = summaryResult.summary;
 
+                      const scannedDocsPayload = scannedFiles.map(f => ({
+                        fileName: f.name || "Prescription Document",
+                        previewUrl: f.previewUrl || f.imageSrc || "",
+                        imageSrc: f.previewUrl || f.imageSrc || "",
+                        medications: (f.medications && f.medications.length > 0) ? f.medications : extractedEntities.medications,
+                        labValues: (f.labValues && f.labValues.length > 0) ? f.labValues : extractedEntities.labValues,
+                        diagnoses: (f.diagnoses && f.diagnoses.length > 0) ? f.diagnoses : extractedEntities.diagnoses,
+                        summaryText: f.summaryText || liveSummary?.scannedDocumentsSummary || "",
+                        rawOcrText: f.rawOcrText || ""
+                      }));
+
                       const summaryDraftData = {
                         visitId: `visit-${Date.now()}`,
                         patientId: `pat-${Date.now()}`,
@@ -1347,9 +1380,14 @@ export default function KioskPage() {
                         socratesData: selectedAnswers,
                         ayushAssessment: clinicalMode === "ayush" ? selectedAnswers : undefined,
                         pastMedicalHistory: liveSummary?.pastHistory ? [liveSummary.pastHistory] : ["Type 2 Diabetes Mellitus"],
-                        currentMedications: liveSummary?.currentMedications || extractedEntities.medications,
+                        currentMedications: (liveSummary?.currentMedications && liveSummary.currentMedications.length > 0)
+                          ? liveSummary.currentMedications
+                          : (extractedEntities.medications && extractedEntities.medications.length > 0)
+                          ? extractedEntities.medications
+                          : [],
                         allergies: liveSummary?.allergies || ["NKDA (No Known Drug Allergies)"],
-                        scannedDocumentsSummary: liveSummary?.scannedDocumentsSummary || `Processed ${scannedFiles.length} records.`,
+                        scannedDocumentsSummary: liveSummary?.scannedDocumentsSummary || (scannedFiles[0]?.summaryText || `Processed ${scannedFiles.length} records.`),
+                        scannedDocuments: scannedDocsPayload,
                         classicalHistory: liveSummary?.classicalHistory,
                         status: "draft" as const,
                         isEmergencyTriage: isEmergency,
@@ -1378,12 +1416,7 @@ export default function KioskPage() {
                         },
                         socratesData: selectedAnswers,
                         ayushAssessment: selectedAnswers,
-                        scannedDocuments: scannedFiles.map(f => ({
-                          fileName: f.name,
-                          medications: extractedEntities.medications,
-                          labValues: extractedEntities.labValues,
-                          diagnoses: extractedEntities.diagnoses
-                        })),
+                        scannedDocuments: scannedDocsPayload,
                         summaryDraft: summaryDraftData,
                         fhirBundle: fhirBundleData,
                         suggestions: liveSummary?.suggestions || [

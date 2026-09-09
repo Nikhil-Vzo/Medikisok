@@ -584,45 +584,68 @@ export default function DoctorPage() {
           )}
 
           {/* Tab 2: OCR Split View Verification */}
-          {activeTab === "ocr" && (
-            <div className="animate-in fade-in duration-200">
-              <OcrDocumentInspector
-                documentTitle={
-                  selectedPatient.isEmergency
-                    ? "Emergency Triage Referral & Pre-Hospital ECG Strip"
-                    : "Previous Prescription & Glycemic Panel (Dr. Rajesh Verma)"
-                }
-                extractedData={
-                  selectedPatient.isEmergency
-                    ? {
-                        medications: [
-                          { name: "Tab Telmisartan", dosage: "40mg", frequency: "1-0-0 (OD)" },
-                          { name: "Tab Amlodipine", dosage: "5mg", frequency: "0-1-0 (HS)" },
-                        ],
-                        labValues: [
-                          { test: "Point-of-Care Troponin I", value: "0.85 ng/mL", range: "< 0.04 ng/mL", abnormal: true },
-                          { test: "Random Blood Glucose", value: "198 mg/dL", range: "70-140 mg/dL", abnormal: true },
-                          { test: "Total Cholesterol", value: "248 mg/dL", range: "< 200 mg/dL", abnormal: true },
-                        ],
-                        diagnoses: ["Acute Coronary Syndrome (STEMI)", "Hypertensive Urgency", "Essential Hypertension"],
-                      }
-                    : {
-                        medications: [
-                          { name: "Tab Metformin", dosage: "500mg", frequency: "1-0-1 (BD)" },
-                          { name: "Tab Telmisartan", dosage: "40mg", frequency: "1-0-0 (OD)" },
-                          { name: "Cap Calcium + Vit D3", dosage: "500mg", frequency: "0-1-0 (HS)" },
-                        ],
-                        labValues: [
-                          { test: "HbA1c", value: "6.8%", range: "< 5.7% (Goal < 7.0%)", abnormal: false },
-                          { test: "Fasting Blood Sugar", value: "118 mg/dL", range: "70-100 mg/dL", abnormal: false },
-                          { test: "Serum Creatinine", value: "0.8 mg/dL", range: "0.6-1.1 mg/dL", abnormal: false },
-                        ],
-                        diagnoses: ["Type 2 Diabetes Mellitus", "Primary Essential Hypertension"],
-                      }
-                }
-              />
-            </div>
-          )}
+          {activeTab === "ocr" && (() => {
+            const patientDocs = selectedPatient.scannedDocuments || dbDraft?.scannedDocuments || [];
+            const primaryDoc = patientDocs[0] || null;
+
+            // Resolve real medications from patient's scanned doc or draft summary
+            const resolvedMedications =
+              (primaryDoc?.medications && primaryDoc.medications.length > 0)
+                ? primaryDoc.medications
+                : (currentSummaryDraft?.currentMedications && currentSummaryDraft.currentMedications.length > 0)
+                ? currentSummaryDraft.currentMedications
+                : (dbDraft?.currentMedications && dbDraft.currentMedications.length > 0)
+                ? dbDraft.currentMedications
+                : (selectedPatient.verifiedMedications && selectedPatient.verifiedMedications.length > 0)
+                ? selectedPatient.verifiedMedications
+                : selectedPatient.isEmergency
+                ? [
+                    { name: "Tab Telmisartan", dosage: "40mg", frequency: "1-0-0 (OD)" },
+                    { name: "Tab Amlodipine", dosage: "5mg", frequency: "0-1-0 (HS)" },
+                  ]
+                : [];
+
+            const resolvedLabValues =
+              (primaryDoc?.labValues && primaryDoc.labValues.length > 0)
+                ? primaryDoc.labValues
+                : (dbDraft?.scannedEntities?.labValues && dbDraft.scannedEntities.labValues.length > 0)
+                ? dbDraft.scannedEntities.labValues
+                : selectedPatient.isEmergency
+                ? [
+                    { test: "Point-of-Care Troponin I", value: "0.85 ng/mL", range: "< 0.04 ng/mL", abnormal: true },
+                    { test: "Random Blood Glucose", value: "198 mg/dL", range: "70-140 mg/dL", abnormal: true },
+                    { test: "Total Cholesterol", value: "248 mg/dL", range: "< 200 mg/dL", abnormal: true },
+                  ]
+                : [];
+
+            const resolvedDiagnoses =
+              (primaryDoc?.diagnoses && primaryDoc.diagnoses.length > 0)
+                ? primaryDoc.diagnoses
+                : (dbDraft?.scannedEntities?.diagnoses && dbDraft.scannedEntities.diagnoses.length > 0)
+                ? dbDraft.scannedEntities.diagnoses
+                : (currentSummaryDraft?.chiefComplaint ? [currentSummaryDraft.chiefComplaint] : [selectedPatient.chiefComplaint || "Clinical Consultation"]);
+
+            const docTitle = primaryDoc?.fileName || (selectedPatient.isEmergency ? "Emergency Triage Referral & Pre-Hospital ECG Strip" : `Prescription Document · ${selectedPatient.name}`);
+            const docImage = primaryDoc?.previewUrl || primaryDoc?.imageSrc || primaryDoc?.imageUrl || "";
+            const docSummaryText = primaryDoc?.summaryText || dbDraft?.scannedDocumentsSummary || "";
+            const docRawOcrText = primaryDoc?.rawOcrText || "";
+
+            return (
+              <div className="animate-in fade-in duration-200">
+                <OcrDocumentInspector
+                  documentTitle={docTitle}
+                  imageSrc={docImage}
+                  summaryText={docSummaryText}
+                  rawOcrText={docRawOcrText}
+                  extractedData={{
+                    medications: resolvedMedications,
+                    labValues: resolvedLabValues,
+                    diagnoses: resolvedDiagnoses
+                  }}
+                />
+              </div>
+            );
+          })()}
 
           {/* Tab 3: Chronological Medical Records Timeline */}
           {activeTab === "timeline" && (
