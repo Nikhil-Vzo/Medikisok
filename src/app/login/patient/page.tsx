@@ -162,7 +162,7 @@ export default function PatientLoginPage() {
         throw new Error(data.error || "Identity verification failed");
       }
 
-      setProfile({
+      const verifiedProfile: AbhaProfile = {
         abhaId: data.abhaId || (trimmedAbha || "91-0000-0000-0001"),
         abhaAddress: data.abhaAddress || (trimmedName ? `${trimmedName.toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"),
         fullName: data.fullName || (trimmedName || "Patient"),
@@ -170,7 +170,20 @@ export default function PatientLoginPage() {
         yearOfBirth: data.yearOfBirth || (new Date().getFullYear() - 30),
         mobile: data.mobile || (trimmedMobile || "XXXXXXXXXX"),
         token: data.token || "TOKEN-VERIFIED",
-      });
+      };
+      setProfile(verifiedProfile);
+      if (typeof window !== "undefined") {
+        try {
+          const age = new Date().getFullYear() - verifiedProfile.yearOfBirth;
+          localStorage.setItem("medikiosk_patient_session", JSON.stringify({
+            ...verifiedProfile,
+            age: String(age),
+            authenticated: true,
+          }));
+        } catch (e) {
+          // ignore storage quota errors
+        }
+      }
       setFlowStep("confirmed");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

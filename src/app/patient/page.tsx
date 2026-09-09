@@ -56,6 +56,11 @@ function PatientPortalContent() {
   const paramAge = searchParams.get("age") || "";
   const paramLang = (searchParams.get("lang") === "hi" ? "hi" : "en") as "hi" | "en";
 
+  const [activeAbha, setActiveAbha] = React.useState(paramAbha);
+  const [activeName, setActiveName] = React.useState(paramName);
+  const [activeGender, setActiveGender] = React.useState(paramGender);
+  const [activeAge, setActiveAge] = React.useState(paramAge);
+
   const [lang, setLang] = React.useState<"hi" | "en">(paramLang);
   const [showAbhaModal, setShowAbhaModal] = React.useState(false);
   const [showRxModal, setShowRxModal] = React.useState(false);
@@ -97,12 +102,48 @@ function PatientPortalContent() {
     },
   ]);
 
+  // Sync with localStorage so patient identity is never lost
+  React.useEffect(() => {
+    if (paramAbha || paramName) {
+      setActiveAbha(paramAbha);
+      setActiveName(paramName);
+      if (paramGender && paramGender !== "Not Specified") setActiveGender(paramGender);
+      if (paramAge) setActiveAge(paramAge);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "medikiosk_patient_session",
+            JSON.stringify({
+              abhaId: paramAbha,
+              fullName: paramName,
+              gender: paramGender,
+              age: paramAge,
+              authenticated: true,
+            })
+          );
+        } catch (e) {}
+      }
+    } else if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medikiosk_patient_session");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.abhaId) setActiveAbha(parsed.abhaId);
+          if (parsed.fullName) setActiveName(parsed.fullName);
+          if (parsed.gender) setActiveGender(parsed.gender);
+          if (parsed.age) setActiveAge(parsed.age);
+        }
+      } catch (e) {}
+    }
+  }, [paramAbha, paramName, paramGender, paramAge]);
+
   React.useEffect(() => {
     async function loadPortalDbData() {
       try {
+        const effectiveAbha = activeAbha || paramAbha;
         const [rxData, labsData, deptsData] = await Promise.all([
-          fetchPatientPrescriptionsFromDb(paramAbha),
-          fetchPatientLabReportsFromDb(paramAbha),
+          fetchPatientPrescriptionsFromDb(effectiveAbha),
+          fetchPatientLabReportsFromDb(effectiveAbha),
           fetchHospitalDepartmentsFromDb(),
         ]);
         if (rxData && rxData.length > 0) setPrescriptions(rxData);
@@ -113,14 +154,14 @@ function PatientPortalContent() {
       }
     }
     loadPortalDbData();
-  }, [paramAbha]);
+  }, [activeAbha, paramAbha]);
 
   // Build kiosk launch query with authenticated session so kiosk skips redundant login
   const kioskParams = new URLSearchParams({
-    abha: paramAbha,
-    name: paramName,
-    gender: paramGender,
-    age: paramAge,
+    abha: activeAbha || paramAbha,
+    name: activeName || paramName,
+    gender: activeGender || paramGender,
+    age: activeAge || paramAge,
     lang: lang,
     authenticated: "true",
     from: "portal",
@@ -198,7 +239,7 @@ function PatientPortalContent() {
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-7 sm:space-y-8">
 
         {/* Unauthenticated Session Banner */}
-        {(!paramName && !paramAbha) && (
+        {(!activeName && !activeAbha && !paramName && !paramAbha) && (
           <div className="p-5 rounded-3xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-200">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-700 text-white flex items-center justify-center shrink-0">
@@ -251,17 +292,17 @@ function PatientPortalContent() {
 
               <div className="space-y-1.5">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-                  {paramName || (lang === "hi" ? "अतिथि मरीज़" : "Guest Patient")}
+                  {activeName || paramName || (lang === "hi" ? "अतिथि मरीज़" : "Guest Patient")}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600 font-medium">
                   <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
-                    {paramAbha || (lang === "hi" ? "ABHA दर्ज नहीं" : "No ABHA Linked")}
+                    {activeAbha || paramAbha || (lang === "hi" ? "ABHA दर्ज नहीं" : "No ABHA Linked")}
                   </span>
                   <span>·</span>
-                  <span>{paramGender}{paramAge ? `, ${paramAge} ${lang === "hi" ? "वर्ष" : "Years"}` : ""}</span>
+                  <span>{activeGender || paramGender}{(activeAge || paramAge) ? `, ${activeAge || paramAge} ${lang === "hi" ? "वर्ष" : "Years"}` : ""}</span>
                   <span>·</span>
                   <span className="text-slate-500">
-                    {paramName ? `${paramName.toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"}
+                    {(activeName || paramName) ? `${(activeName || paramName).toLowerCase().replace(/\s+/g, ".")}@abdm` : "patient@abdm"}
                   </span>
                 </div>
               </div>

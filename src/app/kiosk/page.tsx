@@ -34,7 +34,29 @@ import { CHIEF_COMPLAINTS, getQuestionsForComplaint } from "@/lib/ontologies/chi
 import { KioskStep } from "@/types/kiosk";
 
 export default function KioskPage() {
-  const [step, setStep] = React.useState<KioskStep>("identify");
+  const [step, setStep] = React.useState<KioskStep>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlAuth = params.get("authenticated") === "true" || params.get("from") === "portal";
+      const urlAbha = params.get("abha");
+      const urlName = params.get("name");
+      const requestedStep = params.get("step") as KioskStep | null;
+      let hasLocal = false;
+      try {
+        const saved = localStorage.getItem("medikiosk_patient_session");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.abhaId || parsed.fullName) hasLocal = true;
+        }
+      } catch (e) {}
+
+      if (urlAuth || (urlAbha && urlName) || (params.get("from") === "portal" && hasLocal)) {
+        return requestedStep || "complaint_select";
+      }
+      if (requestedStep) return requestedStep;
+    }
+    return "identify";
+  });
   const [language, setLanguage] = React.useState("en");
   const [clinicalMode, setClinicalMode] = React.useState<"allopathy" | "ayush">("allopathy");
 
@@ -46,6 +68,11 @@ export default function KioskPage() {
   const [presetNotice, setPresetNotice] = React.useState<string | null>(null);
 
   const [isPortalSession, setIsPortalSession] = React.useState(false);
+
+  // Initialize continuity with a safe default
+  const [continuity, setContinuity] = React.useState<ContinuityDecision>(() =>
+    computeContinuity({ isReturning: false })
+  );
 
   // Hydrate custom patient profile if routed from patient login or verified portal
   React.useEffect(() => {
@@ -59,61 +86,79 @@ export default function KioskPage() {
       const urlAuth = params.get("authenticated") === "true" || params.get("from") === "portal";
       const requestedStep = params.get("step") as KioskStep | null;
 
+      let effectiveAbha = urlAbha || "";
+      let effectiveName = urlName || "";
+      let effectiveAge = urlAge || "";
+      let effectiveGender = urlGender || "";
+
+      // Check localStorage for authenticated patient session
+      try {
+        const saved = localStorage.getItem("medikiosk_patient_session");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (!effectiveAbha && parsed.abhaId) effectiveAbha = parsed.abhaId;
+          if (!effectiveName && parsed.fullName) effectiveName = parsed.fullName;
+          if (!effectiveAge && parsed.age) effectiveAge = parsed.age;
+          if (!effectiveGender && parsed.gender) effectiveGender = parsed.gender;
+        }
+      } catch (e) {}
+
       if (urlLang) {
         setLanguage(urlLang);
       }
 
-      if (requestedStep) {
+      if (effectiveAbha) setAbhaId(effectiveAbha);
+      if (effectiveName) setPatientName(effectiveName);
+      if (effectiveAge && !isNaN(Number(effectiveAge))) setPatientAge(Number(effectiveAge));
+      if (effectiveGender) setPatientGender(effectiveGender);
+
+      const isAuthSession = urlAuth || Boolean(effectiveAbha && effectiveName);
+
+      // If authenticated via patient portal, bypass redundant authentication step completely!
+      if (isAuthSession) {
+        setIsPortalSession(true);
+        setConsentGranted(true);
+
+        // By default, start with a fresh clinical intake for their new inquiry.
+        // Only trigger delta triage if explicitly flagged (e.g. ?revisit=true).
+        const urlIsReturning = params.get("revisit") === "true";
+        setIsReturningPatient(urlIsReturning);
+
+        const decision = computeContinuity({
+          isReturning: urlIsReturning,
+          ...(urlIsReturning ? {
+            lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+            lastChiefComplaint: "Prior consultation follow-up",
+            lastMedications: []
+          } : {})
+        });
+        setContinuity(decision);
+
+        // Route straight to OPD intake / complaint selection (or requested step like 'scan')
         const validSteps: KioskStep[] = [
-          "identify", "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm", "completed"
+          "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm"
         ];
-        if (validSteps.includes(requestedStep)) {
-          setStep(requestedStep);
-          setConsentGranted(true);
-        }
-      }
+        const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
+          ? requestedStep
+          : "complaint_select";
 
-      if (urlAbha || urlName) {
-        if (urlAbha) setAbhaId(urlAbha);
-        if (urlName) setPatientName(urlName);
-        if (urlAge && !isNaN(Number(urlAge))) setPatientAge(Number(urlAge));
-        if (urlGender) setPatientGender(urlGender);
-
-        // If authenticated via patient portal, bypass redundant authentication step completely!
-        if (urlAuth || (urlAbha && urlName)) {
-          setIsPortalSession(true);
-          setConsentGranted(true);
-
-          // By default, start with a fresh clinical intake for their new inquiry.
-          // Only trigger delta triage if explicitly flagged (e.g. ?revisit=true).
-          const urlIsReturning = params.get("revisit") === "true";
-          setIsReturningPatient(urlIsReturning);
-
-          const decision = computeContinuity({
-            isReturning: urlIsReturning,
-            ...(urlIsReturning ? {
-              lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-              lastChiefComplaint: "Prior consultation follow-up",
-              lastMedications: []
-            } : {})
-          });
-          setContinuity(decision);
-
-          // Route straight to OPD intake / complaint selection (or requested step like 'scan')
+        setStep(targetStep);
+        setPresetNotice(
+          `ABDM Authenticated Session · ${effectiveName || effectiveAbha} · Direct OPD Consultation Active`
+        );
+      } else {
+        if (requestedStep) {
           const validSteps: KioskStep[] = [
-            "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm"
+            "identify", "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm", "completed"
           ];
-          const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
-            ? requestedStep
-            : "complaint_select";
-
-          setStep(targetStep);
-          setPresetNotice(
-            `ABDM Authenticated Session · ${urlName || urlAbha} · Direct OPD Consultation Active`
-          );
-        } else {
-          setIsReturningPatient(false);
-          setPresetNotice(`Loaded custom patient profile: "${urlName || urlAbha}"`);
+          if (validSteps.includes(requestedStep)) {
+            setStep(requestedStep);
+            setConsentGranted(true);
+          }
+        }
+        setIsReturningPatient(false);
+        if (effectiveName || effectiveAbha) {
+          setPresetNotice(`Loaded custom patient profile: "${effectiveName || effectiveAbha}"`);
         }
       }
     }
@@ -161,7 +206,6 @@ export default function KioskPage() {
 
   // Continuity Engine state
   const [isReturningPatient, setIsReturningPatient] = React.useState(false);
-  const [continuity, setContinuity] = React.useState<ContinuityDecision | null>(null);
   const [selectedComplaint, setSelectedComplaint] = React.useState<string | null>(null);
 
   // Scanned Document State - starts clean and empty for live OCR demo
@@ -332,7 +376,7 @@ export default function KioskPage() {
         {/* Main Dynamic Step Area */}
         <div className="flex-1 flex flex-col justify-center py-1">
           {/* ================= STEP 1: IDENTIFY ================= */}
-          {step === "identify" && (
+          {step === "identify" && !isPortalSession && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="text-center max-w-xl mx-auto space-y-2">
                 <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
@@ -656,7 +700,7 @@ export default function KioskPage() {
           )}
 
           {/* ================= STEP 2c: CHIEF COMPLAINT SELECT ================= */}
-          {step === "complaint_select" && continuity && (
+          {step === "complaint_select" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="text-center max-w-xl mx-auto space-y-2">
                 <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
@@ -697,7 +741,7 @@ export default function KioskPage() {
               </div>
 
               {/* Continuity reminder for returning patients */}
-              {isReturningPatient && continuity.gapDays >= 0 && (
+              {isReturningPatient && continuity && continuity.gapDays >= 0 && (
                 <div className="max-w-3xl mx-auto p-3.5 rounded-lg bg-emerald-50/60 border border-emerald-200/80 text-center">
                   <p className="text-xs font-semibold text-emerald-900">
                     Continuity Engine: {continuity.interviewType === "triage_only"
