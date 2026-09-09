@@ -71,20 +71,25 @@ async function fetchIndicTtsAudio(text: string, langCode: string): Promise<Array
   }
 
   // 2. High-fidelity Indic Cloud Audio stream (Google Translate Indic TTS engine)
-  const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${tl}&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      Referer: "https://translate.google.com/",
-    },
-  });
+  try {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${tl}&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Referer: "https://translate.google.com/",
+      },
+      signal: AbortSignal.timeout(3500),
+    });
 
-  if (!res.ok) {
-    throw new Error(`Indic TTS upstream failed: ${res.status}`);
+    if (!res.ok) {
+      return null;
+    }
+
+    return await res.arrayBuffer();
+  } catch {
+    return null;
   }
-
-  return await res.arrayBuffer();
 }
 
 /**
@@ -103,7 +108,7 @@ export async function GET(req: NextRequest) {
 
     const audioBuffer = await fetchIndicTtsAudio(text, lang);
     if (!audioBuffer) {
-      return new NextResponse("Failed to generate audio", { status: 500 });
+      return new NextResponse(null, { status: 204 });
     }
 
     return new NextResponse(audioBuffer, {
@@ -113,9 +118,8 @@ export async function GET(req: NextRequest) {
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
       },
     });
-  } catch (error: any) {
-    console.error("[api/voice/tts GET] Error:", error);
-    return new NextResponse(error.message || "TTS error", { status: 500 });
+  } catch {
+    return new NextResponse(null, { status: 204 });
   }
 }
 

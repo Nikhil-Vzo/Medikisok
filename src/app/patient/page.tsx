@@ -1017,39 +1017,58 @@ function PatientPortalContent() {
                     {lang === "hi" ? "आपका टोकन नंबर" : "YOUR APPOINTMENT TOKEN"}
                   </span>
                   <span className="text-5xl font-black text-slate-950 block my-1 font-mono tracking-tight">
-                    #42
+                    {activeToken ? `#${activeToken.tokenNumber}` : (lang === "hi" ? "लंबित" : "PENDING")}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-950 font-bold text-xs px-3.5 py-1 rounded-full mt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                    {lang === "hi" ? "कमरा 104 (डॉ. अनन्या शर्मा)" : "Room 104 (Dr. Ananya Sharma)"}
+                  <span className={`inline-flex items-center gap-1.5 font-bold text-xs px-3.5 py-1 rounded-full mt-1 ${
+                    activeToken ? "bg-emerald-100 text-emerald-950" : "bg-amber-100 text-amber-950"
+                  }`}>
+                    {activeToken ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                        {activeToken.assignedRoom || (lang === "hi" ? "कमरा 104" : "Room 104")}
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5 text-amber-700" />
+                        {lang === "hi" ? "परामर्श इनटेक शेष" : "Intake Not Completed"}
+                      </>
+                    )}
                   </span>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs text-left">
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">{lang === "hi" ? "मरीज का नाम" : "Patient Name"}:</span>
-                    <span className="font-bold text-slate-900">{paramName}</span>
+                    <span className="font-bold text-slate-900">{activeName || paramName || "Patient"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">ABHA ID:</span>
-                    <span className="font-bold text-slate-900">{paramAbha}</span>
+                    <span className="font-bold text-slate-900">{activeAbha || paramAbha || "Unlinked"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium">{lang === "hi" ? "विभाग" : "Department"}:</span>
-                    <span className="font-bold text-slate-900">Kayachikitsa (Ayurveda OPD)</span>
+                    <span className="text-slate-500 font-medium">{lang === "hi" ? "चिकित्सक / कक्ष" : "Doctor / Room"}:</span>
+                    <span className="font-bold text-slate-900">{activeToken?.assignedDoctor || "Dr. Ananya Sharma"}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-slate-100 font-semibold">
                     <span className="text-slate-600">{lang === "hi" ? "वर्तमान नंबर" : "Now Serving"}:</span>
-                    <span className="text-emerald-700 font-bold">#{liveQueueServing} (~8 mins)</span>
+                    <span className="text-emerald-700 font-bold">
+                      #{activeToken?.nowServing ?? liveQueueServing} (~{activeToken?.waitTimeMins ?? 8} {lang === "hi" ? "मिनट शेष" : "mins wait"})
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 p-3 rounded-xl text-left">
                   <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                   <p className="text-xs text-blue-950 font-medium leading-relaxed">
-                    {lang === "hi"
-                      ? "कृपया कमरा 104 के बाहर प्रतीक्षालय में बैठें। टोकन 42 पुकारे जाने पर अंदर जाएं।"
-                      : "Please wait in the seating area outside Room 104. Enter when Token #42 is called."}
+                    {activeToken ? (
+                      lang === "hi"
+                        ? `कृपया ${activeToken.assignedRoom} के बाहर प्रतीक्षालय में बैठें। टोकन #${activeToken.tokenNumber} पुकारे जाने पर अंदर जाएं।`
+                        : `Please wait in the seating area outside ${activeToken.assignedRoom}. Enter when Token #${activeToken.tokenNumber} is called.`
+                    ) : (
+                      lang === "hi"
+                        ? "आपने आज परामर्श इनटेक पूरा नहीं किया है। टोकन प्राप्त करने के लिए कृपया परामर्श इनटेक प्रारंभ करें।"
+                        : "You have not completed triage intake yet. Please start intake to receive your OPD token number."
+                    )}
                   </p>
                 </div>
               </div>

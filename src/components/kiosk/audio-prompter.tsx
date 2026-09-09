@@ -153,10 +153,10 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
             }
           };
           audio.onerror = () => {
-            // ONLY fallback if this token has NOT been superseded by another language/click
             if (promptTokenRef.current !== currentToken) return;
             setActiveAudio(null);
             speakWithBrowserTTS(text, language, { rate: 1.0 })
+              .catch(() => {})
               .finally(() => {
                 if (promptTokenRef.current === currentToken) setIsPlaying(false);
               });
@@ -165,11 +165,17 @@ export const AudioPrompter: React.FC<AudioPrompterProps> = ({
           await audio.play();
           return;
         }
-      } catch (err) {
+      } catch (err: any) {
         if (promptTokenRef.current !== currentToken) return;
         setActiveAudio(null);
+        if (err?.name === "NotAllowedError") {
+          // Autoplay policy: waiting for user gesture/tap
+          setIsPlaying(false);
+          return;
+        }
         // Fallback to browser TTS safely only if still the active prompt
         speakWithBrowserTTS(text, language, { rate: 1.0 })
+          .catch(() => {})
           .finally(() => {
             if (promptTokenRef.current === currentToken) setIsPlaying(false);
           });

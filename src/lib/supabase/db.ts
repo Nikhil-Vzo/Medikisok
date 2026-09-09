@@ -445,13 +445,20 @@ export interface PortalDepartment {
 export async function fetchPatientPrescriptionsFromDb(abhaId?: string): Promise<PortalPrescription[] | null> {
   if (!abhaId) return null;
   try {
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id")
-      .eq("abha_id", abhaId)
-      .maybeSingle();
+    const cleanDigits = abhaId.replace(/\D/g, "");
+    const formatted = cleanDigits.length === 14
+      ? `${cleanDigits.slice(0, 2)}-${cleanDigits.slice(2, 6)}-${cleanDigits.slice(6, 10)}-${cleanDigits.slice(10, 14)}`
+      : abhaId.trim();
 
-    if (!patient) return null;
+    let query = supabase.from("profiles").select("id");
+    if (cleanDigits.length === 14) {
+      query = query.or(`abha_id.eq."${formatted}",abha_id.eq."${cleanDigits}"`);
+    } else {
+      query = query.eq("abha_id", formatted);
+    }
+    const { data: patient, error: pErr } = await query.maybeSingle();
+
+    if (pErr || !patient) return null;
 
     const { data, error } = await supabase
       .from("prescriptions")
@@ -480,13 +487,20 @@ export async function fetchPatientPrescriptionsFromDb(abhaId?: string): Promise<
 export async function fetchPatientLabReportsFromDb(abhaId?: string): Promise<PortalLabReport[] | null> {
   if (!abhaId) return null;
   try {
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id")
-      .eq("abha_id", abhaId)
-      .maybeSingle();
+    const cleanDigits = abhaId.replace(/\D/g, "");
+    const formatted = cleanDigits.length === 14
+      ? `${cleanDigits.slice(0, 2)}-${cleanDigits.slice(2, 6)}-${cleanDigits.slice(6, 10)}-${cleanDigits.slice(10, 14)}`
+      : abhaId.trim();
 
-    if (!patient) return null;
+    let query = supabase.from("profiles").select("id");
+    if (cleanDigits.length === 14) {
+      query = query.or(`abha_id.eq."${formatted}",abha_id.eq."${cleanDigits}"`);
+    } else {
+      query = query.eq("abha_id", formatted);
+    }
+    const { data: patient, error: pErr } = await query.maybeSingle();
+
+    if (pErr || !patient) return null;
 
     const { data, error } = await supabase
       .from("lab_reports")

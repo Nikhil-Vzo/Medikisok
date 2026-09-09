@@ -84,6 +84,7 @@ export function stopAllAudio(): void {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    activeUtterances = [];
   } catch {}
 
   if (activeAudioElement) {
@@ -135,6 +136,8 @@ function bcp47Tag(lang: string): string {
   return map[lang] ?? "en-IN";
 }
 
+let activeUtterances: any[] = [];
+
 /** Speak text using the browser's native Web Speech API (TTS fallback) */
 export async function speakWithBrowserTTS(
   text: string,
@@ -152,71 +155,108 @@ export async function speakWithBrowserTTS(
     stopAllAudio();
     const token = currentSpeechToken;
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0; // Voice must ALWAYS be strictly 1x
-    utterance.pitch = pitch;
-    utterance.volume = volume;
-
-    // Try to find a suitable Indian-language voice
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      const targetTag = bcp47Tag(lang).toLowerCase();
-      const voiceKeywords: Record<string, string[]> = {
-        hi: ["hindi", "हिन्दी", "hemant", "kalpana"],
-        en: ["india", "indian", "en-in"],
-        bn: ["bengali", "bangla", "bn-in"],
-        ta: ["tamil", "ta-in"],
-        te: ["telugu", "te-in"],
-        mr: ["marathi", "mr-in"],
-        mai: ["maithili", "मैथिली", "hindi", "हिन्दी", "kalpana", "hemant"],
-        gu: ["gujarati", "gu-in"],
-        kn: ["kannada", "kn-in"],
-      };
-      const keywords = voiceKeywords[lang] ?? [];
-
-      const matchedVoice = voices.find((v) => {
-        const vLang = v.lang.toLowerCase();
-        const vName = v.name.toLowerCase();
-        return (
-          vLang.startsWith(lang) ||
-          vLang.replace("_", "-") === targetTag ||
-          keywords.some((kw) => vName.includes(kw))
-        );
-      });
-
-      if (matchedVoice) {
-        utterance.voice = matchedVoice;
-        utterance.lang = matchedVoice.lang;
-      } else {
-        // If NO native voice for this Indian language on this device:
-        // Use an Indian voice (Hindi / Indian English) rather than default US English
-        const indicVoice = voices.find((v) =>
-          v.lang.toLowerCase().startsWith("hi") ||
-          v.name.toLowerCase().includes("hindi") ||
-          v.lang.toLowerCase().includes("in")
-        );
-        if (indicVoice) {
-          utterance.voice = indicVoice;
-          utterance.lang = indicVoice.lang;
-        } else {
-          utterance.lang = "en-IN";
-        }
+    // Small 40ms delay prevents Chromium race condition where cancel() kills the next utterance
+    setTimeout(() => {
+      if (currentSpeechToken !== token) {
+        resolve();
+        return;
       }
-    }
 
-    utterance.onend = () => {
-      resolve();
-    };
-    utterance.onerror = (e) => {
-      console.warn("[bhashini.ts] SpeechSynthesis error:", e);
-      resolve();
-    };
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
 
-    if (currentSpeechToken === token) {
-      window.speechSynthesis.speak(utterance);
-    } else {
-      resolve();
-    }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0; // Voice must ALWAYS be strictly 1x
+        utterance.pitch = pitch;
+        utterance.volume = volume;
+
+        // Retain reference in memory to avoid Chromium GC prematurely killing speech
+        activeUtterances.push(utterance);
+        if (activeUtterances.length > 5) {
+          activeUtterances = activeUtterances.slice(-3);
+        }
+
+        // Try to find a suitable Indian-language voice
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          const targetTag = bcp47Tag(lang).toLowerCase();
+          const voiceKeywords: Record<string, string[]> = {
+            hi: ["hindi", "हिन्दी", "hemant", "kalpana"],
+            en: ["india", "indian", "en-in"],
+            bn: ["bengali", "bangla", "bn-in"],
+            ta: ["tamil", "ta-in"],
+            te: ["telugu", "te-in"],
+            mr: ["marathi", "mr-in"],
+            mai: ["maithili", "मैथिली", "hindi", "हिन्दी", "kalpana", "hemant"],
+            gu: ["gujarati", "gu-in"],
+            kn: ["kannada", "kn-in"],
+          };
+          const keywords = voiceKeywords[lang] ?? [];
+
+          const matchedVoice = voices.find((v) => {
+            const vLang = v.lang.toLowerCase();
+            const vName = v.name.toLowerCase();
+            return (
+              vLang.startsWith(lang) ||
+              vLang.replace("_", "-") === targetTag ||
+              keywords.some((kw) => vName.includes(kw))
+            );
+          });
+
+          if (matchedVoice) {
+            utterance.voice = matchedVoice;
+            utterance.lang = matchedVoice.lang;
+          } else {
+            // If NO native voice for this Indian language on this device:
+            // Use an Indian voice (Hindi / Indian English) rather than default US English
+            const indicVoice = voices.find((v) =>
+              v.lang.toLowerCase().startsWith("hi") ||
+              v.name.toLowerCase().includes("hindi") ||
+              v.lang.toLowerCase().includes("in")
+            );
+            if (indicVoice) {
+              utterance.voice = indicVoice;
+              utterance.lang = indicVoice.lang;
+            } else {
+              utterance.lang = "en-IN";
+            }
+          }
+        } else {
+          utterance.lang = bcp47Tag(lang);
+        }
+
+        const cleanup = () => {
+          const idx = activeUtterances.indexOf(utterance);
+          if (idx !== -1) activeUtterances.splice(idx, 1);
+        };
+
+        utterance.onend = () => {
+          cleanup();
+          resolve();
+        };
+
+        utterance.onerror = (e: any) => {
+          cleanup();
+          const errCode = e?.error || "stopped";
+          // Ignore normal interruptions when user navigates or skips to next question
+          if (errCode !== "interrupted" && errCode !== "canceled") {
+            console.info(`[bhashini.ts] SpeechSynthesis state: ${errCode}`);
+          }
+          resolve();
+        };
+
+        if (currentSpeechToken === token) {
+          window.speechSynthesis.speak(utterance);
+        } else {
+          cleanup();
+          resolve();
+        }
+      } catch {
+        resolve();
+      }
+    }, 40);
   });
 }
 
@@ -405,6 +445,10 @@ export async function speak(
           audio.play().catch((err) => {
             if (currentSpeechToken === token) {
               setActiveAudio(null);
+              if (err?.name === "NotAllowedError") {
+                resolve();
+                return;
+              }
               reject(err);
             } else {
               resolve();
@@ -413,12 +457,10 @@ export async function speak(
         });
         return;
       }
-    } catch (err) {
-      // If this speech was cancelled/superseded by another language or stopAllAudio, DO NOT fall back!
+    } catch {
       if (currentSpeechToken !== token) {
         return;
       }
-      console.warn("[bhashini.ts] Local TTS audio stream failed, falling back to browser TTS:", err);
     }
   }
 

@@ -8,13 +8,24 @@ async function lookupPatientRecord(abhaOrMobile?: string) {
     const supabase = createServerClient();
     if (!supabase) return null;
     const clean = abhaOrMobile.trim();
+    const cleanDigits = clean.replace(/\D/g, "");
+    const formatted = cleanDigits.length === 14
+      ? `${cleanDigits.slice(0, 2)}-${cleanDigits.slice(2, 6)}-${cleanDigits.slice(6, 10)}-${cleanDigits.slice(10, 14)}`
+      : clean;
+
     const { data } = await supabase
-      .from("patients")
+      .from("profiles")
       .select("*")
-      .or(`abha_id.eq.${clean},phone.eq.${clean}`)
+      .or(`abha_id.eq."${formatted}",abha_id.eq."${clean}",phone.eq."${clean}"`)
       .limit(1)
       .maybeSingle();
-    return data;
+
+    return data
+      ? {
+          ...data,
+          name: data.full_name,
+        }
+      : null;
   } catch {
     return null;
   }
