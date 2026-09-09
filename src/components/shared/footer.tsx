@@ -11,6 +11,7 @@ import {
   Mail,
   MapPin,
 } from "lucide-react";
+import { InstallPwaButton } from "@/components/shared/install-pwa-button";
 
 export const Footer: React.FC = () => {
   return (
@@ -313,6 +314,10 @@ export const Footer: React.FC = () => {
               </div>
             </div>
 
+            {/* Install Web App (PWA) Button */}
+            <div className="pt-2">
+              <InstallPwaButton variant="footer" />
+            </div>
 
           </div>
 

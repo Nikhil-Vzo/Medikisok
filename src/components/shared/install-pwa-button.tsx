@@ -5,7 +5,7 @@ import { Download, Check, Smartphone, Monitor, X, Share2, PlusSquare } from "luc
 import { cn } from "@/lib/utils/cn";
 
 export interface InstallPwaButtonProps {
-  variant?: "hero" | "nav" | "banner";
+  variant?: "hero" | "nav" | "banner" | "footer";
   className?: string;
 }
 
@@ -86,13 +86,46 @@ export function InstallPwaButton({ variant = "hero", className }: InstallPwaButt
         </span>
       );
     }
+    if (variant === "footer") {
+      return (
+        <span className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-500/40 shadow-xs">
+          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <span>MediKiosk App Installed</span>
+        </span>
+      );
+    }
     return null;
   }
 
   return (
     <>
       {/* Button Renderers */}
-      {variant === "nav" ? (
+      {variant === "footer" ? (
+        <button
+          type="button"
+          onClick={handleInstallClick}
+          aria-label="Download MediKiosk Progressive Web App"
+          className={cn(
+            "group inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-white text-[#1b3573] hover:bg-blue-50 text-xs font-bold shadow-sm hover:shadow active:scale-[0.98] transition-all duration-150 border border-white/40 cursor-pointer",
+            className
+          )}
+        >
+          {justInstalled ? (
+            <>
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>Installed to Device!</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-[#1b3573] group-hover:-translate-y-0.5 transition-transform" />
+              <span>Download Web App</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200">
+                PWA
+              </span>
+            </>
+          )}
+        </button>
+      ) : variant === "nav" ? (
         <button
           type="button"
           onClick={handleInstallClick}

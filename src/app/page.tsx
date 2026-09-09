@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { HighContrastToggle } from "@/components/kiosk/high-contrast-toggle";
 import { Footer } from "@/components/shared/footer";
-import { InstallPwaButton } from "@/components/shared/install-pwa-button";
 
 export default function HomePage() {
   return (
@@ -50,7 +49,6 @@ export default function HomePage() {
           </nav>
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <HighContrastToggle />
-            <InstallPwaButton variant="nav" />
             <Link
               href="/login"
               className="hidden sm:inline-flex items-center gap-1 px-3.5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-emerald-300 hover:text-emerald-900 transition-all shadow-2xs"
