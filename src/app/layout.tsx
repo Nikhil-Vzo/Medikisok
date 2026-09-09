@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
+import { ScreenAssistantBot } from "@/components/shared/screen-assistant-bot";
 
 export const viewport: Viewport = {
   themeColor: "#047857",
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-[#FBFDFD] text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
         <ServiceWorkerRegister />
         <main className="flex-1 flex flex-col">{children}</main>
+        <ScreenAssistantBot />
       </body>
     </html>
   );

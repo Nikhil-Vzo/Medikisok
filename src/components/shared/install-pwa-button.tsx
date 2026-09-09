@@ -98,19 +98,19 @@ export function InstallPwaButton({ variant = "hero", className }: InstallPwaButt
           onClick={handleInstallClick}
           title="Install MediKiosk as Web App (PWA)"
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-2xs active:scale-[0.98]",
+            "inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-2xs active:scale-[0.98]",
             className
           )}
         >
           {justInstalled ? (
             <>
               <Check className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Installed!</span>
+              <span className="hidden xs:inline sm:inline">Installed!</span>
             </>
           ) : (
             <>
               <Download className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Install App</span>
+              <span className="hidden xs:inline sm:inline">Install App</span>
             </>
           )}
         </button>

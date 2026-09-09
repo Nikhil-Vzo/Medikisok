@@ -47,21 +47,19 @@ export default function HomePage() {
             <Link href="/admin" className="hover:text-emerald-800 transition-colors">
               Ministry Portal
             </Link>
-            <a href="#system" className="hover:text-emerald-800 transition-colors">System</a>
-            <a href="#trust" className="hover:text-emerald-800 transition-colors">Trust</a>
           </nav>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             <HighContrastToggle />
             <InstallPwaButton variant="nav" />
             <Link
               href="/login"
-              className="inline-flex items-center gap-1 px-3.5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-emerald-300 hover:text-emerald-900 transition-all shadow-2xs"
+              className="hidden sm:inline-flex items-center gap-1 px-3.5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-emerald-300 hover:text-emerald-900 transition-all shadow-2xs"
             >
               <span>Portals</span>
             </Link>
             <Link
               href="/login/patient"
-              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-all shadow-xs hover:shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-all shadow-xs hover:shadow-sm whitespace-nowrap"
             >
               <span>Launch Kiosk</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -155,25 +153,22 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* BOTTOM: Launch Kiosk Button & Download Web App Button */}
+          {/* BOTTOM: Launch Kiosk Button & Subtext */}
           <motion.div
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.35, delay: 0.25 }}
-            className="flex flex-col items-center gap-3 w-full"
+            className="flex flex-col items-center gap-2 w-full"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md sm:max-w-none">
-              <Link
-                href="/login/patient"
-                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
-              >
-                <span>Launch Kiosk</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <InstallPwaButton variant="hero" className="w-full sm:w-auto" />
-            </div>
+            <Link
+              href="/login/patient"
+              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-700 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 hover:shadow-xl active:scale-[0.98] transition-all duration-150"
+            >
+              <span>Launch Kiosk</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
             <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
-              Installable PWA · 8 Indic languages · Voice &amp; Touch self-service
+              Patient self-service · 8 Indic languages · Voice &amp; Touch
             </span>
           </motion.div>
 
