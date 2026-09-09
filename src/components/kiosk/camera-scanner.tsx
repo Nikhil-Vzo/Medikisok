@@ -14,7 +14,9 @@ import {
   ShieldOff,
   Type,
   FileSearch,
-  Smartphone
+  Sparkles,
+  RotateCcw,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,22 +52,26 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const nativeCameraInputRef = React.useRef<HTMLInputElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const userCancelledRef = React.useRef<boolean>(false);
 
   // OCR mode toggle
   const [ocrMode, setOcrMode] = React.useState<OcrMode>("camera");
-  // Document type hint (affects the upload prompt)
+  // Document type hint (affects prompt)
   const [docTypeHint, setDocTypeHint] = React.useState<DocTypeHint>("prescription");
   // OCR engine availability
   const [ocrStatus, setOcrStatus] = React.useState<OcrStatus>("checking");
   // Camera state
   const [isCameraActive, setIsCameraActive] = React.useState(false);
+  const [isStartingCamera, setIsStartingCamera] = React.useState(false);
   const [capturedImage, setCapturedImage] = React.useState<string | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [cameraError, setCameraError] = React.useState<string | null>(null);
+  const [isFlashing, setIsFlashing] = React.useState(false);
   // Extracted text panel
   const [extractedText, setExtractedText] = React.useState<string | null>(null);
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
+  const [extractedCount, setExtractedCount] = React.useState<{ meds: number; diagnoses: number } | null>(null);
 
   // Check OCR credentials availability on mount
   React.useEffect(() => {
@@ -75,93 +81,130 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         const data = await res.json();
         setOcrStatus(data.configured ? "ready" : "no_credentials");
       } catch {
-        setOcrStatus("ready"); // gracefully allow camera scanning
+        setOcrStatus("no_credentials");
       }
     };
     checkOcrStatus();
   }, []);
 
+  // Multi-tier MediaStream getter for maximum device compatibility
+  const acquireCameraStream = async (): Promise<MediaStream> => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Camera API not supported in this browser or environment (requires HTTPS or localhost).");
+    }
+
+    // Tier 1: Try high-resolution back/environment camera (optimal for documents)
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+    } catch (e1) {
+      console.warn("Back camera 1080p unavailable, trying back camera without resolution constraints...", e1);
+    }
+
+    // Tier 2: Try environment camera without strict resolution
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }
+      });
+    } catch (e2) {
+      console.warn("Ideal environment camera unavailable, falling back to default webcam/video...", e2);
+    }
+
+    // Tier 3: Universal fallback to any connected video stream (webcam, front camera, external cam)
+    return await navigator.mediaDevices.getUserMedia({
+      video: true
+    });
+  };
+
   // Start Video Stream
   const startCamera = async () => {
     setCameraError(null);
-    setIsProcessing(false);
-
-    // If browser does not support getUserMedia or is in an insecure context, trigger phone camera directly
-    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
-      if (nativeCameraInputRef.current) {
-        nativeCameraInputRef.current.click();
-      } else {
-        setCameraError("Camera streaming is not supported on this browser. Please use the upload button.");
-      }
-      return;
-    }
+    setIsStartingCamera(true);
 
     try {
-      let stream: MediaStream | null = null;
-      try {
-        // Attempt 1: Rear / Environment camera with high resolution
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-        });
-      } catch (e1) {
-        try {
-          // Attempt 2: Environment camera without strict resolution constraint
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-          });
-        } catch (e2) {
-          // Attempt 3: Any video device available (front camera, desktop webcam, etc.)
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-          });
-        }
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
 
-      if (videoRef.current && stream) {
+      const stream = await acquireCameraStream();
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      setCameraError(null);
+
+      if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.setAttribute("autoplay", "true");
-        videoRef.current.setAttribute("muted", "true");
-        videoRef.current.muted = true;
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch((playErr) => console.warn("Video play error on metadata:", playErr));
+          videoRef.current?.play().catch(e => {
+            console.warn("Video play error:", e);
+          });
         };
-        try {
-          await videoRef.current.play();
-        } catch (playErr) {
-          console.warn("Video direct play error:", playErr);
-        }
-        setIsCameraActive(true);
+        videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
-      console.warn("Live camera access failed:", err);
-      setCameraError(
-        "Live camera preview could not be opened. Tap 'Take Photo with Phone Camera' to capture using your device camera."
-      );
+      console.warn("Camera access failed:", err);
+      let errorMsg = "Unable to open camera. Please check permissions.";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        errorMsg = "Camera permission was denied. Please allow camera access in your browser settings or upload a photo.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        errorMsg = "No camera hardware detected on this device. You can upload an image file directly.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        errorMsg = "Camera is currently in use by another application. Please close other camera apps and retry.";
+      }
+      setCameraError(errorMsg);
       setIsCameraActive(false);
+    } finally {
+      setIsStartingCamera(false);
     }
   };
+
+  // Ensure stream stays attached if video element re-renders
+  React.useEffect(() => {
+    if (isCameraActive && streamRef.current && videoRef.current) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }, [isCameraActive]);
 
   // Stop Video Stream
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-      setIsCameraActive(false);
+  const stopCamera = (userExplicit = false) => {
+    if (userExplicit) {
+      userCancelledRef.current = true;
     }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsStartingCamera(false);
   };
 
+  // Auto-start camera when in camera mode and no captured image
   React.useEffect(() => {
+    if (ocrMode === "camera" && !capturedImage && !userCancelledRef.current) {
+      startCamera();
+    }
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [ocrMode, capturedImage]);
 
   // Reset extracted text when a new capture/upload starts
   const resetState = () => {
     setExtractedText(null);
     setExtractionError(null);
+    setExtractedCount(null);
   };
 
   // Fast client-side image downscaling so mobile camera 12MP photos don't bottleneck network
@@ -192,7 +235,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.85));
+          resolve(canvas.toDataURL("image/jpeg", 0.88));
         } else {
           resolve(dataUrl);
         }
@@ -206,22 +249,35 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const capturePhoto = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-    let canvas = canvasRef.current;
-    if (!canvas) {
-      canvas = document.createElement("canvas");
+
+    // Trigger visual shutter flash
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 200);
+
+    // Haptic feedback on supported mobile devices
+    if (typeof window !== "undefined" && window.navigator && "vibrate" in window.navigator) {
+      try {
+        window.navigator.vibrate(40);
+      } catch {
+        // ignore
+      }
     }
+
+    // Capture to offscreen canvas
+    const canvas = canvasRef.current || document.createElement("canvas");
     const width = video.videoWidth || 1280;
     const height = video.videoHeight || 720;
-    canvas.width = Math.min(1600, width);
-    canvas.height = Math.min(1600, height);
+    canvas.width = Math.min(1920, width);
+    canvas.height = Math.min(1920, height);
+
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const base64 = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = canvas.toDataURL("image/jpeg", 0.88);
       setCapturedImage(base64);
-      stopCamera();
+      stopCamera(false);
       resetState();
-      processOcr(base64, `Camera_Capture_${Date.now()}.jpg`);
+      processOcr(base64, `Prescription_${Date.now()}.jpg`);
     }
   };
 
@@ -238,6 +294,140 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       processOcr(optimizedBase64, file.name);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Generate a realistic demo prescription on canvas for instant testing without paper
+  const handleLoadSamplePrescription = () => {
+    resetState();
+    stopCamera(true);
+
+    const canvas = canvasRef.current || document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 1500;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Background paper
+    ctx.fillStyle = "#fafaf9";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Top Header Banner
+    ctx.fillStyle = "#064e3b";
+    ctx.fillRect(40, 40, 1120, 140);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText("CITY CIVIL HOSPITAL & MEDICAL COLLEGE", 80, 100);
+    ctx.font = "normal 20px sans-serif";
+    ctx.fillStyle = "#a7f3d0";
+    ctx.fillText("OUTPATIENT DEPARTMENT (OPD) — GENERAL MEDICINE", 80, 140);
+
+    // Doctor & Hospital Info
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 24px sans-serif";
+    ctx.fillText("Dr. Rajesh Sharma, MD (Medicine)", 80, 240);
+    ctx.font = "normal 18px sans-serif";
+    ctx.fillStyle = "#475569";
+    ctx.fillText("Reg. No: MCI-2012-48921 | OPD Room No: 14", 80, 270);
+
+    // Divider
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 300);
+    ctx.lineTo(1120, 300);
+    ctx.stroke();
+
+    // Patient Details
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillText("Patient: Kamla Devi", 80, 340);
+    ctx.fillText("Age/Gender: 58 Y / Female", 450, 340);
+    ctx.fillText(`Date: ${new Date().toLocaleDateString("en-IN")}`, 850, 340);
+    ctx.font = "normal 18px sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("ABHA ID: 91-1234-5678-9012  |  CRN: CRN-849201", 80, 375);
+
+    // Divider
+    ctx.beginPath();
+    ctx.moveTo(80, 405);
+    ctx.lineTo(1120, 405);
+    ctx.stroke();
+
+    // Diagnosis Section
+    ctx.fillStyle = "#047857";
+    ctx.font = "bold 22px sans-serif";
+    ctx.fillText("DIAGNOSIS & CLINICAL NOTES:", 80, 450);
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillText("1. Type 2 Diabetes Mellitus (Uncontrolled)", 100, 490);
+    ctx.fillText("2. Essential Hypertension (Stage 2)", 100, 525);
+    ctx.fillText("3. Mild Dyslipidemia", 100, 560);
+
+    // Rx Symbol
+    ctx.fillStyle = "#064e3b";
+    ctx.font = "bold 48px serif";
+    ctx.fillText("℞", 80, 640);
+
+    // Medications Table Header
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(80, 670, 1040, 45);
+    ctx.fillStyle = "#334155";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText("Medication / Strength", 100, 700);
+    ctx.fillText("Dosage & Frequency", 500, 700);
+    ctx.fillText("Duration", 880, 700);
+
+    // Medicine Rows
+    const medicines = [
+      { name: "Tab. Metformin 500 mg", dose: "1 Tab Twice Daily (BD) after meals", dur: "30 Days" },
+      { name: "Tab. Telmisartan 40 mg", dose: "1 Tab Once Daily (OD) morning", dur: "30 Days" },
+      { name: "Tab. Atorvastatin 20 mg", dose: "1 Tab Bedtime (HS)", dur: "30 Days" },
+      { name: "Cap. Omeprazole 20 mg", dose: "1 Cap Morning (OD) empty stomach", dur: "15 Days" }
+    ];
+
+    let yPos = 750;
+    ctx.font = "normal 19px sans-serif";
+    medicines.forEach((m, idx) => {
+      ctx.fillStyle = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+      ctx.fillRect(80, yPos - 30, 1040, 50);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "bold 19px sans-serif";
+      ctx.fillText(`${idx + 1}. ${m.name}`, 100, yPos);
+
+      ctx.fillStyle = "#334155";
+      ctx.font = "normal 18px sans-serif";
+      ctx.fillText(m.dose, 500, yPos);
+      ctx.fillText(m.dur, 880, yPos);
+      yPos += 55;
+    });
+
+    // Laboratory Advice Box
+    yPos += 40;
+    ctx.fillStyle = "#ecfdf5";
+    ctx.fillRect(80, yPos, 1040, 110);
+    ctx.strokeStyle = "#a7f3d0";
+    ctx.strokeRect(80, yPos, 1040, 110);
+
+    ctx.fillStyle = "#065f46";
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillText("INVESTIGATIONS ADVISED:", 100, yPos + 35);
+    ctx.fillStyle = "#047857";
+    ctx.font = "normal 18px sans-serif";
+    ctx.fillText("• Fasting Blood Sugar (FBS) & HbA1c", 100, yPos + 70);
+    ctx.fillText("• Serum Creatinine & Lipid Profile", 550, yPos + 70);
+
+    // Doctor Signature Stamp
+    ctx.fillStyle = "#1e3a8a";
+    ctx.font = "italic bold 24px serif";
+    ctx.fillText("Dr. R. Sharma", 900, 1380);
+    ctx.font = "normal 16px sans-serif";
+    ctx.fillStyle = "#475569";
+    ctx.fillText("Signature & OPD Stamp", 880, 1410);
+
+    const base64 = canvas.toDataURL("image/jpeg", 0.9);
+    setCapturedImage(base64);
+    processOcr(base64, "Sample_Prescription_Dr_Sharma.jpg");
   };
 
   // Call OCR API
@@ -260,9 +450,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       }
 
       if (data.success && data.extracted) {
-        // Surface raw OCR text in the readable panel
         const raw = data.extracted.rawOcrText ?? data.extracted.summaryText ?? "";
         setExtractedText(raw);
+        setExtractedCount({
+          meds: data.extracted.medications?.length || 0,
+          diagnoses: data.extracted.diagnoses?.length || 0
+        });
         onDocumentExtracted({
           ...data.extracted,
           previewUrl: base64Data,
@@ -280,30 +473,31 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   };
 
   const docTypeLabel = docTypeHint === "prescription" ? "Prescription" : "Lab Report";
-  const docTypeIcon = docTypeHint === "prescription" ? <FileText className="w-4 h-4" /> : <ScanLine className="w-4 h-4" />;
 
   return (
-    <div className={cn("bg-white rounded-xl border border-slate-200 p-6 space-y-5", className)}>
+    <div className={cn("bg-white rounded-xl border border-slate-200 p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xs", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
-            <Camera className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
+            <Camera className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-[15px] font-semibold tracking-tight text-slate-900">Medical Document Vision AI</h4>
+            <h4 className="text-[15px] font-bold tracking-tight text-slate-900">
+              Prescription & Medical Document Vision AI
+            </h4>
             <p className="text-xs text-slate-500 font-normal">
-              {ocrStatus === "checking" ? "Checking OCR status..." :
-               ocrStatus === "no_credentials" ? "OCR not configured" :
-               "High-fidelity prescription & laboratory report digitization"}
+              {ocrStatus === "checking" ? "Initializing camera & Vision AI..." :
+               ocrStatus === "no_credentials" ? "Vision AI (Offline / Setup required)" :
+               "High-speed OPD prescription scanning & clinical entity extraction"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {ocrStatus === "ready" && (
-            <Badge variant="default" className="text-xs font-medium">
-              <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-              Vision AI Ready
+            <Badge variant="default" className="text-xs font-semibold bg-emerald-100 text-emerald-900 border-emerald-300">
+              <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-700" />
+              Vision AI Active
             </Badge>
           )}
           {ocrStatus === "no_credentials" && (
@@ -315,53 +509,57 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         </div>
       </div>
 
-      {/* OCR Mode Toggle & Demo Sample Presets */}
-      {ocrStatus !== "checking" && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1 p-1 bg-emerald-50/50 rounded-lg w-fit border border-emerald-200/60">
-            <button
-              onClick={() => { setOcrMode("camera"); resetState(); setCapturedImage(null); stopCamera(); }}
-              className={cn(
-                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
-                ocrMode === "camera"
-                  ? "bg-emerald-700 text-white shadow-xs"
-                  : "text-slate-600 hover:text-emerald-950"
-              )}
-            >
-              <Camera className="w-3.5 h-3.5" />
-              Camera Scanner
-            </button>
-            <button
-              onClick={() => { setOcrMode("upload"); resetState(); setCapturedImage(null); stopCamera(); }}
-              className={cn(
-                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
-                ocrMode === "upload"
-                  ? "bg-emerald-700 text-white shadow-xs"
-                  : "text-slate-600 hover:text-emerald-950"
-              )}
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Upload File
-            </button>
-          </div>
+      {/* OCR Mode Toggle & Sample Demo Pill */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <div className="flex items-center gap-1 p-1 bg-emerald-50/60 rounded-lg w-fit border border-emerald-200/80">
+          <button
+            onClick={() => {
+              userCancelledRef.current = false;
+              setOcrMode("camera");
+              resetState();
+              setCapturedImage(null);
+              startCamera();
+            }}
+            className={cn(
+              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer",
+              ocrMode === "camera"
+                ? "bg-emerald-700 text-white shadow-xs"
+                : "text-slate-600 hover:text-emerald-950 hover:bg-emerald-100/50"
+            )}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            Live Camera Scanner
+          </button>
+          <button
+            onClick={() => {
+              setOcrMode("upload");
+              resetState();
+              setCapturedImage(null);
+              stopCamera(true);
+            }}
+            className={cn(
+              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer",
+              ocrMode === "upload"
+                ? "bg-emerald-700 text-white shadow-xs"
+                : "text-slate-600 hover:text-emerald-950 hover:bg-emerald-100/50"
+            )}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload File
+          </button>
         </div>
-      )}
 
-      {/* No Credentials Warning Banner */}
-      {ocrStatus === "no_credentials" && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <ShieldOff className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <h5 className="text-sm font-bold text-amber-900">OCR Not Configured</h5>
-            <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-              Set <code className="bg-amber-100 px-1 rounded text-amber-900 font-semibold">PADDLEOCR_API_KEY</code> or{" "}
-              <code className="bg-amber-100 px-1 rounded text-amber-900 font-semibold">GEMINI_API_KEY</code> in your{" "}
-              <code className="bg-amber-100 px-1 rounded text-amber-900 font-semibold">.env.local</code> to enable document scanning.
-              The camera and upload buttons below still work — extracted text will appear here once credentials are configured.
-            </p>
-          </div>
-        </div>
-      )}
+        {/* Instant Demo / Sample Prescription Shortcut */}
+        <button
+          onClick={handleLoadSamplePrescription}
+          disabled={isProcessing}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-2xs cursor-pointer"
+          title="Load realistic OPD prescription sample (Dr. Sharma) to test instant OCR"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Load Sample Prescription</span>
+        </button>
+      </div>
 
       {/* Hidden File Input & Canvas */}
       <input
@@ -375,225 +573,272 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
       {/* Scanner Viewport */}
       <div className={cn(
-        "relative rounded-xl min-h-[280px] sm:min-h-[340px] flex flex-col items-center justify-center overflow-hidden transition-colors",
-        capturedImage || isCameraActive
-          ? "bg-emerald-50/80 border border-emerald-300"
-          : "bg-emerald-50/40 border border-emerald-200"
+        "relative rounded-xl min-h-[260px] sm:min-h-[380px] flex flex-col items-center justify-center overflow-hidden transition-all border",
+        capturedImage || (ocrMode === "camera" && isCameraActive)
+          ? "bg-slate-950 border-emerald-400/80 shadow-md"
+          : "bg-emerald-50/40 border-emerald-200"
       )}>
 
-        {/* ── Camera Live Mode ─────────────────────────────────────── */}
-        {ocrMode === "camera" && isCameraActive ? (
-          <div className="relative w-full h-full">
-            <video ref={videoRef} playsInline autoPlay muted className="w-full h-[340px] object-cover" />
-            {/* Document Guide Overlay */}
-            <div className="absolute inset-4 sm:inset-8 border border-dashed border-emerald-400/80 rounded-xl pointer-events-none flex items-center justify-center">
-              <span className="bg-emerald-900 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">
-                Align {docTypeLabel} inside the box
-              </span>
-            </div>
-            {/* Action Bar */}
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={capturePhoto}
-                className="font-semibold text-sm bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
-                disabled={isProcessing}
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                Capture {docTypeLabel}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={stopCamera}
-                className="bg-white/95 text-slate-900 text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) :
+        {/* Visual Shutter Flash Effect */}
+        {isFlashing && (
+          <div className="absolute inset-0 bg-white z-40 transition-opacity duration-150 animate-out fade-out" />
+        )}
 
-        /* ── Captured / Uploaded Image Preview ─────────────────────── */
-        capturedImage ? (
-          <div className="relative w-full h-[340px] bg-emerald-50/50 flex items-center justify-center">
+        {/* ── Camera Live Mode Viewport ────────────────────────────── */}
+        {ocrMode === "camera" && !capturedImage && (
+          <div className="relative w-full h-[260px] sm:h-[380px] bg-black flex items-center justify-center overflow-hidden">
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              className="w-full h-full object-cover"
+            />
+
+            {/* Starting camera loader */}
+            {isStartingCamera && !isCameraActive && (
+              <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-3 z-30">
+                <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-bold text-white">Opening Camera Hardware...</p>
+                  <p className="text-xs text-emerald-300">Requesting webcam / mobile video stream</p>
+                </div>
+              </div>
+            )}
+
+            {/* Camera error overlay */}
+            {cameraError && !isCameraActive && (
+              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xs flex flex-col items-center justify-center text-white p-6 z-30 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div className="space-y-1 max-w-sm">
+                  <p className="text-sm font-bold text-white">Camera Notice</p>
+                  <p className="text-xs text-red-300 leading-relaxed">{cameraError}</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => { userCancelledRef.current = false; startCamera(); }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-xs font-bold"
+                  >
+                    Retry Camera
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setOcrMode("upload"); stopCamera(true); }}
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs"
+                  >
+                    Upload File Instead
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Document Scanner Framing Overlay */}
+            {isCameraActive && (
+              <div className="absolute inset-3 sm:inset-6 border border-white/20 rounded-2xl pointer-events-none flex flex-col justify-between p-2.5 z-10">
+                {/* Four Corner Alignment Brackets */}
+                <div className="flex justify-between">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg shadow-sm" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg shadow-sm" />
+                </div>
+
+                {/* Guidance Badge in Center */}
+                <div className="self-center flex flex-col items-center gap-1 pointer-events-none">
+                  <span className="bg-slate-900/80 backdrop-blur-md text-emerald-300 text-[11px] sm:text-xs px-3 py-1 rounded-full font-semibold border border-emerald-500/40 shadow-md flex items-center gap-1.5">
+                    <ScanLine className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                    Align {docTypeLabel} inside frame • Hold steady
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg shadow-sm" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg shadow-sm" />
+                </div>
+              </div>
+            )}
+
+            {/* Action Bar / Large Shutter Button */}
+            {isCameraActive && (
+              <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 sm:gap-4 px-3 z-20">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => stopCamera(true)}
+                  className="bg-slate-900/70 hover:bg-slate-900 text-white border-white/20 text-xs font-semibold backdrop-blur-md cursor-pointer px-2.5 py-1.5"
+                >
+                  Close
+                </Button>
+
+                <button
+                  id="kiosk-shutter-button"
+                  onClick={capturePhoto}
+                  disabled={isProcessing}
+                  className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-xl shadow-emerald-950/60 border-2 border-white/90 transition-all cursor-pointer"
+                  title="Take Prescription Photo"
+                >
+                  <span className="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-white"></span>
+                  </span>
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Take Prescription Photo</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Captured Image Preview State ─────────────────────────── */}
+        {capturedImage && (
+          <div className="relative w-full h-[260px] sm:h-[380px] bg-slate-900 flex items-center justify-center overflow-hidden">
             <img
               src={capturedImage}
-              alt="Captured Document"
+              alt="Captured Prescription Document"
               className="max-h-full max-w-full object-contain"
             />
-            {/* Processing Overlay */}
+
+            {/* Top Status Bar */}
+            <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-sm">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Prescription Photo Captured</span>
+              </div>
+
+              {/* Retake Photo Button */}
+              <button
+                onClick={() => {
+                  userCancelledRef.current = false;
+                  setCapturedImage(null);
+                  resetState();
+                  startCamera();
+                }}
+                disabled={isProcessing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white hover:text-emerald-300 border border-white/20 text-xs font-semibold backdrop-blur-md transition-all cursor-pointer shadow-sm"
+                title="Retake Prescription Photo"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Retake Photo</span>
+              </button>
+            </div>
+
+            {/* Processing Overlay with Gemini Vision */}
             {isProcessing && (
-              <div className="absolute inset-0 bg-emerald-950/75 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3">
-                <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
-                <p className="text-sm font-semibold">Extracting medications & lab values...</p>
-                <p className="text-xs text-emerald-200">PaddleOCR / Gemini Vision AI</p>
+              <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3 z-20 px-6 text-center">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full border-4 border-emerald-500/30 border-t-emerald-400 animate-spin flex items-center justify-center" />
+                  <Sparkles className="w-6 h-6 text-emerald-400 absolute inset-0 m-auto animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-base font-bold text-white tracking-tight">Analyzing Prescription with Vision AI</p>
+                  <p className="text-xs text-emerald-300 font-medium">Extracting medications, dosage frequencies & clinical diagnoses...</p>
+                </div>
               </div>
             )}
-            {/* Clear button */}
-            <button
-              onClick={() => { setCapturedImage(null); resetState(); }}
-              className="absolute top-3 right-3 p-2 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 transition-colors shadow-sm"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) :
 
-        /* ── Idle State — Camera or Upload prompt ─────────────────── */
-        (
-          <div className="p-8 text-center space-y-4 text-slate-600">
-            <div className="w-16 h-16 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center mx-auto">
-              <ImageIcon className="w-8 h-8" />
+            {/* Success Summary Pill when Extraction Finishes */}
+            {!isProcessing && extractedCount && (
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center z-10 pointer-events-none">
+                <div className="bg-emerald-950/90 backdrop-blur-md border border-emerald-500/50 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>
+                    Extracted {extractedCount.meds} medicine{extractedCount.meds !== 1 ? "s" : ""}
+                    {extractedCount.diagnoses > 0 ? ` & ${extractedCount.diagnoses} clinical indication${extractedCount.diagnoses !== 1 ? "s" : ""}` : ""}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Upload Mode State ─────────────────────────────────────── */}
+        {ocrMode === "upload" && !capturedImage && (
+          <div className="p-8 text-center space-y-4 text-slate-600 max-w-md mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center mx-auto shadow-xs">
+              <Upload className="w-8 h-8 text-emerald-700" />
             </div>
             <div>
-              <h5 className="text-base font-bold text-slate-900">
-                {ocrMode === "camera" ? "Place Document in Frame" : "Upload Document Photo"}
-              </h5>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                {ocrMode === "camera"
-                  ? "Turn on the camera to photograph the prescription or lab report."
-                  : "Select a clear photo of the document to extract medications automatically."}
+              <h5 className="text-base font-bold text-slate-900">Upload Prescription Document</h5>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Select a clear photo or scanned image of the prescription from your files.
               </p>
             </div>
 
-            {/* Document type hint pills — always visible in upload mode */}
-            {ocrMode === "upload" && (
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Scanning:</span>
-                <button
-                  onClick={() => setDocTypeHint("prescription")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
-                    docTypeHint === "prescription"
-                      ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
-                      : "bg-white text-slate-700 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/50"
-                  )}
-                >
-                  {docTypeIcon}
-                  Prescription
-                </button>
-                <button
-                  onClick={() => setDocTypeHint("lab_report")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
-                    docTypeHint === "lab_report"
-                      ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
-                      : "bg-white text-slate-700 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/50"
-                  )}
-                >
-                  <ScanLine className="w-4 h-4" />
-                  Lab Report
-                </button>
-              </div>
-            )}
-
-            {cameraError && (
-              <p className="text-xs text-red-600 font-semibold bg-red-50 p-2 rounded-lg border border-red-200">
-                {cameraError}
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Button
                 variant="primary"
                 size="md"
-                onClick={startCamera}
-                className="font-semibold text-xs bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm"
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                Open Live Camera
-              </Button>
-
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => nativeCameraInputRef.current?.click()}
-                className="bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 font-semibold text-xs shadow-2xs"
-              >
-                <Smartphone className="w-4 h-4 mr-2 text-emerald-700" />
-                Take Photo with Phone Camera
-              </Button>
-
-              <Button
-                variant="outline"
-                size="md"
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-semibold text-xs shadow-xs"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm cursor-pointer"
               >
-                <Upload className="w-4 h-4 mr-2 text-slate-600" />
-                Upload from Gallery
+                <Upload className="w-4 h-4 mr-2" />
+                Select Prescription File
+              </Button>
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  userCancelledRef.current = false;
+                  setOcrMode("camera");
+                  startCamera();
+                }}
+                className="bg-white text-emerald-950 border-emerald-300 hover:bg-emerald-50 font-semibold text-xs shadow-2xs cursor-pointer"
+              >
+                <Camera className="w-4 h-4 mr-2 text-emerald-700" />
+                Switch to Live Camera
               </Button>
             </div>
 
-            {/* Scannable document hints */}
-            <div className="flex items-center justify-center gap-4 pt-1">
+            <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
                 <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                Prescription
+                Prescriptions
               </div>
               <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
                 <ScanLine className="w-3.5 h-3.5 text-emerald-600" />
-                Lab Report
+                Lab Reports
               </div>
               <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
                 <FileSearch className="w-3.5 h-3.5 text-emerald-600" />
-                Discharge Summary
+                Discharge Slips
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Hidden Canvas for Live Video Snapshot Capture */}
-      <canvas ref={canvasRef} className="hidden" />
-
-      {/* Hidden Native Phone Camera Input (Direct native camera app on mobile) */}
-      <input
-        ref={nativeCameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleFileUpload}
-      />
-
-      {/* Hidden Gallery / File Upload Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.pdf"
-        className="hidden"
-        onChange={handleFileUpload}
-      />
-
       {/* ── Extracted Text Panel ──────────────────────────────────── */}
       {(extractedText || extractionError) && (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
           {/* Error state */}
           {extractionError && (
             <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <h5 className="text-sm font-bold text-red-900">Extraction Failed</h5>
+                <h5 className="text-sm font-bold text-red-900">Extraction Notice</h5>
                 <p className="text-xs text-red-700 mt-0.5">{extractionError}</p>
               </div>
             </div>
           )}
 
-          {/* Extracted text panel */}
+          {/* Extracted text preview panel */}
           {extractedText && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-emerald-700" />
-                <h5 className="text-sm font-bold text-slate-900">Extracted Text</h5>
-                {ocrStatus === "ready" && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-emerald-700" />
+                  <h5 className="text-sm font-bold text-slate-900">Extracted Clinical Text</h5>
+                </div>
+                <Badge variant="default" className="text-xs bg-emerald-100 text-emerald-800 border-0">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
+                  Structured & Parsed
+                </Badge>
               </div>
-              <div className="bg-emerald-50/40 border border-emerald-200 rounded-xl p-4">
-                <pre className="text-sm text-slate-800 whitespace-pre-wrap font-sans leading-relaxed">
+              <div className="bg-emerald-50/40 border border-emerald-200 rounded-xl p-4 max-h-48 overflow-y-auto">
+                <pre className="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed">
                   {extractedText}
                 </pre>
               </div>

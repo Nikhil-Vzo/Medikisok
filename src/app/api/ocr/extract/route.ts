@@ -3,14 +3,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const dynamic = "force-dynamic";
 
+function isValidKey(key?: string | null): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  if (trimmed.length < 10) return false;
+  if (trimmed.startsWith("your_") || trimmed.includes("placeholder") || trimmed.includes("your-api-key")) {
+    return false;
+  }
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const paddleOcrApiKey = process.env.PADDLEOCR_API_KEY;
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-    const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-    const geminiConfigured = Boolean(genAI);
-    const paddleConfigured = Boolean(paddleOcrApiKey);
+    const geminiConfigured = isValidKey(geminiApiKey);
+    const paddleConfigured = isValidKey(paddleOcrApiKey);
+    const genAI = geminiConfigured ? new GoogleGenerativeAI(geminiApiKey!) : null;
     const body = await req.json();
     const { imageBase64, mimeType = "image/jpeg" } = body;
 
@@ -24,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Strip prefix if present (e.g., data:image/jpeg;base64,)
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
-    // ── PaddleOCR path ────────────────────────────────────────────────────────
+    // ── PaddleOCR path (only if real key provided) ───────────────────────────
     if (paddleConfigured) {
       try {
         // PaddleOCR Cloud API
@@ -67,17 +76,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: "requires_credentials",
-        message: "OCR credentials not configured. Set PADDLEOCR_API_KEY or GEMINI_API_KEY in your environment."
+        message: "OCR credentials not configured. Set GEMINI_API_KEY or PADDLEOCR_API_KEY in your environment."
       });
     }
-
-    const candidateModels = Array.from(new Set([
-      process.env.GEMINI_MODEL || "gemini-1.5-flash",
-      "gemini-1.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash-8b",
-      "gemini-1.5-pro",
-    ]));
 
     const prompt = `You are an expert medical OCR specialist for Indian hospital OPDs.
 Analyze this medical document (handwritten prescription, lab report, or discharge slip).
@@ -110,6 +111,8 @@ Extract all clinical entities accurately and output strictly a JSON object with 
   "summaryText": "Concise summary of findings from this document"
 }`;
 
+    const candidateModels = ["gemini-flash-lite-latest", "gemini-flash-latest"];
+
     let lastError: any = null;
     let responseText = "";
     let usedModel = "";
@@ -121,10 +124,11 @@ Extract all clinical entities accurately and output strictly a JSON object with 
           generationConfig: {
             temperature: 0.1,
             maxOutputTokens: 1500,
-            responseMimeType: "application/json",
           },
         });
-        const result = await model.generateContent([
+
+        // Fast 10s timeout per candidate to keep OCR responsive
+        const generatePromise = model.generateContent([
           prompt,
           {
             inlineData: {
@@ -133,6 +137,11 @@ Extract all clinical entities accurately and output strictly a JSON object with 
             }
           }
         ]);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout after 12s on ${cand}`)), 12000)
+        );
+
+        const result: any = await Promise.race([generatePromise, timeoutPromise]);
         responseText = result.response.text().trim();
         usedModel = cand;
         if (responseText) break;
