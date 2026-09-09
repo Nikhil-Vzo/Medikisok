@@ -153,7 +153,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       return;
     }
     setIsSpeakingSummary(true);
-    speak(extractedText, { lang: currentLanguage });
+    speak(extractedText, currentLanguage);
   };
 
   // Multi-tier MediaStream getter for maximum device compatibility

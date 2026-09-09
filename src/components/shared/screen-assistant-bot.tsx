@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import {
   MessageSquare,
   X,
   Send,
   Bot,
   Minimize2,
+  Maximize2,
   RefreshCw,
   HelpCircle,
   Sparkles,
@@ -24,9 +26,90 @@ interface ChatMessage {
   timestamp: string;
 }
 
+function extractText(node: any): string {
+  if (!node) return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (typeof node === "object" && node?.props?.children) {
+    return extractText(node.props.children);
+  }
+  return "";
+}
+
+function AssistantMarkdown({ content }: { content: string }) {
+  // Normalize unicode bullets to standard markdown list syntax
+  const normalizedContent = React.useMemo(() => {
+    if (!content) return "";
+    return content.replace(/^[ \t]*[•●][ \t]+/gm, "- ");
+  }, [content]);
+
+  return (
+    <div className="text-[12px] leading-relaxed text-slate-800 space-y-1.5 break-words">
+      <ReactMarkdown
+        components={{
+          h1: ({ children }) => (
+            <h4 className="font-bold text-[13px] text-emerald-950 mt-2.5 mb-1.5 border-b border-emerald-100 pb-0.5 flex items-center gap-1.5">
+              {children}
+            </h4>
+          ),
+          h2: ({ children }) => (
+            <h4 className="font-bold text-[12.5px] text-emerald-950 mt-2 mb-1 border-b border-emerald-100 pb-0.5 flex items-center gap-1.5">
+              {children}
+            </h4>
+          ),
+          h3: ({ children }) => (
+            <h5 className="font-bold text-xs text-emerald-950 mt-2.5 mb-1 flex items-center gap-1 tracking-tight">
+              {children}
+            </h5>
+          ),
+          h4: ({ children }) => (
+            <h6 className="font-semibold text-[11.5px] text-slate-900 mt-1.5 mb-0.5">
+              {children}
+            </h6>
+          ),
+          p: ({ children }) => {
+            const text = extractText(children);
+            if (text.includes("👉") || text.includes("💡") || text.includes("⚠️")) {
+              return (
+                <div className="my-2 p-2.5 rounded-xl bg-emerald-50/95 border border-emerald-200/90 text-emerald-950 font-medium text-[11.5px] leading-snug shadow-2xs">
+                  {children}
+                </div>
+              );
+            }
+            return <p className="leading-relaxed text-slate-800 my-1 first:mt-0 last:mb-0">{children}</p>;
+          },
+          ul: ({ children }) => (
+            <ul className="my-1.5 space-y-1.5 pl-4 list-disc marker:text-emerald-600 text-[11.5px]">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-1.5 space-y-1.5 pl-4 list-decimal marker:text-emerald-700 marker:font-bold text-[11.5px]">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed text-slate-800 pl-0.5">{children}</li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-bold text-slate-950 bg-emerald-100/60 px-1 py-0.2 rounded border border-emerald-200/50">
+              {children}
+            </strong>
+          ),
+          code: ({ children }) => (
+            <code className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10.5px] font-mono border border-emerald-200/60 font-semibold">
+              {children}
+            </code>
+          ),
+          hr: () => <hr className="my-2.5 border-emerald-100" />,
+        }}
+      >
+        {normalizedContent}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export function ScreenAssistantBot() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [inputMessage, setInputMessage] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
@@ -128,7 +211,15 @@ export function ScreenAssistantBot() {
     const greeting: ChatMessage = {
       id: "welcome-" + pathname,
       role: "assistant",
-      content: `Namaste! I am your **MediKiosk AI Assistant**.\n\nI can see you are currently on the **${screenInfo.name}**. I can answer any question about this screen, guide your next steps, or explain how any part of our platform works. What would you like to know?`,
+      content: `### 🌟 MediKiosk Live Assistant
+Welcome! You are exploring **${screenInfo.name}** (${screenInfo.category}).
+
+### 💡 What I can help you with:
+- **Feature Walkthrough**: Ask how any tool or module works on this screen.
+- **Clinical Protocols**: Explain SOCRATES intake, Ayush Pariksha, or OCR vision extraction.
+- **ABDM Milestones**: Explain ABHA verification, FHIR R4 bundles, and DPDP compliance.
+
+👉 **Quick Start**: Tap any suggestion chip below or ask your question!`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     };
     setMessages([greeting]);
@@ -168,6 +259,8 @@ export function ScreenAssistantBot() {
     try {
       const screenContext = {
         pathname,
+        name: screenInfo.name,
+        category: screenInfo.category,
         title: typeof document !== "undefined" ? document.title : screenInfo.name,
         summary: screenInfo.summary,
         visibleHeadings: getVisibleHeadings()
@@ -228,9 +321,16 @@ export function ScreenAssistantBot() {
 
         {/* Expanded Chat Window */}
         {isOpen && (
-          <div className="w-[calc(100vw-1.5rem)] sm:w-[390px] h-[500px] max-h-[calc(100dvh-5rem)] bg-white rounded-2xl shadow-2xl border border-emerald-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+          <div
+            className={cn(
+              "w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-4.5rem)] bg-white rounded-2xl shadow-2xl border border-emerald-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200 transition-all",
+              isExpanded
+                ? "sm:w-[540px] h-[640px]"
+                : "sm:w-[420px] h-[520px]"
+            )}
+          >
             {/* Header */}
-            <div className="p-3.5 bg-gradient-to-r from-emerald-800 to-emerald-700 text-white flex items-center justify-between shadow-sm">
+            <div className="p-3.5 bg-gradient-to-r from-emerald-800 to-emerald-700 text-white flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-emerald-100" />
@@ -252,11 +352,11 @@ export function ScreenAssistantBot() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
-                  title="Minimize"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  title={isExpanded ? "Collapse width" : "Expand width"}
                   className="p-1.5 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors"
                 >
-                  <Minimize2 className="w-4 h-4" />
+                  {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -270,12 +370,12 @@ export function ScreenAssistantBot() {
             </div>
 
             {/* Current Screen Awareness Banner */}
-            <div className="px-3.5 py-1.5 bg-emerald-50/90 border-b border-emerald-100 text-[11px] text-emerald-900 flex items-center justify-between">
+            <div className="px-3.5 py-1.5 bg-emerald-50/90 border-b border-emerald-100 text-[11px] text-emerald-900 flex items-center justify-between shrink-0">
               <span className="font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Screen Context Active
               </span>
-              <span className="text-[10px] text-emerald-700 font-medium">
+              <span className="text-[10px] text-emerald-700 font-medium truncate max-w-[170px]">
                 {pathname}
               </span>
             </div>
@@ -286,20 +386,19 @@ export function ScreenAssistantBot() {
                 <div
                   key={m.id}
                   className={cn(
-                    "flex flex-col max-w-[88%]",
-                    m.role === "user" ? "ml-auto items-end" : "mr-auto items-start"
+                    "flex flex-col",
+                    m.role === "user" ? "ml-auto items-end max-w-[85%]" : "mr-auto items-start max-w-[96%]"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "p-3 rounded-2xl leading-relaxed whitespace-pre-wrap",
-                      m.role === "user"
-                        ? "bg-emerald-700 text-white rounded-br-xs shadow-xs"
-                        : "bg-white text-slate-800 border border-slate-200/90 rounded-bl-xs shadow-2xs"
-                    )}
-                  >
-                    {m.content}
-                  </div>
+                  {m.role === "user" ? (
+                    <div className="p-2.5 px-3.5 rounded-2xl bg-emerald-700 text-white rounded-br-xs shadow-xs text-[11.5px] font-medium leading-relaxed">
+                      {m.content}
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 rounded-bl-xs shadow-2xs w-full">
+                      <AssistantMarkdown content={m.content} />
+                    </div>
+                  )}
                   <span className="text-[9px] text-slate-400 mt-1 px-1">{m.timestamp}</span>
                 </div>
               ))}
@@ -307,7 +406,7 @@ export function ScreenAssistantBot() {
               {isLoading && (
                 <div className="flex items-center gap-2 p-3 bg-white border border-slate-200/90 rounded-2xl rounded-bl-xs w-fit text-slate-500 shadow-2xs">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-700" />
-                  <span className="text-xs">Analyzing screen & generating answer…</span>
+                  <span className="text-xs">Analyzing screen & generating structured answer…</span>
                 </div>
               )}
 

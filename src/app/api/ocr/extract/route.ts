@@ -14,7 +14,7 @@ function isValidKey(key?: string | null): boolean {
 }
 
 // ── Multilingual Clinical Summary Generator ──────────────────────────────
-export function buildLocalizedSummary(data: any, lang: string = "en"): string {
+function buildLocalizedSummary(data: any, lang: string = "en"): string {
   const isHi = lang === "hi";
   const isBn = lang === "bn";
   const isTa = lang === "ta";
