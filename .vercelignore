@@ -2,8 +2,8 @@
 .gitignore
 .env*.local
 .env
-supabase/
-docs/
+/supabase/
+/docs/
 *.md
 !README.md
 choosen problem statemet.txt
