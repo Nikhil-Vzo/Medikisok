@@ -68,6 +68,16 @@ function PatientPortalContent() {
   const [showTokenModal, setShowTokenModal] = React.useState(false);
   const [showHelpModal, setShowHelpModal] = React.useState(false);
 
+  interface ActiveQueueToken {
+    tokenNumber: number;
+    assignedRoom: string;
+    assignedDoctor: string;
+    nowServing: number;
+    waitTimeMins: number;
+    chiefComplaint?: string;
+  }
+
+  const [activeToken, setActiveToken] = React.useState<ActiveQueueToken | null>(null);
   const [liveQueueServing, setLiveQueueServing] = React.useState(38);
   const [isRefreshingQueue, setIsRefreshingQueue] = React.useState(false);
   const [prescriptions, setPrescriptions] = React.useState<PrescriptionItem[]>([]);
@@ -149,6 +159,42 @@ function PatientPortalContent() {
         if (rxData && rxData.length > 0) setPrescriptions(rxData);
         if (labsData && labsData.length > 0) setLabReports(labsData);
         if (deptsData && deptsData.length > 0) setDepartments(deptsData);
+
+        // Fetch active queue status
+        if (effectiveAbha) {
+          try {
+            const qRes = await fetch(`/api/queue?abhaId=${encodeURIComponent(effectiveAbha)}`);
+            if (qRes.ok) {
+              const qData = await qRes.json();
+              if (qData.inQueue && qData.tokenNumber) {
+                setActiveToken({
+                  tokenNumber: qData.tokenNumber,
+                  assignedRoom: qData.assignedRoom || "Room 104 (Dr. Ananya)",
+                  assignedDoctor: qData.assignedDoctor || "Dr. Ananya Sharma",
+                  nowServing: qData.nowServing ?? 38,
+                  waitTimeMins: qData.waitTimeMins ?? 8,
+                  chiefComplaint: qData.patient?.chiefComplaint,
+                });
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+
+        // Check local storage if token was just generated during kiosk session
+        if (typeof window !== "undefined") {
+          try {
+            const saved = localStorage.getItem("medikiosk_active_token");
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.tokenNumber) {
+                setActiveToken(parsed);
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+        setActiveToken(null);
       } catch (e) {
         // graceful fallback to preset data
       }
@@ -167,11 +213,36 @@ function PatientPortalContent() {
     from: "portal",
   }).toString();
 
-  const refreshQueue = (e: React.MouseEvent) => {
+  const refreshQueue = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsRefreshingQueue(true);
+    const effectiveAbha = activeAbha || paramAbha;
+    if (effectiveAbha) {
+      try {
+        const qRes = await fetch(`/api/queue?abhaId=${encodeURIComponent(effectiveAbha)}`);
+        if (qRes.ok) {
+          const qData = await qRes.json();
+          if (qData.inQueue && qData.tokenNumber) {
+            setActiveToken({
+              tokenNumber: qData.tokenNumber,
+              assignedRoom: qData.assignedRoom || "Room 104 (Dr. Ananya)",
+              assignedDoctor: qData.assignedDoctor || "Dr. Ananya Sharma",
+              nowServing: qData.nowServing ?? 38,
+              waitTimeMins: qData.waitTimeMins ?? 8,
+              chiefComplaint: qData.patient?.chiefComplaint,
+            });
+          } else {
+            const saved = localStorage.getItem("medikiosk_active_token");
+            if (saved) {
+              setActiveToken(JSON.parse(saved));
+            } else {
+              setActiveToken(null);
+            }
+          }
+        }
+      } catch (e) {}
+    }
     setTimeout(() => {
-      setLiveQueueServing((prev) => (prev < 41 ? prev + 1 : prev));
       setIsRefreshingQueue(false);
     }, 600);
   };
@@ -509,58 +580,92 @@ function PatientPortalContent() {
                 </button>
               </div>
 
-              {/* Light Aesthetic Hospital Ticket Container */}
-              <div className="p-5 bg-gradient-to-br from-blue-50/70 via-white to-sky-50/40 text-slate-900 rounded-2xl border-2 border-blue-200/90 space-y-3.5 shadow-xs">
-                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                  <span className="text-[11px] text-slate-500 font-semibold">
-                    AIIA New Delhi · Ayush HMIS
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                    Live OPD Desk
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
-                      {lang === "hi" ? "आपका टोकन" : "Your Token"}
+              {/* Dynamic OPD Ticket Container (Active vs Pending Intake) */}
+              {activeToken ? (
+                <div className="p-5 bg-gradient-to-br from-blue-50/70 via-white to-sky-50/40 text-slate-900 rounded-2xl border-2 border-blue-200/90 space-y-3.5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">
+                      AIIA New Delhi · Ayush HMIS
                     </span>
-                    <span className="text-4xl font-black text-blue-950 font-mono tracking-tight">
-                      #42
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                      Live OPD Desk
                     </span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
-                      {lang === "hi" ? "परामर्श कक्ष" : "Room Assignment"}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
+                        {lang === "hi" ? "आपका टोकन" : "Your Token"}
+                      </span>
+                      <span className="text-4xl font-black text-blue-950 font-mono tracking-tight">
+                        #{activeToken.tokenNumber}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">
+                        {lang === "hi" ? "परामर्श कक्ष" : "Room Assignment"}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs inline-block">
+                        {activeToken.assignedRoom}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2.5 border-t border-blue-100 text-xs">
+                    <span className="text-slate-600 font-medium">
+                      {lang === "hi" ? "वर्तमान नंबर:" : "Now Serving:"}{" "}
+                      <strong className="text-blue-900 font-bold font-mono text-sm">#{activeToken.nowServing}</strong>
                     </span>
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs inline-block">
-                      Room 104 (Dr. Ananya)
+                    <span className="font-semibold text-blue-800 bg-blue-100/70 px-2.5 py-0.5 rounded-md">
+                      ~{activeToken.waitTimeMins} {lang === "hi" ? "मिनट शेष" : "mins wait"}
                     </span>
                   </div>
                 </div>
+              ) : (
+                <div className="p-5 bg-slate-50/80 text-slate-800 rounded-2xl border border-dashed border-slate-300 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">
+                      AIIA New Delhi · OPD Triage
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-800 bg-amber-100/80 border border-amber-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {lang === "hi" ? "इनटेक लंबित" : "Intake Pending"}
+                    </span>
+                  </div>
 
-                <div className="flex items-center justify-between pt-2.5 border-t border-blue-100 text-xs">
-                  <span className="text-slate-600 font-medium">
-                    {lang === "hi" ? "वर्तमान नंबर:" : "Now Serving:"}{" "}
-                    <strong className="text-blue-900 font-bold font-mono text-sm">#{liveQueueServing}</strong>
-                  </span>
-                  <span className="font-semibold text-blue-800 bg-blue-100/70 px-2.5 py-0.5 rounded-md">
-                    ~{Math.max(0, (42 - liveQueueServing) * 2)} {lang === "hi" ? "मिनट शेष" : "mins wait"}
-                  </span>
+                  <div className="py-2 space-y-1">
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      {lang === "hi" ? "कोई सक्रिय ओपीडी टोकन नहीं है" : "No Active OPD Token"}
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {lang === "hi"
+                        ? "आपने आज डॉक्टर परामर्श इनटेक पूरा नहीं किया है। टोकन प्राप्त करने और डॉक्टर कक्ष आबंटित कराने के लिए परामर्श इनटेक प्रारंभ करें।"
+                        : "You have not completed clinical triage or consultation intake today. Start intake to generate an OPD token and receive a doctor room assignment."}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Bottom Button Action */}
-            <Button
-              variant="outline"
-              onClick={() => setShowTokenModal(true)}
-              className="w-full h-12 rounded-2xl border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-slate-400 font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>{lang === "hi" ? "ओपीडी डिजिटल पर्ची खोलें" : "View Digital OPD Pass"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+            {activeToken ? (
+              <Button
+                variant="outline"
+                onClick={() => setShowTokenModal(true)}
+                className="w-full h-12 rounded-2xl border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-slate-400 font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{lang === "hi" ? "ओपीडी डिजिटल पर्ची खोलें" : "View Digital OPD Pass"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Link
+                href={`/kiosk?${kioskParams}&step=complaint_select`}
+                className="w-full h-12 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <span>{lang === "hi" ? "परामर्श प्रारंभ कर टोकन लें" : "Start Intake & Generate Token"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
 
           {/* ── CARD 4: Emergency & Hospital Helplines ────────────────────── */}

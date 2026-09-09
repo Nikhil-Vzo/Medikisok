@@ -119,9 +119,8 @@ export default function KioskPage() {
         setIsPortalSession(true);
         setConsentGranted(true);
 
-        // By default, start with a fresh clinical intake for their new inquiry.
-        // Only trigger delta triage if explicitly flagged (e.g. ?revisit=true).
-        const urlIsReturning = params.get("revisit") === "true";
+        const urlVisitType = params.get("visit_type");
+        const urlIsReturning = params.get("revisit") === "true" || urlVisitType === "followup";
         setIsReturningPatient(urlIsReturning);
 
         const decision = computeContinuity({
@@ -134,13 +133,14 @@ export default function KioskPage() {
         });
         setContinuity(decision);
 
-        // Route straight to OPD intake / complaint selection (or requested step like 'scan')
+        // If explicitly requesting a step, route to it; otherwise default to continuity (Visit Purpose)
+        // so the patient chooses: Follow-up for old illness OR Fresh consultation for new illness!
         const validSteps: KioskStep[] = [
           "consent", "continuity", "complaint_select", "mode_select", "converse", "scan", "confirm"
         ];
         const targetStep: KioskStep = requestedStep && validSteps.includes(requestedStep)
           ? requestedStep
-          : "complaint_select";
+          : (urlVisitType ? "complaint_select" : "continuity");
 
         setStep(targetStep);
         setPresetNotice(
@@ -547,58 +547,71 @@ export default function KioskPage() {
             </div>
           )}
 
-          {/* ================= STEP 2b: CONTINUITY CHECK (Gap-Adaptive History) ================= */}
+          {/* ================= STEP 2b: CONTINUITY / VISIT PURPOSE (New vs Old Illness) ================= */}
           {step === "continuity" && (
             <div className="max-w-4xl mx-auto w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300 py-4">
               {/* Header */}
-              <div className="text-center max-w-2xl mx-auto space-y-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
-                  <History className="w-3.5 h-3.5 text-emerald-700" />
-                  {language === "hi" ? "कंटिन्यूइटी इंजन · अनुकूलित ओपीडी परामर्श" : "Continuity Engine · Adaptive OPD Intake"}
-                </span>
-                <h3 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950">
-                  {language === "hi" ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं?" : "Have you visited this hospital before?"}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                  {language === "hi"
-                    ? "पुराने मरीज़ों के लिए सिर्फ वही सवाल पूछे जाएंगे जो पिछली बार के बाद बदले हैं, जिससे आपका कीमती समय बचेगा।"
-                    : "Returning patients are fast-tracked with delta triage—only answering what changed since their last consultation."}
-                </p>
-                <AudioPrompter
-                  autoPlay
-                  language={language}
-                  textToSpeak={
-                    language === "hi"
-                      ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं? यदि हाँ तो पुराना मरीज़ चुनें, अन्यथा नया मरीज़ चुनें।"
-                      : "Have you visited this hospital before? Select returning patient to fast-track your visit, or new patient for first-time registration."
-                  }
-                />
-              </div>
+              {Boolean(isReturningPatient || isPortalSession || (patientName && abhaId)) ? (
+                <div className="text-center max-w-2xl mx-auto space-y-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+                    <History className="w-3.5 h-3.5 text-emerald-700" />
+                    {language === "hi" ? "परामर्श का उद्देश्य · विजिट का प्रकार" : "Consultation Purpose · Visit Type"}
+                  </span>
+                  <h3 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950">
+                    {language === "hi"
+                      ? `आज आपके परामर्श का क्या उद्देश्य है, ${patientName || "मरीज़"}?`
+                      : `What is the purpose of today's visit, ${patientName || "Patient"}?`}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                    {language === "hi"
+                      ? "कृपया चुनें कि क्या आप पिछली बीमारी के फॉलो-अप व चल रहे इलाज की समीक्षा के लिए आए हैं, या किसी नई समस्या के लिए?"
+                      : "Please select whether you are following up on your ongoing treatment or consulting for a completely new health problem."}
+                  </p>
+                  <AudioPrompter
+                    autoPlay
+                    language={language}
+                    textToSpeak={
+                      language === "hi"
+                        ? "आज आपके आने का मुख्य कारण क्या है? क्या आप पिछली बीमारी के फॉलो-अप के लिए आए हैं या किसी नई समस्या के लिए?"
+                        : "What is the purpose of today's visit? Are you following up on a previous condition or consulting for a new health issue?"
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="text-center max-w-2xl mx-auto space-y-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+                    <History className="w-3.5 h-3.5 text-emerald-700" />
+                    {language === "hi" ? "कंटिन्यूइटी इंजन · अनुकूलित ओपीडी परामर्श" : "Continuity Engine · Adaptive OPD Intake"}
+                  </span>
+                  <h3 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950">
+                    {language === "hi" ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं?" : "Have you visited this hospital before?"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                    {language === "hi"
+                      ? "पुराने मरीज़ों के लिए सिर्फ वही सवाल पूछे जाएंगे जो पिछली बार के बाद बदले हैं, जिससे आपका कीमती समय बचेगा।"
+                      : "Returning patients are fast-tracked with delta triage—only answering what changed since their last consultation."}
+                  </p>
+                  <AudioPrompter
+                    autoPlay
+                    language={language}
+                    textToSpeak={
+                      language === "hi"
+                        ? "क्या आप पहले भी इस अस्पताल में आ चुके हैं? यदि हाँ तो पुराना मरीज़ चुनें, अन्यथा नया मरीज़ चुनें।"
+                        : "Have you visited this hospital before? Select returning patient to fast-track your visit, or new patient for first-time registration."
+                    }
+                  />
+                </div>
+              )}
 
-              {/* Intelligent Prior Record Detection Banner */}
-              {isReturningPatient && patientName && abhaId && (
-                <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in duration-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="font-bold block text-slate-900 text-sm">
-                        {language === "hi" ? `पूर्व ओपीडी रिकॉर्ड उपलब्ध: ${patientName}` : `Previous Clinical Record Found: ${patientName}`}
-                      </span>
-                      <span className="text-slate-600 font-medium">
-                        {language === "hi"
-                          ? `ABHA ${abhaId} · पूर्व परामर्श रिकॉर्ड संलग्न · सक्रिय प्रिस्क्रिप्शन फ़ाइल पर हैं`
-                          : `ABHA ${abhaId} · Prior consultation records attached · Active prescriptions on file`}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
+              {/* Two High-Contrast Touch Cards */}
+              {Boolean(isReturningPatient || isPortalSession || (patientName && abhaId)) ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
+                  {/* ── CARD A: Regarding Previous Illness (Follow-up) ── */}
+                  <div
                     onClick={() => {
                       const decision = computeContinuity({
                         isReturning: true,
-                        lastVisitDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        lastVisitDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
                         lastChiefComplaint: "Prior consultation follow-up",
                         lastMedications: ["Active prescription on file"]
                       });
@@ -606,96 +619,158 @@ export default function KioskPage() {
                       setIsReturningPatient(true);
                       setStep("complaint_select");
                     }}
-                    className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer shrink-0"
+                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
                   >
-                    {language === "hi" ? "त्वरित पुराने मरीज़ चयन →" : "Fast-Track Revisit →"}
-                  </button>
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                          <History className="w-7 h-7" strokeWidth={2.2} />
+                        </div>
+                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {language === "hi" ? "डेल्टा इनटेक · 2 मिनट" : "Delta Triage · 2 Mins"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                          {language === "hi" ? "पिछली बीमारी का फॉलो-अप" : "Regarding Previous Illness"}
+                        </h4>
+                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                          {language === "hi"
+                            ? "पुरानी तकलीफ, दवाइयों का असर और सुधार की जांच। सिस्टम सिर्फ वही सवाल पूछेगा जो पिछली बार के बाद बदले हैं।"
+                            : "Follow-up for your ongoing condition, review how previous medicines worked, and report recovery progress."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                      <span>{language === "hi" ? "पिछली बीमारी का फॉलो-अप लें" : "Follow-up for Previous Illness"}</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* ── CARD B: New Illness / Different Symptom ── */}
+                  <div
+                    onClick={() => {
+                      const decision = computeContinuity({ isReturning: false });
+                      setContinuity(decision);
+                      setIsReturningPatient(false);
+                      setStep("complaint_select");
+                    }}
+                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                  >
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                          <Stethoscope className="w-7 h-7" strokeWidth={2.2} />
+                        </div>
+                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                          {language === "hi" ? "नई समस्या · संपूर्ण इनटेक" : "New Illness · Full Intake"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
+                          {language === "hi" ? "नई बीमारी / नया परामर्श" : "New Illness / Different Issue"}
+                        </h4>
+                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                          {language === "hi"
+                            ? "किसी नए दर्द, नई समस्या या अचानक उभरे लक्षणों के लिए। पुरानी फाइल से अलग नए लक्षणों का संपूर्ण इनटेक होगा।"
+                            : "Consulting for a newly developed health problem, new pain, or different symptoms. A fresh clinical history will be taken."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                      <span>{language === "hi" ? "नई बीमारी के लिए परामर्श शुरू करें" : "Start Intake for New Illness"}</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
+                  {/* ── CARD A: Returning Patient ── */}
+                  <div
+                    onClick={() => {
+                      const decision = computeContinuity({
+                        isReturning: true,
+                        lastVisitDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        lastChiefComplaint: "Previous consultation follow-up",
+                        lastMedications: ["Active prescription on file"]
+                      });
+                      setContinuity(decision);
+                      setIsReturningPatient(true);
+                      setStep("complaint_select");
+                    }}
+                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                  >
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                          <History className="w-7 h-7" strokeWidth={2.2} />
+                        </div>
+                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {language === "hi" ? "त्वरित जांच · 3 मिनट" : "Fast-Track · 3 Mins"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
+                          {language === "hi" ? "हाँ, पहले आ चुका हूँ" : "Yes, Returning Patient"}
+                        </h4>
+                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                          {language === "hi"
+                            ? "आपकी पुरानी फाइल व दवाइयों का रिकॉर्ड सीधे लिंक होगा। दोबारा लंबी जानकारी नहीं भरनी होगी।"
+                            : "Fast-track your consultation using linked prior prescriptions and medical history."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                      <span>{language === "hi" ? "पुराने मरीज़ के रूप में आगे बढ़ें" : "Continue as Returning Patient"}</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* ── CARD B: First-Time Patient ── */}
+                  <div
+                    onClick={() => {
+                      const decision = computeContinuity({ isReturning: false });
+                      setContinuity(decision);
+                      setIsReturningPatient(false);
+                      setStep("complaint_select");
+                    }}
+                    className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
+                  >
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                          <UserPlus className="w-7 h-7" strokeWidth={2.2} />
+                        </div>
+                        <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                          {language === "hi" ? "नया पंजीकरण" : "New Registration"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
+                          {language === "hi" ? "नहीं, पहली बार आया हूँ" : "No, First-Time Visit"}
+                        </h4>
+                        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                          {language === "hi"
+                            ? "अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी नई ओपीडी फाइल व जांच रिकॉर्ड तैयार होगा।"
+                            : "First visit to this hospital. A complete clinical case sheet will be prepared for your doctor."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
+                      <span>{language === "hi" ? "नए मरीज़ के रूप में शुरू करें" : "Begin First-Time Intake"}</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </div>
                 </div>
               )}
-
-              {/* Two High-Contrast 3xl Touch Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
-                {/* ── CARD A: Returning Patient ── */}
-                <div
-                  onClick={() => {
-                    const decision = computeContinuity({
-                      isReturning: true,
-                      lastVisitDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                      lastChiefComplaint: "Previous consultation follow-up",
-                      lastMedications: ["Active prescription on file"]
-                    });
-                    setContinuity(decision);
-                    setIsReturningPatient(true);
-                    setStep("complaint_select");
-                  }}
-                  className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-xl hover:bg-emerald-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
-                >
-                  <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                        <History className="w-7 h-7" strokeWidth={2.2} />
-                      </div>
-                      <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        {language === "hi" ? "त्वरित जांच · 3 मिनट" : "Fast-Track · 3 Mins"}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-emerald-950 transition-colors">
-                        {language === "hi" ? "हाँ, पहले आ चुका हूँ" : "Yes, Returning Patient"}
-                      </h4>
-                      <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-                        {language === "hi"
-                          ? "आपकी पुरानी फाइल व दवाइयों का रिकॉर्ड सीधे लिंक होगा। दोबारा लंबी जानकारी नहीं भरनी होगी।"
-                          : "Fast-track your consultation using linked prior prescriptions and medical history."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-14 rounded-2xl bg-emerald-700 group-hover:bg-emerald-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
-                    <span>{language === "hi" ? "पुराने मरीज़ के रूप में आगे बढ़ें" : "Continue as Returning Patient"}</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                </div>
-
-                {/* ── CARD B: First-Time Patient ── */}
-                <div
-                  onClick={() => {
-                    const decision = computeContinuity({ isReturning: false });
-                    setContinuity(decision);
-                    setIsReturningPatient(false);
-                    setStep("complaint_select");
-                  }}
-                  className="group p-8 sm:p-9 rounded-3xl bg-white border-2 border-teal-200/90 hover:border-teal-600 hover:shadow-xl hover:bg-teal-50/20 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-8 text-left hover:-translate-y-1 shadow-sm"
-                >
-                  <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                        <UserPlus className="w-7 h-7" strokeWidth={2.2} />
-                      </div>
-                      <span className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
-                        {language === "hi" ? "नया पंजीकरण" : "New Registration"}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight group-hover:text-teal-950 transition-colors">
-                        {language === "hi" ? "नहीं, पहली बार आया हूँ" : "No, First-Time Visit"}
-                      </h4>
-                      <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-                        {language === "hi"
-                          ? "अस्पताल में पहला आगमन। डॉक्टर के लिए आपकी नई ओपीडी फाइल व जांच रिकॉर्ड तैयार होगा।"
-                          : "First visit to this hospital. A complete clinical case sheet will be prepared for your doctor."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-14 rounded-2xl bg-teal-700 group-hover:bg-teal-800 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-colors">
-                    <span>{language === "hi" ? "नए मरीज़ के रूप में शुरू करें" : "Begin First-Time Intake"}</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

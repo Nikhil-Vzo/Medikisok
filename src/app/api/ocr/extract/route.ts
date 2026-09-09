@@ -71,16 +71,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── Gemini path with multi-model resilience ──────────────────────────────
     const candidateModels = Array.from(new Set([
-      modelName,
-      "gemini-3.5-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash"
+      process.env.GEMINI_MODEL || "gemini-1.5-flash",
+      "gemini-1.5-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash-8b",
+      "gemini-1.5-pro",
     ]));
 
-    const prompt = `You are a medical OCR specialist for Indian hospital OPDs.
-Analyze this medical document (handwritten prescription, printed discharge summary, or laboratory report).
+    const prompt = `You are an expert medical OCR specialist for Indian hospital OPDs.
+Analyze this medical document (handwritten prescription, lab report, or discharge slip).
 Extract all clinical entities accurately and output strictly a JSON object with this structure:
 {
   "docType": "prescription" | "lab_report" | "discharge_summary",
@@ -108,8 +108,7 @@ Extract all clinical entities accurately and output strictly a JSON object with 
   "proceduresSurgeries": ["e.g. Cholecystectomy 2021", "Appendectomy"],
   "allergies": ["e.g. Penicillin allergy"],
   "summaryText": "Concise summary of findings from this document"
-}
-Output only valid JSON without markdown wrapping.`;
+}`;
 
     let lastError: any = null;
     let responseText = "";
@@ -117,7 +116,14 @@ Output only valid JSON without markdown wrapping.`;
 
     for (const cand of candidateModels) {
       try {
-        const model = genAI!.getGenerativeModel({ model: cand });
+        const model = genAI!.getGenerativeModel({
+          model: cand,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1500,
+            responseMimeType: "application/json",
+          },
+        });
         const result = await model.generateContent([
           prompt,
           {

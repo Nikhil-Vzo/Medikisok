@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY;
-const modelName = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
 export const isGeminiConfigured = Boolean(apiKey);
 

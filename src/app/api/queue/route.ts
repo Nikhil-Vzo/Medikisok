@@ -49,13 +49,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const abhaLookup = searchParams.get("abhaId");
 
-    // If searching for a specific ABHA ID (patient history lookup)
+    // If searching for a specific ABHA ID (patient history lookup & active token check)
     if (abhaLookup) {
-      const memMatch = globalQueue.__liveOpdQueue?.find(
-        (p) => p.abhaId.replace(/\D/g, "") === abhaLookup.replace(/\D/g, "")
+      const cleanLookup = abhaLookup.replace(/\D/g, "");
+      const queueList = globalQueue.__liveOpdQueue || [];
+      const memMatchIndex = queueList.findIndex(
+        (p) => p.abhaId && p.abhaId.replace(/\D/g, "") === cleanLookup
       );
-      if (memMatch) {
-        return NextResponse.json({ found: true, patient: memMatch });
+      if (memMatchIndex >= 0) {
+        const item = queueList[memMatchIndex];
+        return NextResponse.json({
+          found: true,
+          inQueue: true,
+          tokenNumber: memMatchIndex + 1,
+          assignedRoom: item.assignedRoom || "Room 104 (Dr. Ananya)",
+          assignedDoctor: item.assignedDoctor || "Dr. Ananya Sharma",
+          nowServing: Math.max(1, memMatchIndex),
+          waitTimeMins: item.waitTimeMins || (memMatchIndex + 1) * 3,
+          patient: item,
+        });
       }
 
       const supabase = createServerClient();
@@ -69,6 +81,7 @@ export async function GET(req: NextRequest) {
         if (profile) {
           return NextResponse.json({
             found: true,
+            inQueue: false,
             patient: {
               name: profile.full_name,
               age: profile.age,
@@ -79,8 +92,9 @@ export async function GET(req: NextRequest) {
           });
         }
       }
-      return NextResponse.json({ found: false });
+      return NextResponse.json({ found: false, inQueue: false });
     }
+
 
     // Otherwise return active OPD Queue
     const supabase = createServerClient();

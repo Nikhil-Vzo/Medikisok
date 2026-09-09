@@ -121,17 +121,55 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     setExtractionError(null);
   };
 
+  // Fast client-side image downscaling so mobile camera 12MP photos don't bottleneck network
+  const compressImageIfNeeded = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined") {
+        resolve(dataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1600;
+        let { width, height } = img;
+        if (width <= MAX_DIM && height <= MAX_DIM) {
+          resolve(dataUrl);
+          return;
+        }
+        if (width > height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   // Capture Snapshot from Video
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = Math.min(1600, video.videoWidth || 1280);
+    canvas.height = Math.min(1600, video.videoHeight || 720);
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const base64 = canvas.toDataURL("image/jpeg", 0.9);
+      const base64 = canvas.toDataURL("image/jpeg", 0.85);
       setCapturedImage(base64);
       stopCamera();
       resetState();
@@ -145,10 +183,11 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     if (!file) return;
     resetState();
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setCapturedImage(base64);
-      processOcr(base64, file.name);
+    reader.onload = async (event) => {
+      const rawBase64 = event.target?.result as string;
+      const optimizedBase64 = await compressImageIfNeeded(rawBase64);
+      setCapturedImage(optimizedBase64);
+      processOcr(optimizedBase64, file.name);
     };
     reader.readAsDataURL(file);
   };
